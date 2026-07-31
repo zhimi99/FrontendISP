@@ -1,12 +1,23 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { catchError, map, of, switchMap } from 'rxjs';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { catchError, map, Observable, of, startWith, switchMap } from 'rxjs';
 
 import { IconComponent } from '../../shared/icon';
 import { ClientesService } from '../../core/services/clientes.service';
+import { FacturacionService } from '../../core/services/facturacion.service';
 import { ClienteDetalle } from '../../core/models/contratos.model';
+import {
+  ESTADO_PAGO_ETIQUETA,
+  ESTADO_PAGO_TONO,
+  ESTADO_SRI_ETIQUETA,
+  ESTADO_SRI_TONO,
+  FacturaVista,
+} from '../../core/models/facturacion.model';
 import { EstadoCliente, ESTADOS } from './clientes.data';
+
+/** Estado de la carga perezosa de facturas para la pestaña de Facturación. */
+type EstadoFacturas = { estado: 'cargando' | 'ok' | 'error'; lista: FacturaVista[] };
 
 @Component({
   selector: 'app-cliente-detalle',
@@ -18,7 +29,14 @@ import { EstadoCliente, ESTADOS } from './clientes.data';
 export class ClienteDetalleComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly clientesService = inject(ClientesService);
+  private readonly facturacionService = inject(FacturacionService);
   readonly estadosMap = ESTADOS;
+
+  // Mapas de etiqueta/tono para las insignias de la pestaña de Facturación.
+  readonly pagoEtq = ESTADO_PAGO_ETIQUETA;
+  readonly pagoTono = ESTADO_PAGO_TONO;
+  readonly sriEtq = ESTADO_SRI_ETIQUETA;
+  readonly sriTono = ESTADO_SRI_TONO;
 
   readonly tabs = [
     'Resumen',
@@ -56,8 +74,47 @@ export class ClienteDetalleComponent {
     return det ? this.armarVista(det) : null;
   });
 
+  /**
+   * Facturas del cliente (MS-FACTURACION) para la pestaña de Facturación. Se cargan
+   * en cuanto la ficha resuelve su id numérico —la referencia lógica que enlaza con
+   * factura.cliente_id— y se recargan solas si se navega a otro cliente.
+   */
+  private readonly facturasResp = toSignal(
+    toObservable(this.detalle).pipe(
+      switchMap((det): Observable<EstadoFacturas> =>
+        det && det.id != null
+          ? this.facturacionService.listar({ clienteId: det.id }).pipe(
+              map((lista) => ({ estado: 'ok' as const, lista })),
+              startWith({ estado: 'cargando' as const, lista: [] as FacturaVista[] }),
+              catchError(() => of({ estado: 'error' as const, lista: [] as FacturaVista[] })),
+            )
+          : of({ estado: 'ok' as const, lista: [] as FacturaVista[] }),
+      ),
+    ),
+    { initialValue: { estado: 'cargando', lista: [] } as EstadoFacturas },
+  );
+
+  readonly facturas = computed(() => this.facturasResp().lista);
+  readonly facturasCargando = computed(() => this.facturasResp().estado === 'cargando');
+  readonly facturasError = computed(() => this.facturasResp().estado === 'error');
+  readonly facturasSaldo = computed(() =>
+    this.facturas().reduce((s, f) => s + (f.saldoPendiente ?? 0), 0),
+  );
+  readonly facturasTotal = computed(() =>
+    this.facturas().reduce((s, f) => s + (f.total ?? 0), 0),
+  );
+
   setTab(i: number) {
     this.tabActiva.set(i);
+  }
+
+  moneda(n: number): string {
+    return '$' + (n ?? 0).toFixed(2);
+  }
+
+  /** dd/mm/aaaa a partir de un ISO; reutiliza el formateador interno. */
+  fecha(iso: string | null): string {
+    return this.fmt(iso);
   }
 
   iniciales(nombre: string): string {

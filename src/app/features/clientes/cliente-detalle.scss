@@ -701,3 +701,65 @@ tbody tr:hover {
     flex: 1;
   }
 }
+
+/* ============ Pestaña Facturación ============ */
+.fact-tab {
+  padding: 18px 18px 10px;
+}
+.fact-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.fact-sumario {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.fact-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  min-width: 118px;
+}
+.fact-chip.alerta {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
+.fact-chip-cap {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.fact-chip-val {
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.fact-estado {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 26px;
+  color: var(--muted);
+}
+.fact-estado.error {
+  color: var(--danger);
+}
+.empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 22px;
+}
+.badge.neutral {
+  background: var(--slate-soft);
+  color: var(--slate);
+}

@@ -123,6 +123,8 @@ export interface ContratoVista extends Contrato {
  * grilla mostraba con datos de prueba, NO existen en el dominio: no vienen aquí.
  */
 export interface ClienteListado {
+  /** PK numérico: permite resolver clienteId (referencia lógica) -> nombre en otras pantallas. */
+  id: number;
   codigo: string;
   tipoCliente: TipoCliente;
   tipoIdentificacion: TipoIdentificacion;
@@ -151,6 +153,8 @@ export interface RedDetalle {
 
 /** Un contrato del cliente en la ficha de detalle. */
 export interface ContratoResumen {
+  /** PK numérico del contrato: referencia lógica que usa factura.contrato_id. */
+  id: number;
   codigo: string;
   plan: string;
   velocidad: string;
@@ -176,6 +180,11 @@ export interface DireccionDetalle {
  * MS-CONTRATOS posee; facturación/uptime/OLT vienen de otros servicios (no aquí).
  */
 export interface ClienteDetalle {
+  /**
+   * PK numérico del cliente: la referencia lógica que MS-FACTURACION guarda en
+   * factura.cliente_id. Se usa para consultar /api/facturas?clienteId=; el codigo no.
+   */
+  id: number;
   codigo: string;
   tipoCliente: TipoCliente;
   tipoIdentificacion: TipoIdentificacion;

@@ -1,0 +1,188 @@
+<div class="page">
+  <!-- ============ Encabezado ============ -->
+  <div class="page-head">
+    <div>
+      <h2>Cobranzas / Caja</h2>
+      <p class="sub">Recaudaciones aplicadas a facturas y estado de los puntos de cobro.</p>
+    </div>
+  </div>
+
+  <!-- ============ Estado de las cajas ============ -->
+  <div class="caja-grid">
+    @for (c of cajas(); track c.id) {
+      <div class="card caja-card" [class.abierta]="c.sesionAbierta">
+        <div class="caja-top">
+          <span class="caja-ico"><app-icon name="cash" [size]="18" /></span>
+          <div class="caja-id">
+            <span class="caja-nombre">{{ c.nombre }}</span>
+            <span class="caja-codigo mono">{{ c.codigo }}</span>
+          </div>
+          <span class="badge" [class]="c.sesionAbierta ? 'ok' : 'neutral'">
+            {{ c.sesionAbierta ? 'Abierta' : 'Cerrada' }}
+          </span>
+        </div>
+
+        @if (c.sesionAbierta; as s) {
+          <dl class="caja-kv">
+            <div><dt>Abierta desde</dt><dd>{{ fechaHora(s.fechaApertura) }}</dd></div>
+            <div><dt>Recaudado</dt><dd class="mono">{{ moneda(s.totalRecaudado) }}</dd></div>
+            <div><dt>Efectivo en caja</dt><dd class="mono strong">{{ moneda(s.efectivoEnCaja) }}</dd></div>
+            <div><dt>N.º pagos</dt><dd>{{ s.cantidadPagos }}</dd></div>
+          </dl>
+        } @else {
+          <p class="caja-cerrada">Sin jornada abierta.</p>
+        }
+      </div>
+    } @empty {
+      @if (!cargando()) {
+        <div class="card caja-card"><p class="caja-cerrada">No hay cajas registradas.</p></div>
+      }
+    }
+  </div>
+
+  <!-- ============ Tarjetas de resumen ============ -->
+  <div class="stats">
+    <div class="stat">
+      <span class="stat-ico ok"><app-icon name="cash" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">Recaudado (confirmado)</span>
+        <span class="stat-value">{{ moneda(totalRecaudado) }}</span>
+        <span class="stat-foot">{{ numeroPagos }} pago(s) registrados</span>
+      </div>
+    </div>
+    <div class="stat">
+      <span class="stat-ico slate"><app-icon name="invoice" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">Total de pagos</span>
+        <span class="stat-value">{{ numeroPagos }}</span>
+        <span class="stat-foot">Recaudaciones en el sistema</span>
+      </div>
+    </div>
+    <div class="stat">
+      <span class="stat-ico warn"><app-icon name="cash" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">Cajas abiertas</span>
+        <span class="stat-value">{{ cajasAbiertas }}</span>
+        <span class="stat-foot">de {{ cajas().length }} punto(s) de cobro</span>
+      </div>
+    </div>
+    <div class="stat">
+      <span class="stat-ico info"><app-icon name="cash" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">Efectivo en cajas</span>
+        <span class="stat-value">{{ moneda(efectivoEnCajas) }}</span>
+        <span class="stat-foot">Esperado en gaveta ahora</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Filtros ============ -->
+  <div class="filters card">
+    <div class="field grow">
+      <label>Buscar</label>
+      <div class="input-ico">
+        <app-icon name="search" [size]="15" />
+        <input
+          type="text"
+          placeholder="N.º de recibo o cliente…"
+          [ngModel]="q()"
+          (ngModelChange)="q.set($event); onFiltroCambio()"
+        />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Forma de pago</label>
+      <select [ngModel]="formaPago()" (ngModelChange)="formaPago.set($event); onFiltroCambio()">
+        <option value="">Todas</option>
+        <option value="EFECTIVO">Efectivo</option>
+        <option value="TRANSFERENCIA">Transferencia</option>
+        <option value="DEPOSITO">Depósito</option>
+        <option value="TARJETA">Tarjeta</option>
+        <option value="CHEQUE">Cheque</option>
+        <option value="PASARELA">Pasarela</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Estado</label>
+      <select [ngModel]="estado()" (ngModelChange)="estado.set($event); onFiltroCambio()">
+        <option value="">Todos</option>
+        <option value="REGISTRADO">Registrado</option>
+        <option value="CONFIRMADO">Confirmado</option>
+        <option value="ANULADO">Anulado</option>
+      </select>
+    </div>
+
+    <div class="filter-btns">
+      <button class="btn" (click)="limpiar()"><app-icon name="refresh" [size]="15" /> Limpiar</button>
+    </div>
+  </div>
+
+  <!-- ============ Tabla de pagos ============ -->
+  <div class="card table-card">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>N.º Recibo</th>
+            <th>Fecha</th>
+            <th>Cliente</th>
+            <th>Forma de pago</th>
+            <th>Facturas</th>
+            <th>Estado</th>
+            <th class="right">Monto</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of pagina_(); track p.id) {
+            <tr>
+              <td class="mono muted">{{ p.numeroRecibo }}</td>
+              <td class="muted">{{ fechaHora(p.fecha) }}</td>
+              <td class="strong">{{ p.clienteNombre }}</td>
+              <td>
+                {{ formaEtq[p.formaPago] }}
+                @if (p.cajaCodigo) { <span class="mono muted">· {{ p.cajaCodigo }}</span> }
+              </td>
+              <td class="mono muted">{{ facturasDe(p) }}</td>
+              <td><span class="badge" [class]="estadoTono[p.estado]">{{ estadoEtq[p.estado] }}</span></td>
+              <td class="right mono strong">{{ moneda(p.monto) }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="7" class="empty">{{ mensajeTabla() }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ============ Paginación ============ -->
+    <div class="pager">
+      <span class="pager-info">
+        Mostrando {{ rangoDesde() }} a {{ rangoHasta() }} de {{ filtrados().length }} pagos
+      </span>
+
+      <div class="pager-ctrl">
+        <label class="rows">
+          Filas por página:
+          <select [value]="filasPorPagina()" (change)="cambiarFilas($any($event.target).value)">
+            <option [value]="10">10</option>
+            <option [value]="20">20</option>
+            <option [value]="50">50</option>
+          </select>
+        </label>
+
+        <div class="pages">
+          <button class="pg" [disabled]="paginaActual() === 1" (click)="irA(1)">«</button>
+          <button class="pg" [disabled]="paginaActual() === 1" (click)="irA(paginaActual() - 1)">‹</button>
+          @for (n of numerosPagina(); track n) {
+            <button class="pg" [class.active]="n === paginaActual()" (click)="irA(n)">{{ n }}</button>
+          }
+          <button class="pg" [disabled]="paginaActual() === totalPaginas()" (click)="irA(paginaActual() + 1)">›</button>
+          <button class="pg" [disabled]="paginaActual() === totalPaginas()" (click)="irA(totalPaginas())">»</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

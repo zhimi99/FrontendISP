@@ -123,6 +123,73 @@
               </div>
             </div>
           </div>
+        } @else if (tabActiva() === 2) {
+          <!-- ============ Facturación (MS-FACTURACION) ============ -->
+          <div class="card fact-tab">
+            <div class="fact-head">
+              <div>
+                <h3 class="card-title mb0">Facturación del cliente</h3>
+                <p class="sub">Comprobantes electrónicos emitidos a este cliente.</p>
+              </div>
+              @if (!facturasCargando() && !facturasError()) {
+                <div class="fact-sumario">
+                  <div class="fact-chip">
+                    <span class="fact-chip-cap">Comprobantes</span>
+                    <span class="fact-chip-val">{{ facturas().length }}</span>
+                  </div>
+                  <div class="fact-chip">
+                    <span class="fact-chip-cap">Total facturado</span>
+                    <span class="fact-chip-val">{{ moneda(facturasTotal()) }}</span>
+                  </div>
+                  <div class="fact-chip" [class.alerta]="facturasSaldo() > 0">
+                    <span class="fact-chip-cap">Saldo por cobrar</span>
+                    <span class="fact-chip-val">{{ moneda(facturasSaldo()) }}</span>
+                  </div>
+                </div>
+              }
+            </div>
+
+            @if (facturasCargando()) {
+              <div class="fact-estado"><app-icon name="refresh" [size]="20" /> Cargando facturas…</div>
+            } @else if (facturasError()) {
+              <div class="fact-estado error">
+                No se pudieron cargar las facturas. ¿Está arriba MS-FACTURACION en el gateway?
+              </div>
+            } @else {
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>N.º Documento</th>
+                      <th>Emisión</th>
+                      <th>Vencimiento</th>
+                      <th class="right">Total</th>
+                      <th class="right">Saldo</th>
+                      <th>Pago</th>
+                      <th>SRI</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (f of facturas(); track f.id) {
+                      <tr>
+                        <td class="mono">{{ f.numeroDocumento }}</td>
+                        <td class="muted">{{ fecha(f.fechaEmision) }}</td>
+                        <td class="muted">{{ fecha(f.fechaVencimiento) }}</td>
+                        <td class="right mono">{{ moneda(f.total) }}</td>
+                        <td class="right mono">{{ moneda(f.saldoPendiente) }}</td>
+                        <td><span class="badge" [class]="pagoTono[f.estadoPago]">{{ pagoEtq[f.estadoPago] }}</span></td>
+                        <td><span class="badge" [class]="sriTono[f.estadoSri]">{{ sriEtq[f.estadoSri] }}</span></td>
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td colspan="7" class="empty">Este cliente aún no tiene comprobantes emitidos.</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </div>
         } @else {
           <div class="card tab-empty">
             <div class="tab-empty-ico"><app-icon name="box" [size]="26" /></div>

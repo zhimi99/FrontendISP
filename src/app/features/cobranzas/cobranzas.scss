@@ -1,0 +1,90 @@
+/* Estilos propios de Cobranzas/Caja; el resto se hereda de clientes.scss. */
+
+/* Tonos que la hoja compartida no define */
+.stat-ico.info {
+  background: var(--info-soft);
+  color: var(--info);
+}
+.badge.neutral {
+  background: var(--slate-soft);
+  color: var(--slate);
+}
+
+/* ============ Panel de cajas ============ */
+.caja-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.caja-card {
+  padding: 16px 18px;
+  border-left: 3px solid var(--border-2);
+}
+.caja-card.abierta {
+  border-left-color: var(--ok);
+}
+
+.caja-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.caja-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--slate-soft);
+  color: var(--slate);
+  flex: none;
+}
+.caja-card.abierta .caja-ico {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+.caja-id {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.caja-nombre {
+  font-weight: 650;
+}
+.caja-codigo {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.caja-kv {
+  margin: 14px 0 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+}
+.caja-kv div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.caja-kv dt {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.caja-kv dd {
+  margin: 0;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.caja-cerrada {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}

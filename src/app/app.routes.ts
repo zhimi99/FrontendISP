@@ -3,6 +3,7 @@ import { Routes } from '@angular/router';
 import { ClienteDetalleComponent } from './features/clientes/cliente-detalle';
 import { ClienteNuevoComponent } from './features/clientes/cliente-nuevo';
 import { ClientesComponent } from './features/clientes/clientes';
+import { CobranzasComponent } from './features/cobranzas/cobranzas';
 import { ContratosComponent } from './features/contratos/contratos';
 import { FacturacionComponent } from './features/facturacion/facturacion';
 import { PlaceholderComponent } from './features/placeholder/placeholder';
@@ -21,7 +22,7 @@ export const routes: Routes = [
   { path: 'dashboard', component: PlaceholderComponent, data: { titulo: 'Dashboard', icono: 'dashboard' } },
   { path: 'contratos', component: ContratosComponent },
   { path: 'facturacion', component: FacturacionComponent },
-  { path: 'cobranzas', component: PlaceholderComponent, data: { titulo: 'Cobranzas', icono: 'cash' } },
+  { path: 'cobranzas', component: CobranzasComponent },
   { path: 'soporte', component: PlaceholderComponent, data: { titulo: 'Soporte', icono: 'support' } },
   { path: 'red', component: PlaceholderComponent, data: { titulo: 'Red', icono: 'network' } },
   { path: 'inventario', component: PlaceholderComponent, data: { titulo: 'Inventario', icono: 'box' } },

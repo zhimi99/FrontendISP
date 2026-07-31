@@ -92,6 +92,63 @@ export interface PagoVista extends Pago {
   cajeroNombre?: string;
 }
 
+/* =====================================================================
+ *  DTOs de la capa REST (lo que devuelven /api/pagos y /api/cajas)
+ * ===================================================================== */
+
+/** Reparto de un pago a una factura (denormalizado en MS-FINANZAS). */
+export interface AplicacionPago {
+  facturaId: number;
+  facturaNumero: string | null;
+  montoAplicado: number;
+}
+
+/** Fila de `GET /api/pagos`: la recaudación con su caja y reparto resueltos. */
+export interface PagoCobranza {
+  id: number;
+  numeroRecibo: string;
+  clienteId: number;
+  contratoId: number | null;
+  fecha: string;
+  monto: number;
+  formaPago: FormaPago;
+  estado: EstadoPago;
+  referencia: string | null;
+  banco: string | null;
+  sesionCajaId: number | null;
+  cajaCodigo: string | null;
+  cajaNombre: string | null;
+  usuarioId: number | null;
+  observacion: string | null;
+  aplicaciones: AplicacionPago[];
+}
+
+/** Pago con el nombre del cliente ya resuelto (cruzado con /api/clientes en el front). */
+export interface PagoCobranzaVista extends PagoCobranza {
+  clienteNombre: string;
+}
+
+/** Resumen de la sesión abierta de una caja (de `GET /api/cajas`). */
+export interface SesionAbierta {
+  id: number;
+  usuarioId: number;
+  fechaApertura: string;
+  montoInicial: number;
+  totalRecaudado: number;
+  cantidadPagos: number;
+  efectivoEnCaja: number;
+}
+
+/** Fila de `GET /api/cajas`: la caja con el estado de su jornada. */
+export interface CajaEstado {
+  id: number;
+  codigo: string;
+  nombre: string;
+  ubicacion: string | null;
+  activa: boolean;
+  sesionAbierta: SesionAbierta | null;
+}
+
 export const FORMA_PAGO_ETIQUETA: Record<FormaPago, string> = {
   EFECTIVO: 'Efectivo',
   TRANSFERENCIA: 'Transferencia',
