@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import {
+  AltaEquipoRequest,
   Equipo,
   EstadoEquipo,
   Existencia,
@@ -55,5 +56,10 @@ export class InventarioService {
     if (filtro?.contratoId != null) params = params.set('contratoId', filtro.contratoId);
     if (filtro?.ubicacionId != null) params = params.set('ubicacionId', filtro.ubicacionId);
     return this.http.get<Equipo[]>(`${this.base}/api/equipos`, { params });
+  }
+
+  /** POST /api/equipos — alta de una unidad serializada (queda DISPONIBLE). */
+  crearEquipo(req: AltaEquipoRequest): Observable<Equipo> {
+    return this.http.post<Equipo>(`${this.base}/api/equipos`, req);
   }
 }

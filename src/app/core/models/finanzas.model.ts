@@ -139,6 +139,35 @@ export interface SesionAbierta {
   efectivoEnCaja: number;
 }
 
+/** Una línea del reparto en el alta de pago. */
+export interface AplicacionPagoReq {
+  facturaId: number;
+  facturaNumero: string | null;
+  montoAplicado: number;
+}
+
+/** Cuerpo del alta de recaudación (`POST /api/pagos`). */
+export interface RegistrarPagoRequest {
+  clienteId: number;
+  contratoId: number | null;
+  monto: number;
+  formaPago: FormaPago;
+  referencia: string | null;
+  banco: string | null;
+  sesionCajaId: number | null;
+  observacion: string | null;
+  aplicaciones: AplicacionPagoReq[];
+}
+
+/** Respuesta del alta: el recibo recién emitido. */
+export interface PagoRegistrado {
+  id: number;
+  numeroRecibo: string;
+  monto: number;
+  estado: EstadoPago;
+  fecha: string;
+}
+
 /** Fila de `GET /api/cajas`: la caja con el estado de su jornada. */
 export interface CajaEstado {
   id: number;

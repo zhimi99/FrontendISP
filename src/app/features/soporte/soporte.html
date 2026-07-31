@@ -7,6 +7,13 @@
     </div>
   </div>
 
+  @if (banner(); as b) {
+    <div class="card banner" [class.error]="b.error">
+      <span>{{ b.texto }}</span>
+      <button class="banner-x" (click)="banner.set(null)" aria-label="Cerrar">✕</button>
+    </div>
+  }
+
   <!-- ============ Tarjetas de resumen (órdenes abiertas) ============ -->
   <div class="stats">
     <div class="stat">
@@ -79,6 +86,7 @@
             <th>Programada</th>
             <th>Técnico</th>
             <th>Estado</th>
+            <th class="w-acc">Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -91,12 +99,88 @@
               <td class="muted">{{ fecha(o.fechaProgramada) }}</td>
               <td [class.muted]="o.tecnicoUsuarioId == null">{{ tecnicoNombre(o) }}</td>
               <td><span class="badge" [class]="estadoTono[o.estado]">{{ estadoEtq[o.estado] }}</span></td>
+              <td class="w-acc">
+                <div class="acc">
+                  @if (o.estado === 'PENDIENTE' && puedeAsignar()) {
+                    <button class="btn mini" (click)="abrirAsignar(o)">Asignar</button>
+                  }
+                  @if (o.estado === 'ASIGNADA' && puedeOperar()) {
+                    <button class="btn mini" [disabled]="procesandoId() === o.id" (click)="iniciarOrden(o)">
+                      {{ procesandoId() === o.id ? '…' : 'Iniciar' }}
+                    </button>
+                  }
+                  @if (o.estado === 'EN_PROCESO' && puedeOperar()) {
+                    <button class="btn mini btn-primary" (click)="abrirCerrar(o)">Cerrar</button>
+                  }
+                </div>
+              </td>
             </tr>
           } @empty {
-            <tr><td colspan="7" class="empty">{{ mensajeTabla() }}</td></tr>
+            <tr><td colspan="8" class="empty">{{ mensajeTabla() }}</td></tr>
           }
         </tbody>
       </table>
     </div>
   </div>
 </div>
+
+<!-- ============ Modal: asignar técnico ============ -->
+@if (accion() === 'asignar') {
+  <div class="modal-backdrop" (click)="cerrarModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <h3>Asignar técnico · {{ ordenAccion()?.numero }}</h3>
+        <button class="modal-x" (click)="cerrarModal()" [disabled]="guardando()" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Técnico *</label>
+          @if (tecnicosCargando()) {
+            <span class="hint">Cargando plantilla…</span>
+          } @else {
+            <select [ngModel]="tecnicoSel()" (ngModelChange)="tecnicoSel.set($event)">
+              <option [ngValue]="null" disabled>Selecciona…</option>
+              @for (t of tecnicos(); track t.id) {
+                <option [ngValue]="t.id">{{ t.nombreCompleto }} · {{ t.cargo }}</option>
+              }
+            </select>
+          }
+        </div>
+        @if (errorAccion()) { <div class="modal-error">{{ errorAccion() }}</div> }
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" (click)="cerrarModal()" [disabled]="guardando()">Cancelar</button>
+        <button type="button" class="btn btn-primary" (click)="confirmarAsignar()" [disabled]="guardando()">
+          {{ guardando() ? 'Asignando…' : 'Asignar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ============ Modal: cerrar orden ============ -->
+@if (accion() === 'cerrar') {
+  <div class="modal-backdrop" (click)="cerrarModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <h3>Cerrar orden · {{ ordenAccion()?.numero }}</h3>
+        <button class="modal-x" (click)="cerrarModal()" [disabled]="guardando()" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Resultado del trabajo *</label>
+          <textarea rows="4" [ngModel]="resultado()" (ngModelChange)="resultado.set($event)"
+                    placeholder="Qué se hizo, materiales usados, observaciones…"></textarea>
+          <span class="hint">Obligatorio: queda en la auditoría de la orden.</span>
+        </div>
+        @if (errorAccion()) { <div class="modal-error">{{ errorAccion() }}</div> }
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" (click)="cerrarModal()" [disabled]="guardando()">Cancelar</button>
+        <button type="button" class="btn btn-primary" (click)="confirmarCerrar()" [disabled]="guardando()">
+          {{ guardando() ? 'Cerrando…' : 'Cerrar orden' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

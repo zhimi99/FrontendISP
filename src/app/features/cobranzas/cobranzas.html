@@ -5,6 +5,11 @@
       <h2>Cobranzas / Caja</h2>
       <p class="sub">Recaudaciones aplicadas a facturas y estado de los puntos de cobro.</p>
     </div>
+    @if (puedeRegistrarPago()) {
+      <button class="btn btn-primary" (click)="abrirPago()">
+        <app-icon name="cash" [size]="15" /> Nuevo pago
+      </button>
+    }
   </div>
 
   <!-- ============ Estado de las cajas ============ -->
@@ -186,3 +191,106 @@
     </div>
   </div>
 </div>
+
+<!-- ============ Modal: registrar pago ============ -->
+@if (modalAbierto()) {
+  <div class="modal-backdrop" (click)="cerrarPago()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <h3>Registrar pago</h3>
+        <button class="modal-x" (click)="cerrarPago()" [disabled]="guardando()" aria-label="Cerrar">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="field span2">
+            <label>Cliente *</label>
+            <select [ngModel]="clienteSel()" (ngModelChange)="onClienteSel($event)">
+              <option [ngValue]="null" disabled>Selecciona…</option>
+              @for (c of clientesOrdenados(); track c.id) {
+                <option [ngValue]="c.id">{{ c.nombre }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="field span2">
+            <label>Factura por cobrar *</label>
+            @if (facturasCargando()) {
+              <span class="hint">Cargando facturas…</span>
+            } @else if (clienteSel() == null) {
+              <span class="hint">Elige primero un cliente.</span>
+            } @else if (facturasCliente().length === 0) {
+              <span class="hint">Este cliente no tiene facturas por cobrar.</span>
+            } @else {
+              <select [ngModel]="facturaSel()" (ngModelChange)="onFacturaSel($event)">
+                <option [ngValue]="null" disabled>Selecciona…</option>
+                @for (f of facturasCliente(); track f.id) {
+                  <option [ngValue]="f.id">{{ f.numeroDocumento }} · saldo {{ moneda(f.saldoPendiente) }}</option>
+                }
+              </select>
+            }
+          </div>
+
+          <div class="field">
+            <label>Monto *</label>
+            <input type="number" min="0" step="0.01" [disabled]="!facturaActual()"
+                   [ngModel]="montoPago()" (ngModelChange)="montoPago.set($event)" />
+            @if (facturaActual()) {
+              <span class="hint">Saldo: {{ moneda(facturaActual()!.saldoPendiente) }}</span>
+            }
+          </div>
+
+          <div class="field">
+            <label>Forma de pago *</label>
+            <select [ngModel]="formaSel()" (ngModelChange)="formaSel.set($event)">
+              @for (fp of formasPago; track fp) { <option [value]="fp">{{ formaEtq[fp] }}</option> }
+            </select>
+          </div>
+
+          @if (esEfectivo()) {
+            <div class="field span2">
+              <label>Sesión de caja *</label>
+              @if (sesionesAbiertas().length === 0) {
+                <span class="hint hint-warn">No hay cajas abiertas: el efectivo necesita una.</span>
+              } @else {
+                <select [ngModel]="sesionSel()" (ngModelChange)="sesionSel.set($event)">
+                  @for (c of sesionesAbiertas(); track c.id) {
+                    <option [ngValue]="c.sesionAbierta!.id">{{ c.nombre }} ({{ c.codigo }})</option>
+                  }
+                </select>
+              }
+            </div>
+          } @else {
+            <div class="field">
+              <label>Referencia</label>
+              <input type="text" [ngModel]="referencia()" (ngModelChange)="referencia.set($event)"
+                     placeholder="N.º transferencia / depósito" />
+            </div>
+            <div class="field">
+              <label>Banco</label>
+              <input type="text" [ngModel]="banco()" (ngModelChange)="banco.set($event)"
+                     placeholder="Banco del Austro" />
+            </div>
+          }
+
+          <div class="field span2">
+            <label>Observación</label>
+            <input type="text" [ngModel]="observacion()" (ngModelChange)="observacion.set($event)"
+                   placeholder="Opcional" />
+          </div>
+        </div>
+
+        @if (errorPago()) {
+          <div class="modal-error">{{ errorPago() }}</div>
+        }
+      </div>
+
+      <div class="modal-foot">
+        <button type="button" class="btn" (click)="cerrarPago()" [disabled]="guardando()">Cancelar</button>
+        <button type="button" class="btn btn-primary" (click)="guardarPago()" [disabled]="guardando()">
+          {{ guardando() ? 'Registrando…' : 'Registrar pago' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

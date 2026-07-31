@@ -27,4 +27,21 @@ export class OperativoService {
     }
     return this.http.get<Orden[]>(`${environment.apiBase}/api/ordenes`, { params });
   }
+
+  /** POST /api/ordenes/{id}/asignar — asigna la orden a un técnico (PENDIENTE → ASIGNADA). */
+  asignar(id: number, tecnicoUsuarioId: number): Observable<Orden> {
+    return this.http.post<Orden>(`${environment.apiBase}/api/ordenes/${id}/asignar`, {
+      tecnicoUsuarioId,
+    });
+  }
+
+  /** POST /api/ordenes/{id}/iniciar — el técnico empieza el trabajo (ASIGNADA → EN_PROCESO). */
+  iniciar(id: number): Observable<Orden> {
+    return this.http.post<Orden>(`${environment.apiBase}/api/ordenes/${id}/iniciar`, {});
+  }
+
+  /** POST /api/ordenes/{id}/cerrar — cierra con resultado (EN_PROCESO → CERRADA). */
+  cerrar(id: number, resultado: string): Observable<Orden> {
+    return this.http.post<Orden>(`${environment.apiBase}/api/ordenes/${id}/cerrar`, { resultado });
+  }
 }

@@ -5,6 +5,11 @@
       <h2>Inventario</h2>
       <p class="sub">Stock de material por ubicación y equipos serializados (ONT, routers).</p>
     </div>
+    @if (puedeAltaEquipo()) {
+      <button class="btn btn-primary" (click)="abrirAlta()">
+        <app-icon name="box" [size]="15" /> Nuevo equipo
+      </button>
+    }
   </div>
 
   <!-- ============ Tarjetas de resumen ============ -->
@@ -179,3 +184,65 @@
     </div>
   }
 </div>
+
+<!-- ============ Modal: alta de equipo ============ -->
+@if (modalAbierto()) {
+  <div class="modal-backdrop" (click)="cerrarAlta()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <h3>Nuevo equipo</h3>
+        <button class="modal-x" (click)="cerrarAlta()" [disabled]="guardando()" aria-label="Cerrar">✕</button>
+      </div>
+
+      <form [formGroup]="formAlta" (ngSubmit)="guardarEquipo()">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="field">
+              <label>Tipo *</label>
+              <select formControlName="tipo">
+                @for (t of tiposEquipo; track t) { <option [value]="t">{{ tipoEquipoEtq[t] }}</option> }
+              </select>
+            </div>
+            <div class="field">
+              <label>Ubicación *</label>
+              <select formControlName="ubicacionId">
+                <option [ngValue]="null" disabled>Selecciona…</option>
+                @for (u of ubicaciones(); track u.id) { <option [ngValue]="u.id">{{ u.nombre }}</option> }
+              </select>
+            </div>
+            <div class="field">
+              <label>Marca *</label>
+              <input type="text" formControlName="marca" placeholder="Huawei" />
+            </div>
+            <div class="field">
+              <label>Modelo *</label>
+              <input type="text" formControlName="modelo" placeholder="EG8145V5" />
+            </div>
+            <div class="field span2">
+              <label>N.º de serie *</label>
+              <input type="text" formControlName="numeroSerie" placeholder="HWTC-2026-000123" />
+            </div>
+            <div class="field span2">
+              <label>MAC (opcional)</label>
+              <input type="text" formControlName="macAddress" placeholder="00:1a:2b:3c:4d:5e" />
+              @if (formAlta.controls.macAddress.touched && formAlta.controls.macAddress.errors?.['pattern']) {
+                <span class="field-error">Formato esperado: 00:1a:2b:3c:4d:5e</span>
+              }
+            </div>
+          </div>
+
+          @if (errorAlta()) {
+            <div class="modal-error">{{ errorAlta() }}</div>
+          }
+        </div>
+
+        <div class="modal-foot">
+          <button type="button" class="btn" (click)="cerrarAlta()" [disabled]="guardando()">Cancelar</button>
+          <button type="submit" class="btn btn-primary" [disabled]="guardando()">
+            {{ guardando() ? 'Guardando…' : 'Dar de alta' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

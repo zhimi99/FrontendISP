@@ -1,15 +1,18 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 
 import { IconComponent } from '../../shared/icon';
 import { InventarioService } from '../../core/services/inventario.service';
+import { AuthService } from '../../core/services/auth.service';
 import {
+  AltaEquipoRequest,
   Equipo,
   EstadoEquipo,
   Existencia,
   Material,
   MaterialBajoStock,
+  TipoEquipo,
   Ubicacion,
   ESTADO_EQUIPO_ETIQUETA,
   ESTADO_EQUIPO_TONO,
@@ -17,6 +20,9 @@ import {
   TIPO_UBICACION_ETIQUETA,
   UNIDAD_ETIQUETA,
 } from '../../core/models/inventario.model';
+
+/** Tipos de equipo disponibles en el selector del alta. */
+const TIPOS_EQUIPO: TipoEquipo[] = ['ROUTER', 'ONT', 'ONU', 'SWITCH', 'ANTENA', 'SPLITTER', 'OTRO'];
 
 /**
  * Inventario sobre datos reales (MS-INVENTARIO). Dos vistas: stock de material
@@ -26,12 +32,18 @@ import {
 @Component({
   selector: 'app-inventario',
   standalone: true,
-  imports: [FormsModule, IconComponent],
+  imports: [FormsModule, ReactiveFormsModule, IconComponent],
   templateUrl: './inventario.html',
   styleUrls: ['../clientes/clientes.scss', './inventario.scss'],
 })
 export class InventarioComponent {
   private readonly inventario = inject(InventarioService);
+  private readonly auth = inject(AuthService);
+  private readonly fb = inject(FormBuilder);
+
+  readonly tiposEquipo = TIPOS_EQUIPO;
+  /** Solo TECNICO/ADMIN pueden dar de alta equipos (POST /api/equipos). */
+  readonly puedeAltaEquipo = computed(() => this.auth.tieneRol('TECNICO', 'ADMINISTRADOR'));
 
   readonly tipoEquipoEtq = TIPO_EQUIPO_ETIQUETA;
   readonly estadoEquipoEtq = ESTADO_EQUIPO_ETIQUETA;
@@ -154,6 +166,74 @@ export class InventarioComponent {
 
   cantidad(n: number): string {
     return Number(n ?? 0).toLocaleString('es-EC', { maximumFractionDigits: 2 });
+  }
+
+  /* ---------- Alta de equipo (modal) ---------- */
+  readonly modalAbierto = signal(false);
+  readonly guardando = signal(false);
+  readonly errorAlta = signal<string | null>(null);
+
+  readonly formAlta = this.fb.nonNullable.group({
+    tipo: ['ONT' as TipoEquipo, Validators.required],
+    marca: ['', [Validators.required, Validators.maxLength(60)]],
+    modelo: ['', [Validators.required, Validators.maxLength(60)]],
+    numeroSerie: ['', [Validators.required, Validators.maxLength(80)]],
+    macAddress: ['', Validators.pattern(/^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/)],
+    ubicacionId: [null as number | null, Validators.required],
+  });
+
+  abrirAlta() {
+    this.errorAlta.set(null);
+    this.formAlta.reset();
+    // Preselecciona una bodega para que el caso común sea un clic menos.
+    const bodega = this.ubicaciones().find((u) => u.tipo === 'BODEGA') ?? this.ubicaciones()[0];
+    if (bodega) this.formAlta.patchValue({ ubicacionId: bodega.id });
+    this.modalAbierto.set(true);
+  }
+
+  cerrarAlta() {
+    if (this.guardando()) return;
+    this.modalAbierto.set(false);
+  }
+
+  guardarEquipo() {
+    if (this.formAlta.invalid) {
+      this.formAlta.markAllAsTouched();
+      return;
+    }
+    const v = this.formAlta.getRawValue();
+    const req: AltaEquipoRequest = {
+      tipo: v.tipo,
+      marca: v.marca.trim(),
+      modelo: v.modelo.trim(),
+      numeroSerie: v.numeroSerie.trim(),
+      macAddress: v.macAddress.trim() ? v.macAddress.trim() : null,
+      ubicacionId: v.ubicacionId!,
+    };
+    this.guardando.set(true);
+    this.errorAlta.set(null);
+    this.inventario.crearEquipo(req).subscribe({
+      next: () => {
+        this.guardando.set(false);
+        this.modalAbierto.set(false);
+        // Lo recién creado queda DISPONIBLE: salta a esa vista para verlo.
+        this.tabActiva.set(1);
+        this.cambiarEstado('DISPONIBLE');
+      },
+      error: (e) => {
+        this.guardando.set(false);
+        this.errorAlta.set(this.mensajeAlta(e));
+      },
+    });
+  }
+
+  private mensajeAlta(e: { status?: number }): string {
+    // El backend devuelve 422 (regla de negocio) para serie/MAC duplicada; 409 por si acaso.
+    if (e.status === 409 || e.status === 422) return 'Ya existe un equipo con ese número de serie o esa MAC.';
+    if (e.status === 400) return 'Revisa los datos: algún campo es inválido (¿el formato de la MAC?).';
+    if (e.status === 403) return 'Tu rol no tiene permiso para dar de alta equipos.';
+    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
+    return 'No se pudo dar de alta el equipo.';
   }
 
   private mensajeDeError(e: { status?: number }): string {

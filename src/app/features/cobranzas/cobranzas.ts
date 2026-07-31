@@ -5,6 +5,10 @@ import { catchError, forkJoin, of } from 'rxjs';
 import { IconComponent } from '../../shared/icon';
 import { FinanzasService } from '../../core/services/finanzas.service';
 import { ClientesService } from '../../core/services/clientes.service';
+import { FacturacionService } from '../../core/services/facturacion.service';
+import { AuthService } from '../../core/services/auth.service';
+import { ClienteListado } from '../../core/models/contratos.model';
+import { FacturaVista } from '../../core/models/facturacion.model';
 import {
   CajaEstado,
   EstadoPago,
@@ -13,7 +17,11 @@ import {
   ESTADO_PAGO_FIN_ETIQUETA,
   ESTADO_PAGO_FIN_TONO,
   PagoCobranzaVista,
+  RegistrarPagoRequest,
 } from '../../core/models/finanzas.model';
+
+/** Formas de pago para el selector del alta. */
+const FORMAS_PAGO: FormaPago[] = ['EFECTIVO', 'TRANSFERENCIA', 'DEPOSITO', 'TARJETA', 'CHEQUE', 'PASARELA'];
 
 /**
  * Cobranzas / Caja sobre datos reales (GET /api/pagos + /api/cajas). El nombre del
@@ -30,13 +38,19 @@ import {
 export class CobranzasComponent {
   private readonly finanzas = inject(FinanzasService);
   private readonly clientesService = inject(ClientesService);
+  private readonly facturacion = inject(FacturacionService);
+  private readonly auth = inject(AuthService);
 
   readonly formaEtq = FORMA_PAGO_ETIQUETA;
   readonly estadoEtq = ESTADO_PAGO_FIN_ETIQUETA;
   readonly estadoTono = ESTADO_PAGO_FIN_TONO;
+  readonly formasPago = FORMAS_PAGO;
+  /** Solo COBRANZAS/ADMIN pueden registrar pagos (POST /api/pagos). */
+  readonly puedeRegistrarPago = computed(() => this.auth.tieneRol('COBRANZAS', 'ADMINISTRADOR'));
 
   private readonly pagos = signal<PagoCobranzaVista[]>([]);
   readonly cajas = signal<CajaEstado[]>([]);
+  private readonly clientesLista = signal<ClienteListado[]>([]);
   readonly cargando = signal(true);
   readonly error = signal<string | null>(null);
 
@@ -48,14 +62,20 @@ export class CobranzasComponent {
   readonly pagina = signal(1);
 
   constructor() {
+    this.cargar();
+  }
+
+  private cargar() {
+    this.cargando.set(true);
     forkJoin({
       pagos: this.finanzas.listarPagos(),
       cajas: this.finanzas.listarCajas(),
-      // La lista de clientes solo resuelve el nombre; si falla, se degrada a "Cliente #id"
-      // en vez de tumbar toda la pantalla.
+      // La lista de clientes resuelve el nombre y alimenta el selector del alta; si
+      // falla, se degrada a "Cliente #id" en vez de tumbar toda la pantalla.
       clientes: this.clientesService.listar().pipe(catchError(() => of([]))),
     }).subscribe({
       next: ({ pagos, cajas, clientes }) => {
+        this.clientesLista.set(clientes);
         const nombre = new Map(clientes.map((c) => [c.id, c.nombre]));
         this.pagos.set(
           pagos.map((p) => ({
@@ -72,6 +92,15 @@ export class CobranzasComponent {
       },
     });
   }
+
+  /** Clientes ordenados por nombre para el selector del alta de pago. */
+  readonly clientesOrdenados = computed(() =>
+    [...this.clientesLista()].sort((a, b) => a.nombre.localeCompare(b.nombre)),
+  );
+  /** Sesiones de caja abiertas, para cobros en efectivo. */
+  readonly sesionesAbiertas = computed(() =>
+    this.cajas().filter((c) => c.sesionAbierta),
+  );
 
   /* ---------- Tarjetas de resumen ---------- */
   get totalRecaudado() {
@@ -178,5 +207,133 @@ export class CobranzasComponent {
     if (e.status === 403) return 'Tu rol no tiene permiso para ver cobranzas.';
     if (e.status) return `El gateway respondió ${e.status} al cargar cobranzas.`;
     return 'Error inesperado cargando las cobranzas.';
+  }
+
+  /* ---------- Registrar pago (modal) ---------- */
+  readonly modalAbierto = signal(false);
+  readonly guardando = signal(false);
+  readonly errorPago = signal<string | null>(null);
+
+  readonly clienteSel = signal<number | null>(null);
+  readonly facturasCliente = signal<FacturaVista[]>([]);
+  readonly facturasCargando = signal(false);
+  readonly facturaSel = signal<number | null>(null);
+  readonly formaSel = signal<FormaPago>('EFECTIVO');
+  readonly sesionSel = signal<number | null>(null);
+  readonly montoPago = signal<number | null>(null);
+  readonly referencia = signal('');
+  readonly banco = signal('');
+  readonly observacion = signal('');
+
+  readonly esEfectivo = computed(() => this.formaSel() === 'EFECTIVO');
+  readonly facturaActual = computed(
+    () => this.facturasCliente().find((f) => f.id === this.facturaSel()) ?? null,
+  );
+
+  abrirPago() {
+    this.errorPago.set(null);
+    this.clienteSel.set(null);
+    this.facturasCliente.set([]);
+    this.facturaSel.set(null);
+    this.formaSel.set('EFECTIVO');
+    this.sesionSel.set(this.sesionesAbiertas()[0]?.sesionAbierta?.id ?? null);
+    this.montoPago.set(null);
+    this.referencia.set('');
+    this.banco.set('');
+    this.observacion.set('');
+    this.modalAbierto.set(true);
+  }
+
+  cerrarPago() {
+    if (this.guardando()) return;
+    this.modalAbierto.set(false);
+  }
+
+  onClienteSel(id: number | null) {
+    this.clienteSel.set(id);
+    this.facturaSel.set(null);
+    this.montoPago.set(null);
+    this.facturasCliente.set([]);
+    if (id == null) return;
+    this.facturasCargando.set(true);
+    this.facturacion.listar({ clienteId: id }).subscribe({
+      next: (lista) => {
+        this.facturasCliente.set(
+          lista.filter(
+            (f) =>
+              (f.estadoPago === 'PENDIENTE' || f.estadoPago === 'PARCIAL') &&
+              (f.saldoPendiente ?? 0) > 0,
+          ),
+        );
+        this.facturasCargando.set(false);
+      },
+      error: () => {
+        this.facturasCliente.set([]);
+        this.facturasCargando.set(false);
+      },
+    });
+  }
+
+  onFacturaSel(id: number | null) {
+    this.facturaSel.set(id);
+    const f = this.facturasCliente().find((x) => x.id === id);
+    this.montoPago.set(f ? f.saldoPendiente : null);
+  }
+
+  guardarPago() {
+    const err = this.validarPago();
+    if (err) {
+      this.errorPago.set(err);
+      return;
+    }
+    const f = this.facturaActual()!;
+    const monto = this.montoPago()!;
+    const req: RegistrarPagoRequest = {
+      clienteId: this.clienteSel()!,
+      contratoId: f.contratoId ?? null,
+      monto,
+      formaPago: this.formaSel(),
+      referencia: this.referencia().trim() || null,
+      banco: this.banco().trim() || null,
+      sesionCajaId: this.esEfectivo() ? this.sesionSel() : null,
+      observacion: this.observacion().trim() || null,
+      aplicaciones: [{ facturaId: f.id, facturaNumero: f.numeroDocumento, montoAplicado: monto }],
+    };
+    this.guardando.set(true);
+    this.errorPago.set(null);
+    this.finanzas.registrarPago(req).subscribe({
+      next: () => {
+        this.guardando.set(false);
+        this.modalAbierto.set(false);
+        this.cargar(); // refresca pagos, cajas y totales
+      },
+      error: (e) => {
+        this.guardando.set(false);
+        this.errorPago.set(this.mensajePago(e));
+      },
+    });
+  }
+
+  private validarPago(): string | null {
+    if (this.clienteSel() == null) return 'Elige un cliente.';
+    const f = this.facturaActual();
+    if (!f) return 'Elige una factura por cobrar.';
+    const m = this.montoPago();
+    if (m == null || m <= 0) return 'El monto debe ser mayor que cero.';
+    if (m > (f.saldoPendiente ?? 0)) {
+      return `El monto no puede superar el saldo (${this.moneda(f.saldoPendiente)}).`;
+    }
+    if (this.esEfectivo() && this.sesionSel() == null) {
+      return 'El efectivo exige una sesión de caja abierta.';
+    }
+    return null;
+  }
+
+  private mensajePago(e: { status?: number }): string {
+    if (e.status === 422) return 'La operación no cumple una regla de negocio (revisa el monto o la caja).';
+    if (e.status === 400) return 'Revisa los datos del pago: hay algún campo inválido.';
+    if (e.status === 403) return 'Tu rol no tiene permiso para registrar pagos.';
+    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
+    return 'No se pudo registrar el pago.';
   }
 }

@@ -3,7 +3,13 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
-import { CajaEstado, EstadoPago, PagoCobranza } from '../models/finanzas.model';
+import {
+  CajaEstado,
+  EstadoPago,
+  PagoCobranza,
+  PagoRegistrado,
+  RegistrarPagoRequest,
+} from '../models/finanzas.model';
 
 /** Consultas de cobranzas y cajas (MS-FINANZAS), a través del gateway. */
 @Injectable({ providedIn: 'root' })
@@ -31,5 +37,10 @@ export class FinanzasService {
   /** GET /api/cajas — cajas con el estado de su jornada abierta. */
   listarCajas(): Observable<CajaEstado[]> {
     return this.http.get<CajaEstado[]>(`${environment.apiBase}/api/cajas`);
+  }
+
+  /** POST /api/pagos — registra una recaudación y la aplica a facturas. */
+  registrarPago(req: RegistrarPagoRequest): Observable<PagoRegistrado> {
+    return this.http.post<PagoRegistrado>(`${environment.apiBase}/api/pagos`, req);
   }
 }

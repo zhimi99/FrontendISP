@@ -90,6 +90,16 @@ export interface Movimiento {
   fecha: string;
 }
 
+/** Cuerpo del alta de equipo (`POST /api/equipos`). */
+export interface AltaEquipoRequest {
+  tipo: TipoEquipo;
+  marca: string;
+  modelo: string;
+  numeroSerie: string;
+  macAddress: string | null;
+  ubicacionId: number;
+}
+
 export const UNIDAD_ETIQUETA: Record<UnidadMedida, string> = {
   UNIDAD: 'unidad(es)',
   METRO: 'metro(s)',
