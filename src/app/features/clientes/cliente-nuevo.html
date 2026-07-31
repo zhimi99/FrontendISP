@@ -1,0 +1,246 @@
+<div class="page">
+  <!-- ============ Barra de migas + acciones ============ -->
+  <div class="crumb-bar">
+    <div>
+      <nav class="crumbs">
+        <a routerLink="/clientes">Inicio</a>
+        <span class="sep">/</span>
+        <a routerLink="/clientes">Clientes</a>
+        <span class="sep">/</span>
+        <span class="cur">Nuevo Cliente</span>
+      </nav>
+      <h2 class="title">Nuevo Cliente</h2>
+      <p class="subtitle">Registra un cliente y su primer servicio contratado.</p>
+    </div>
+    <div class="crumb-actions">
+      <a class="btn" routerLink="/clientes">Cancelar</a>
+      <button class="btn btn-primary" (click)="guardar()" [disabled]="enviando()">
+        <app-icon name="plus" [size]="15" /> {{ enviando() ? 'Guardando…' : 'Guardar cliente' }}
+      </button>
+    </div>
+  </div>
+
+  @if (guardado()) {
+    <!-- ============ Confirmación del alta ============ -->
+    <div class="card done">
+      <div class="done-ico"><app-icon name="dashboard" [size]="30" /></div>
+      <h3>Cliente registrado</h3>
+      <p>
+        <strong>{{ nombrePreview() }}</strong> se creó con el código
+        <span class="mono strong">{{ codigoNuevo() }}</span> en estado
+        <span class="badge info">Pendiente</span>.
+      </p>
+      <p class="muted fs-13">
+        El contrato queda pendiente hasta que se complete la orden de instalación, que lo activa.
+      </p>
+      <div class="done-actions">
+        <button class="btn" (click)="crearOtro()"><app-icon name="plus" [size]="15" /> Crear otro</button>
+        <button class="btn" (click)="irALista()">Ir a la lista</button>
+        <button class="btn btn-primary" (click)="irADetalle()">Ver ficha</button>
+      </div>
+    </div>
+  } @else {
+    @if (errorAlta()) {
+      <div class="card alta-error" style="display:flex;gap:8px;align-items:center;color:#b91c1c;">
+        <app-icon name="bell" [size]="18" /> {{ errorAlta() }}
+      </div>
+    }
+    <form class="new-grid" [formGroup]="form" (ngSubmit)="guardar()">
+      <!-- ============ Columna del formulario ============ -->
+      <div class="form-col">
+        <!-- Tipo de cliente -->
+        <section class="card">
+          <h3 class="card-title">Tipo de cliente</h3>
+          <div class="card-in">
+            <div class="type-toggle">
+              <button
+                type="button"
+                class="type-opt"
+                [class.active]="!esEmpresa()"
+                (click)="setTipo('PERSONA')"
+              >
+                <app-icon name="users" [size]="20" />
+                <span>
+                  <span class="type-name">Persona</span>
+                  <span class="type-sub">Cliente natural (cédula / pasaporte)</span>
+                </span>
+              </button>
+              <button
+                type="button"
+                class="type-opt"
+                [class.active]="esEmpresa()"
+                (click)="setTipo('EMPRESA')"
+              >
+                <app-icon name="box" [size]="20" />
+                <span>
+                  <span class="type-name">Empresa</span>
+                  <span class="type-sub">Persona jurídica (RUC)</span>
+                </span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Identificación -->
+        <section class="card">
+          <h3 class="card-title">Datos de identificación</h3>
+          <div class="card-in grid-2">
+            <div class="field">
+              <label>Tipo de documento</label>
+              <select class="select" formControlName="tipoId" (change)="onTipoIdChange($any($event.target).value)">
+                @if (!esEmpresa()) {
+                  <option value="CEDULA">Cédula</option>
+                  <option value="PASAPORTE">Pasaporte</option>
+                } @else {
+                  <option value="RUC">RUC</option>
+                }
+              </select>
+            </div>
+
+            <div class="field" [class.has-error]="err('identificacion')">
+              <label>{{ tipoIdLabel() }} <span class="req">*</span></label>
+              <input class="input" formControlName="identificacion" [placeholder]="idHelp()" />
+              @if (err('identificacion')) {
+                <span class="err-msg">Ingresa un número válido ({{ idHelp() }}).</span>
+              } @else {
+                <span class="hint">{{ idHelp() }}</span>
+              }
+            </div>
+
+            @if (!esEmpresa()) {
+              <div class="field" [class.has-error]="err('nombres')">
+                <label>Nombres <span class="req">*</span></label>
+                <input class="input" formControlName="nombres" placeholder="Ej. Juan Carlos" />
+                @if (err('nombres')) { <span class="err-msg">Los nombres son obligatorios.</span> }
+              </div>
+              <div class="field" [class.has-error]="err('apellidos')">
+                <label>Apellidos <span class="req">*</span></label>
+                <input class="input" formControlName="apellidos" placeholder="Ej. Peralta Zhingre" />
+                @if (err('apellidos')) { <span class="err-msg">Los apellidos son obligatorios.</span> }
+              </div>
+            } @else {
+              <div class="field span-2" [class.has-error]="err('razonSocial')">
+                <label>Razón social <span class="req">*</span></label>
+                <input class="input" formControlName="razonSocial" placeholder="Ej. Joyería Filigrana Cía. Ltda." />
+                @if (err('razonSocial')) { <span class="err-msg">La razón social es obligatoria.</span> }
+              </div>
+            }
+          </div>
+        </section>
+
+        <!-- Contacto -->
+        <section class="card">
+          <h3 class="card-title">Contacto</h3>
+          <div class="card-in grid-2">
+            <div class="field" [class.has-error]="err('telefono')">
+              <label>Teléfono <span class="req">*</span></label>
+              <input class="input" formControlName="telefono" placeholder="Ej. 099 745 1236" />
+              @if (err('telefono')) { <span class="err-msg">Ingresa un teléfono válido.</span> }
+            </div>
+            <div class="field">
+              <label>WhatsApp</label>
+              <input class="input" formControlName="whatsapp" placeholder="Ej. 099 745 1236" />
+            </div>
+            <div class="field span-2" [class.has-error]="err('email')">
+              <label>Email</label>
+              <input class="input" formControlName="email" placeholder="cliente@correo.com" />
+              @if (err('email')) { <span class="err-msg">El correo no tiene un formato válido.</span> }
+            </div>
+          </div>
+        </section>
+
+        <!-- Ubicación -->
+        <section class="card">
+          <h3 class="card-title">Ubicación del servicio</h3>
+          <div class="card-in grid-2">
+            <div class="field span-2" [class.has-error]="err('direccion')">
+              <label>Dirección <span class="req">*</span></label>
+              <input class="input" formControlName="direccion" placeholder="Calle, número y sector" />
+              @if (err('direccion')) { <span class="err-msg">La dirección es obligatoria.</span> }
+            </div>
+            <div class="field">
+              <label>Referencia</label>
+              <input class="input" formControlName="referencia" placeholder="Ej. Casa de dos pisos, portón verde" />
+            </div>
+            <div class="field">
+              <label>Latitud</label>
+              <input class="input" formControlName="latitud" placeholder="-2.92361" />
+            </div>
+            <div class="field">
+              <label>Longitud</label>
+              <input class="input" formControlName="longitud" placeholder="-78.78028" />
+            </div>
+          </div>
+        </section>
+
+        <!-- Servicio -->
+        <section class="card">
+          <h3 class="card-title">Servicio contratado</h3>
+          <div class="card-in grid-2">
+            <div class="field" [class.has-error]="err('plan')">
+              <label>Plan <span class="req">*</span></label>
+              <select class="select" formControlName="plan" (change)="onPlanChange()" [class.placeholder]="!form.controls.plan.value">
+                <option value="" disabled>Selecciona un plan</option>
+                @for (p of planes(); track p.codigo) {
+                  <option [value]="p.codigo">{{ p.nombre }} — {{ p.velocidad }} — {{ '$' + p.precioMensual.toFixed(2) }}</option>
+                }
+              </select>
+              @if (err('plan')) { <span class="err-msg">Selecciona un plan.</span> }
+            </div>
+            <div class="field">
+              <label>Día de corte</label>
+              <select class="select" formControlName="diaCorte">
+                @for (dc of diasCorte; track dc) { <option [value]="dc">Día {{ dc }}</option> }
+              </select>
+              <span class="hint">Día del mes en que se emite la factura.</span>
+            </div>
+          </div>
+        </section>
+
+        <div class="form-actions">
+          <a class="btn" routerLink="/clientes">Cancelar</a>
+          <button type="submit" class="btn btn-primary" [disabled]="enviando()">
+            <app-icon name="plus" [size]="15" /> {{ enviando() ? 'Guardando…' : 'Guardar cliente' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- ============ Vista previa en vivo ============ -->
+      <aside class="preview-col">
+        <div class="card preview">
+          <h3 class="card-title">Vista previa</h3>
+
+          <div class="pv-id">
+            <div class="avatar-xl" [class.empresa]="esEmpresa()">{{ iniciales() }}</div>
+            <div class="pv-nombre" [class.placeholder]="nombrePreview().endsWith('…')">{{ nombrePreview() }}</div>
+            <span class="badge info">Pendiente</span>
+          </div>
+
+          <dl class="pv-datos">
+            <div><dt>Código</dt><dd class="mono muted">{{ codigoNuevo() || 'Se asigna al guardar' }}</dd></div>
+            <div><dt>{{ tipoIdLabel() }}</dt><dd class="mono">{{ form.controls.identificacion.value || '—' }}</dd></div>
+            <div><dt>Teléfono</dt><dd>{{ form.controls.telefono.value || '—' }}</dd></div>
+            <div><dt>Email</dt><dd class="wrap">{{ form.controls.email.value || '—' }}</dd></div>
+            <div class="split"><dt>Dirección</dt><dd>{{ form.controls.direccion.value || '—' }}</dd></div>
+            <div><dt>Grupo</dt><dd>{{ grupo() }}</dd></div>
+          </dl>
+
+          <div class="pv-servicio">
+            <div class="pv-servicio-cap">Servicio a contratar</div>
+            @if (planSel(); as p) {
+              <div class="pv-plan">{{ p.nombre }}</div>
+              <div class="pv-vel">{{ p.velocidad }} · Corte día {{ form.controls.diaCorte.value }}</div>
+              <div class="pv-totales">
+                <div><span>Mensual</span><b>{{ '$' + totales().precio.toFixed(2) }}</b></div>
+                <div><span>IVA 15%</span><b>{{ '$' + totales().iva.toFixed(2) }}</b></div>
+                <div class="tot"><span>Total</span><b>{{ '$' + totales().total.toFixed(2) }}</b></div>
+              </div>
+            } @else {
+              <div class="pv-empty">Selecciona un plan para ver el valor.</div>
+            }
+          </div>
+        </div>
+      </aside>
+    </form>
+  }
+</div>

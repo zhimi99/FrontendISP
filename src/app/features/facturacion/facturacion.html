@@ -1,0 +1,153 @@
+<div class="page">
+  <!-- ============ Encabezado ============ -->
+  <div class="page-head">
+    <div>
+      <h2>Facturación</h2>
+      <p class="sub">Comprobantes electrónicos emitidos y su estado de cobro.</p>
+    </div>
+  </div>
+
+  <!-- ============ Filtros ============ -->
+  <div class="filters card">
+    <div class="field grow">
+      <label>Buscar</label>
+      <div class="input-ico">
+        <app-icon name="search" [size]="15" />
+        <input
+          type="text"
+          placeholder="N.º de documento o cliente…"
+          [ngModel]="q()"
+          (ngModelChange)="q.set($event); onFiltroCambio()"
+        />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Estado de pago</label>
+      <select [ngModel]="estadoPago()" (ngModelChange)="estadoPago.set($event); onFiltroCambio()">
+        <option value="">Todos</option>
+        <option value="PENDIENTE">Pendiente</option>
+        <option value="PARCIAL">Parcial</option>
+        <option value="PAGADA">Pagada</option>
+        <option value="ANULADA">Anulada</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Estado SRI</label>
+      <select [ngModel]="estadoSri()" (ngModelChange)="estadoSri.set($event); onFiltroCambio()">
+        <option value="">Todos</option>
+        <option value="GENERADA">Generada</option>
+        <option value="AUTORIZADA">Autorizada</option>
+        <option value="NO_AUTORIZADA">No autorizada</option>
+        <option value="ANULADA">Anulada</option>
+      </select>
+    </div>
+
+    <div class="filter-btns">
+      <button class="btn" (click)="limpiar()"><app-icon name="refresh" [size]="15" /> Limpiar</button>
+    </div>
+  </div>
+
+  <!-- ============ Tarjetas de estado ============ -->
+  <div class="stats">
+    <div class="stat">
+      <span class="stat-ico slate"><app-icon name="invoice" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">Total Facturas</span>
+        <span class="stat-value">{{ total }}</span>
+        <span class="stat-foot">100% del total</span>
+      </div>
+    </div>
+    <div class="stat">
+      <span class="stat-ico ok"><app-icon name="invoice" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">Autorizadas (SRI)</span>
+        <span class="stat-value">{{ autorizadas }}</span>
+        <span class="stat-foot">{{ pct(autorizadas) }}</span>
+      </div>
+    </div>
+    <div class="stat">
+      <span class="stat-ico warn"><app-icon name="invoice" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">Por cobrar</span>
+        <span class="stat-value">{{ porCobrar }}</span>
+        <span class="stat-foot">{{ pct(porCobrar) }}</span>
+      </div>
+    </div>
+    <div class="stat">
+      <span class="stat-ico danger"><app-icon name="cash" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">Saldo por cobrar</span>
+        <span class="stat-value">{{ moneda(saldoTotal) }}</span>
+        <span class="stat-foot">Suma de saldos pendientes</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Tabla ============ -->
+  <div class="card table-card">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>N.º Documento</th>
+            <th>Cliente</th>
+            <th>Emisión</th>
+            <th>Vencimiento</th>
+            <th class="right">Total</th>
+            <th class="right">Saldo</th>
+            <th>Pago</th>
+            <th>SRI</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (f of pagados(); track f.id) {
+            <tr>
+              <td class="mono muted">{{ f.numeroDocumento }}</td>
+              <td class="strong">{{ f.clienteRazonSocial }}</td>
+              <td class="muted">{{ fechaCorta(f.fechaEmision) }}</td>
+              <td class="muted">{{ fechaCorta(f.fechaVencimiento) }}</td>
+              <td class="right mono">{{ moneda(f.total) }}</td>
+              <td class="right mono">{{ moneda(f.saldoPendiente) }}</td>
+              <td><span class="badge" [class]="pagoTono[f.estadoPago]">{{ pagoEtq[f.estadoPago] }}</span></td>
+              <td><span class="badge" [class]="sriTono[f.estadoSri]">{{ sriEtq[f.estadoSri] }}</span></td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="8" class="empty">{{ mensajeTabla() }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ============ Paginación ============ -->
+    <div class="pager">
+      <span class="pager-info">
+        Mostrando {{ rangoDesde() }} a {{ rangoHasta() }} de {{ filtrados().length }} facturas
+      </span>
+
+      <div class="pager-ctrl">
+        <label class="rows">
+          Filas por página:
+          <select [value]="filasPorPagina()" (change)="cambiarFilas($any($event.target).value)">
+            <option [value]="10">10</option>
+            <option [value]="20">20</option>
+            <option [value]="50">50</option>
+          </select>
+        </label>
+
+        <div class="pages">
+          <button class="pg" [disabled]="paginaActual() === 1" (click)="irA(1)">«</button>
+          <button class="pg" [disabled]="paginaActual() === 1" (click)="irA(paginaActual() - 1)">‹</button>
+          @for (n of numerosPagina(); track n) {
+            <button class="pg" [class.active]="n === paginaActual()" (click)="irA(n)">{{ n }}</button>
+          }
+          <button class="pg" [disabled]="paginaActual() === totalPaginas()" (click)="irA(paginaActual() + 1)">›</button>
+          <button class="pg" [disabled]="paginaActual() === totalPaginas()" (click)="irA(totalPaginas())">»</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

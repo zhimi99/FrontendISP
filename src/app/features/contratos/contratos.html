@@ -1,0 +1,171 @@
+<div class="page">
+  <!-- ============ Encabezado ============ -->
+  <div class="page-head">
+    <div>
+      <h2>Contratos</h2>
+      <p class="sub">Servicios contratados y su estado en la red.</p>
+    </div>
+  </div>
+
+  <!-- ============ Filtros ============ -->
+  <div class="filters card">
+    <div class="field grow">
+      <label>Buscar</label>
+      <div class="input-ico">
+        <app-icon name="search" [size]="15" />
+        <input
+          type="text"
+          placeholder="Contrato, cliente, cédula, usuario PPPoE…"
+          [ngModel]="q()"
+          (ngModelChange)="q.set($event); onFiltroCambio()"
+        />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Estado</label>
+      <select [ngModel]="estado()" (ngModelChange)="estado.set($event); onFiltroCambio()">
+        <option value="">Todos</option>
+        <option value="PENDIENTE">Pendiente</option>
+        <option value="ACTIVO">Activo</option>
+        <option value="SUSPENDIDO">Suspendido</option>
+        <option value="CORTADO">Cortado</option>
+        <option value="RETIRADO">Retirado</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Plan</label>
+      <select [ngModel]="plan()" (ngModelChange)="plan.set($event); onFiltroCambio()">
+        <option value="">Todos</option>
+        @for (p of planes(); track p) {
+          <option [value]="p">{{ p }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="filter-btns">
+      <button class="btn" (click)="limpiar()"><app-icon name="refresh" [size]="15" /> Limpiar</button>
+    </div>
+  </div>
+
+  <!-- ============ Tarjetas de estado ============ -->
+  <div class="stats">
+    <div class="stat">
+      <span class="stat-ico slate"><app-icon name="contract" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">Total Contratos</span>
+        <span class="stat-value">{{ total }}</span>
+        <span class="stat-foot">100% del total</span>
+      </div>
+    </div>
+    <div class="stat">
+      <span class="stat-ico ok"><app-icon name="contract" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">Activos</span>
+        <span class="stat-value">{{ activos }}</span>
+        <span class="stat-foot">{{ pct(activos) }}</span>
+      </div>
+    </div>
+    <div class="stat">
+      <span class="stat-ico warn"><app-icon name="contract" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">Suspendidos</span>
+        <span class="stat-value">{{ suspendidos }}</span>
+        <span class="stat-foot">{{ pct(suspendidos) }}</span>
+      </div>
+    </div>
+    <div class="stat">
+      <span class="stat-ico danger"><app-icon name="contract" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">Cortados</span>
+        <span class="stat-value">{{ cortados }}</span>
+        <span class="stat-foot">{{ pct(cortados) }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Tabla ============ -->
+  <div class="card table-card">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Contrato</th>
+            <th>Cliente</th>
+            <th>Plan / Velocidad</th>
+            <th>Estado</th>
+            <th>Día corte</th>
+            <th>Usuario PPPoE</th>
+            <th>Alta</th>
+            <th class="w-acc">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of pagados(); track c.codigo) {
+            <tr>
+              <td class="mono muted">{{ c.codigo }}</td>
+              <td>
+                <div class="cell-main">
+                  <a class="name-link" [routerLink]="['/clientes', c.clienteCodigo]">{{ c.clienteNombre }}</a>
+                </div>
+                <div class="cell-sub mono">{{ c.clienteIdentificacion }}</div>
+              </td>
+              <td>
+                <div class="cell-main">{{ c.plan }}</div>
+                <div class="cell-sub">{{ c.velocidad }}</div>
+              </td>
+              <td>
+                <span class="badge" [class]="estadosMap[c.estadoServicio].tono">
+                  {{ estadosMap[c.estadoServicio].texto }}
+                </span>
+              </td>
+              <td class="muted">{{ c.diaCorte }}</td>
+              <td class="mono">{{ c.pppoeUsuario ?? '—' }}</td>
+              <td class="muted">{{ fechaCorta(c.fechaAlta) }}</td>
+              <td class="w-acc">
+                <div class="acc">
+                  <a class="acc-btn" title="Ver cliente" [routerLink]="['/clientes', c.clienteCodigo]">
+                    <app-icon name="eye" [size]="16" />
+                  </a>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="8" class="empty">{{ mensajeTabla() }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ============ Paginación ============ -->
+    <div class="pager">
+      <span class="pager-info">
+        Mostrando {{ rangoDesde() }} a {{ rangoHasta() }} de {{ filtrados().length }} contratos
+      </span>
+
+      <div class="pager-ctrl">
+        <label class="rows">
+          Filas por página:
+          <select [value]="filasPorPagina()" (change)="cambiarFilas($any($event.target).value)">
+            <option [value]="10">10</option>
+            <option [value]="20">20</option>
+            <option [value]="50">50</option>
+          </select>
+        </label>
+
+        <div class="pages">
+          <button class="pg" [disabled]="paginaActual() === 1" (click)="irA(1)">«</button>
+          <button class="pg" [disabled]="paginaActual() === 1" (click)="irA(paginaActual() - 1)">‹</button>
+          @for (n of numerosPagina(); track n) {
+            <button class="pg" [class.active]="n === paginaActual()" (click)="irA(n)">{{ n }}</button>
+          }
+          <button class="pg" [disabled]="paginaActual() === totalPaginas()" (click)="irA(paginaActual() + 1)">›</button>
+          <button class="pg" [disabled]="paginaActual() === totalPaginas()" (click)="irA(totalPaginas())">»</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

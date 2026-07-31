@@ -1,0 +1,205 @@
+@if (d(); as v) {
+  <div class="page">
+    <!-- ============ Barra de migas + acciones ============ -->
+    <div class="crumb-bar">
+      <nav class="crumbs">
+        <a routerLink="/clientes">Inicio</a>
+        <span class="sep">/</span>
+        <a routerLink="/clientes">Clientes</a>
+        <span class="sep">/</span>
+        <span class="cur">Detalle de cliente</span>
+      </nav>
+      <div class="crumb-actions">
+        <a class="btn" routerLink="/clientes"><app-icon name="chevron" [size]="15" /> Volver</a>
+        <button class="btn"><app-icon name="pencil" [size]="15" /> Editar</button>
+        <button class="btn btn-dark">Acciones <app-icon name="chevron" [size]="15" /></button>
+      </div>
+    </div>
+
+    <!-- ============ Cuerpo (ficha + contenido) ============ -->
+    <div class="detail-top">
+      <!-- Ficha del cliente -->
+      <aside class="card cliente-card">
+        <h3 class="card-title">Información del Cliente</h3>
+
+        <div class="cliente-id">
+          <div class="avatar-xl" [class.empresa]="v.base.esEmpresa">{{ iniciales(v.base.nombre) }}</div>
+          <div class="cliente-nombre">{{ v.base.nombre }}</div>
+          <span class="badge" [class]="estadosMap[v.base.estado].tono">
+            {{ estadosMap[v.base.estado].texto }}
+          </span>
+        </div>
+
+        <dl class="cliente-datos">
+          <div><dt><app-icon name="contract" [size]="15" /> Código Cliente</dt><dd class="mono">{{ v.base.codigo }}</dd></div>
+          <div><dt><app-icon name="contract" [size]="15" /> {{ v.base.tipoId }}</dt><dd class="mono">{{ v.base.identificacion }}</dd></div>
+          <div><dt><app-icon name="phone" [size]="15" /> Teléfono</dt><dd>{{ v.base.telefono }}</dd></div>
+          <div><dt><app-icon name="invoice" [size]="15" /> Email</dt><dd class="wrap">{{ v.email }}</dd></div>
+          <div class="split"><dt><app-icon name="location" [size]="15" /> Dirección</dt><dd>{{ v.base.direccion }}</dd></div>
+          <div><dt><app-icon name="dashboard" [size]="15" /> Fecha de registro</dt><dd>{{ v.base.fechaRegistro }}</dd></div>
+          <div><dt><app-icon name="users" [size]="15" /> Grupo</dt><dd>{{ v.grupo }}</dd></div>
+        </dl>
+      </aside>
+
+      <!-- Contenido principal -->
+      <section class="detail-main">
+        <!-- Tabs -->
+        <div class="tabs">
+          @for (t of tabs; track t; let i = $index) {
+            <button class="tab" [class.active]="tabActiva() === i" (click)="setTab(i)">{{ t }}</button>
+          }
+        </div>
+
+        @if (tabActiva() === 0) {
+          <!-- Tarjetas de estado -->
+          <div class="metric-cards">
+            <div class="card metric">
+              <div class="metric-ico" [class]="estadosMap[v.base.estado].tono"><app-icon name="dashboard" [size]="22" /></div>
+              <div class="metric-body">
+                <span class="metric-cap">Estado del Cliente</span>
+                <span class="metric-main" [class]="'text-' + estadosMap[v.base.estado].tono">{{ estadosMap[v.base.estado].texto.toUpperCase() }}</span>
+                <span class="metric-sub">Grupo: {{ v.grupo }}</span>
+                <span class="metric-sub">Cliente desde: {{ v.base.fechaRegistro }}</span>
+              </div>
+            </div>
+
+            <div class="card metric">
+              <div class="metric-ico ink"><app-icon name="network" [size]="22" /></div>
+              <div class="metric-body">
+                <span class="metric-cap">Servicio Contratado</span>
+                <span class="metric-main">{{ v.base.plan }}</span>
+                <span class="metric-sub">{{ v.base.velocidad }}</span>
+                <span class="metric-sub">Desde: {{ v.base.fechaRegistro }}</span>
+              </div>
+            </div>
+
+            <div class="card metric">
+              <div class="metric-ico warn"><app-icon name="invoice" [size]="22" /></div>
+              <div class="metric-body">
+                <span class="metric-cap">Mensualidad</span>
+                <span class="metric-main">{{ '$' + v.valorTotal.toFixed(2) }}</span>
+                <span class="metric-sub">Suma de planes activos</span>
+                <span class="metric-sub">Vencimiento y mora: MS-FACTURACION</span>
+              </div>
+            </div>
+
+            <div class="card metric">
+              <div class="metric-ico" [class]="v.conectado ? 'ok' : 'danger'"><app-icon name="network" [size]="22" /></div>
+              <div class="metric-body">
+                <span class="metric-cap">Estado de Conexión</span>
+                <span class="metric-main" [class]="'text-' + v.estadoConexion.tono">{{ v.estadoConexion.texto }}</span>
+                <span class="metric-sub">IP: {{ v.ipUsuario }}</span>
+                <span class="metric-sub">Uptime: {{ v.uptime }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Paneles: info servicio + dirección -->
+          <div class="panels">
+            <div class="card panel">
+              <h3 class="card-title">Información del Servicio</h3>
+              <dl class="kv">
+                <div><dt>Plan contratado</dt><dd class="strong">{{ v.base.plan }}</dd></div>
+                <div><dt>Velocidad</dt><dd>{{ v.base.velocidad }}</dd></div>
+                <div><dt>Tecnología</dt><dd>{{ v.tecnologia }}</dd></div>
+                <div><dt>IP / Usuario</dt><dd class="mono">{{ v.ipUsuario }}</dd></div>
+                <div><dt>OLT</dt><dd class="mono">{{ v.olt }}</dd></div>
+                <div><dt>Puerto / ONU</dt><dd class="mono">{{ v.puertoOnu }}</dd></div>
+                <div><dt>Estado</dt><dd><span class="badge" [class]="estadosMap[v.base.estado].tono">{{ estadosMap[v.base.estado].texto }}</span></dd></div>
+                <div><dt>Fecha activación</dt><dd>{{ v.base.fechaRegistro }}</dd></div>
+                <div><dt>Contrato</dt><dd><a class="link" href="javascript:void(0)"><app-icon name="contract" [size]="14" /> Ver contrato</a></dd></div>
+              </dl>
+            </div>
+
+            <div class="card panel">
+              <h3 class="card-title">Dirección del Servicio</h3>
+              <div class="map">
+                <div class="map-grid"></div>
+                <div class="map-pin"><app-icon name="location" [size]="34" /></div>
+              </div>
+              <div class="map-foot">
+                <span class="map-addr">{{ v.base.direccion }}</span>
+                <button class="btn btn-primary btn-sm"><app-icon name="location" [size]="14" /> Ver en mapa</button>
+              </div>
+            </div>
+          </div>
+        } @else {
+          <div class="card tab-empty">
+            <div class="tab-empty-ico"><app-icon name="box" [size]="26" /></div>
+            <h3>{{ tabs[tabActiva()] }}</h3>
+            <p>Esta pestaña aún no está diseñada. Empezamos por <strong>Resumen</strong>.</p>
+          </div>
+        }
+      </section>
+    </div>
+
+    <!-- ============ Servicios del cliente ============ -->
+    <div class="card servicios">
+      <div class="servicios-head">
+        <h3 class="card-title mb0">Servicios del Cliente</h3>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>ID Servicio</th>
+              <th>Servicio</th>
+              <th>Plan</th>
+              <th>Velocidad</th>
+              <th>Estado</th>
+              <th>Fecha inicio</th>
+              <th class="right">Precio</th>
+              <th class="w-acc">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (s of v.servicios; track s.id) {
+              <tr>
+                <td class="mono">{{ s.id }}</td>
+                <td class="strong">{{ s.servicio }}</td>
+                <td>{{ s.plan }}</td>
+                <td>{{ s.velocidad }}</td>
+                <td><span class="badge" [class]="estadosMap[s.estado].tono">{{ estadosMap[s.estado].texto }}</span></td>
+                <td class="muted">{{ s.fechaInicio }}</td>
+                <td class="right mono">{{ '$' + s.precio.toFixed(2) }}</td>
+                <td class="w-acc">
+                  <div class="acc">
+                    <button class="acc-btn" title="Ver"><app-icon name="eye" [size]="16" /></button>
+                    <button class="acc-btn" title="Editar"><app-icon name="pencil" [size]="16" /></button>
+                    <button class="acc-btn" title="Más"><app-icon name="dots" [size]="16" /></button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="servicios-foot">
+        <span class="muted">Mostrando 1 a {{ v.servicios.length }} de {{ v.servicios.length }} servicios</span>
+        <div class="pages">
+          <button class="pg" disabled>Anterior</button>
+          <button class="pg active">1</button>
+          <button class="pg" disabled>Siguiente</button>
+        </div>
+      </div>
+    </div>
+  </div>
+} @else if (cargando()) {
+  <!-- Cargando la ficha -->
+  <div class="page">
+    <div class="card not-found">
+      <div class="tab-empty-ico"><app-icon name="refresh" [size]="26" /></div>
+      <h3>Cargando ficha del cliente…</h3>
+    </div>
+  </div>
+} @else {
+  <!-- Cliente no encontrado -->
+  <div class="page">
+    <div class="card not-found">
+      <div class="tab-empty-ico"><app-icon name="users" [size]="26" /></div>
+      <h3>Cliente no encontrado</h3>
+      <p>No existe un cliente con ese código, o el gateway no respondió.</p>
+      <a class="btn btn-primary" routerLink="/clientes">Volver a la lista</a>
+    </div>
+  </div>
+}

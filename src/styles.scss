@@ -1,0 +1,89 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+
+/* =====================================================================
+   FIBRA NET · tokens de marca (negro / verde fibra / blanco)
+   Paleta tomada del logo.
+   ===================================================================== */
+:root {
+  /* Marca */
+  --brand: #5cbb46;
+  --brand-600: #4aa336;
+  --brand-700: #3d8c2c;
+  --brand-soft: #eaf7e6;
+
+  /* Sidebar oscuro (el negro del logo, con un matiz verde muy sutil) */
+  --side-bg: #0c0f0d;
+  --side-bg-2: #141a15;
+  --side-hover: #1b241b;
+  --side-text: #c4ccc4;
+  --side-faint: #7f897f;
+  --side-border: #1e271e;
+
+  /* Superficies */
+  --bg: #f6f8f5;
+  --card: #ffffff;
+  --border: #e5eae4;
+  --border-2: #d6ddd5;
+
+  /* Texto */
+  --text: #182018;
+  --muted: #667066;
+  --faint: #97a097;
+
+  /* Estados */
+  --ok: #34a853;
+  --ok-soft: #e6f4ea;
+  --warn: #e08e2f;
+  --warn-soft: #fbefe0;
+  --danger: #e0473f;
+  --danger-soft: #fbe9e8;
+  --info: #3b82c4;
+  --info-soft: #e8f1fa;
+  --slate: #3f4a5a;
+  --slate-soft: #eef1f5;
+
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow-sm: 0 1px 2px rgba(16, 24, 16, 0.05);
+  --shadow: 0 1px 3px rgba(16, 24, 16, 0.06), 0 6px 18px rgba(16, 24, 16, 0.05);
+  --sidebar-w: 250px;
+  --topbar-h: 62px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family: 'DM Sans', 'Segoe UI', sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+}
+
+::selection {
+  background: var(--brand);
+  color: #fff;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #cdd4cc;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #b3bbb2;
+  background-clip: content-box;
+}

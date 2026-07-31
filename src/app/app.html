@@ -1,0 +1,97 @@
+<div class="shell" [class.is-collapsed]="collapsed()">
+  <!-- ===================== Sidebar ===================== -->
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="logo.jpeg" alt="FIBRA NET" class="brand-logo" />
+      <div class="brand-text">
+        <span class="brand-name">FIBRA<span class="brand-accent">NET</span></span>
+        <span class="brand-sub">ISP Management</span>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <span class="nav-caption">Principal</span>
+      @for (item of navMain; track item.path) {
+        <a
+          class="nav-item"
+          [routerLink]="item.path"
+          routerLinkActive="active"
+          [title]="item.label"
+        >
+          <span class="nav-ico"><app-icon [name]="item.icon" [size]="19" /></span>
+          <span class="nav-label">{{ item.label }}</span>
+          @if (item.badge) {
+            <span class="nav-badge">{{ item.badge }}</span>
+          }
+        </a>
+      }
+
+      <span class="nav-caption">Sistema</span>
+      @for (item of navFoot; track item.path) {
+        <a
+          class="nav-item"
+          [routerLink]="item.path"
+          routerLinkActive="active"
+          [title]="item.label"
+        >
+          <span class="nav-ico"><app-icon [name]="item.icon" [size]="19" /></span>
+          <span class="nav-label">{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+
+    <div class="side-foot">
+      <div class="side-foot-line">FIBRA NET · Chordeleg</div>
+      <div class="side-foot-ver">Sistema Integral ISP · v1.0.0</div>
+    </div>
+  </aside>
+
+  <!-- ===================== Panel ===================== -->
+  <div class="panel">
+    <!-- Topbar -->
+    <header class="topbar">
+      <button class="icon-btn" (click)="toggle()" aria-label="Menú">
+        <app-icon name="menu" [size]="20" />
+      </button>
+
+      <div class="topbar-title">
+        <h1>Clientes</h1>
+        <nav class="crumbs">
+          <span>Inicio</span>
+          <span class="sep">/</span>
+          <span>Clientes</span>
+          <span class="sep">/</span>
+          <span class="cur">Lista de Clientes</span>
+        </nav>
+      </div>
+
+      <div class="topbar-search">
+        <app-icon name="search" [size]="16" />
+        <input type="text" placeholder="Buscar cliente, teléfono, cédula, dirección…" />
+      </div>
+
+      <button class="icon-btn has-dot" aria-label="Notificaciones">
+        <app-icon name="bell" [size]="19" />
+        <span class="dot">5</span>
+      </button>
+
+      <a class="user-chip" routerLink="/sesion" title="Mi sesión">
+        <span class="avatar">{{ auth.perfil()?.iniciales ?? '?' }}</span>
+        <span class="user-meta">
+          <span class="user-name">{{ auth.perfil()?.nombre || auth.perfil()?.usuario || 'Sesión' }}</span>
+          <span class="user-mail">{{ auth.perfil()?.email }}</span>
+        </span>
+        <app-icon name="chevron" [size]="16" />
+      </a>
+
+      <button class="icon-btn" (click)="cerrarSesion()" title="Cerrar sesión" aria-label="Cerrar sesión">
+        <app-icon name="logout" [size]="19" />
+      </button>
+    </header>
+
+    <!-- Contenido de la ruta -->
+    <main class="content">
+      <router-outlet />
+    </main>
+  </div>
+</div>

@@ -1,0 +1,76 @@
+<section class="sesion">
+  <header class="sesion-head">
+    <h2>Mi sesión</h2>
+    <p>Prueba de la cadena de autenticación real: token de Keycloak y llamada al backend por el gateway.</p>
+  </header>
+
+  <div class="tarjetas">
+    <!-- ===== Lo que dice el token (sin backend) ===== -->
+    <article class="tarjeta">
+      <div class="tarjeta-titulo">
+        <app-icon name="users" [size]="18" />
+        <span>Identidad del token</span>
+        <span class="fuente">Keycloak</span>
+      </div>
+
+      @if (auth.perfil(); as p) {
+        <dl class="datos">
+          <dt>Usuario</dt><dd>{{ p.usuario }}</dd>
+          <dt>Nombre</dt><dd>{{ p.nombre || '—' }}</dd>
+          <dt>Correo</dt><dd>{{ p.email || '—' }}</dd>
+          <dt>usuario_id (claim)</dt><dd>{{ p.usuarioId ?? '—' }}</dd>
+          <dt>Roles</dt>
+          <dd>
+            @for (r of p.roles; track r) {
+              <span class="chip">{{ r }}</span>
+            } @empty {
+              <span class="vacio">sin roles</span>
+            }
+          </dd>
+        </dl>
+      } @else {
+        <p class="vacio">No hay sesión.</p>
+      }
+    </article>
+
+    <!-- ===== Lo que responde el backend ===== -->
+    <article class="tarjeta">
+      <div class="tarjeta-titulo">
+        <app-icon name="contract" [size]="18" />
+        <span>Ficha del empleado</span>
+        <span class="fuente">GET /api/usuarios/yo</span>
+      </div>
+
+      @if (cargando()) {
+        <p class="estado">Consultando el gateway…</p>
+      } @else if (error()) {
+        <div class="estado estado-error">
+          <p>{{ error() }}</p>
+          <button class="btn" (click)="consultar()">
+            <app-icon name="refresh" [size]="15" /> Reintentar
+          </button>
+        </div>
+      } @else if (ficha(); as f) {
+        <dl class="datos">
+          <dt>id</dt><dd>{{ f.id }}</dd>
+          <dt>Nombre completo</dt><dd>{{ f.nombreCompleto }}</dd>
+          <dt>Cédula</dt><dd>{{ f.cedula }}</dd>
+          <dt>Cargo</dt><dd>{{ f.cargo }}</dd>
+          <dt>Correo</dt><dd>{{ f.email }}</dd>
+          <dt>Teléfono</dt><dd>{{ f.telefono || '—' }}</dd>
+          <dt>Estado</dt>
+          <dd>
+            <span class="chip" [class.chip-ok]="f.activo" [class.chip-off]="!f.activo">
+              {{ f.activo ? 'Activo' : 'Inactivo' }}
+            </span>
+          </dd>
+          <dt>Ingreso</dt><dd>{{ f.fechaIngreso ?? '—' }}</dd>
+        </dl>
+        <p class="ok">
+          <app-icon name="eye" [size]="15" />
+          Cadena verificada: token → interceptor → gateway → MS-USUARIOS.
+        </p>
+      }
+    </article>
+  </div>
+</section>

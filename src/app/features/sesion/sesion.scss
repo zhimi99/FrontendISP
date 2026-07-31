@@ -1,0 +1,146 @@
+:host {
+  display: block;
+  padding: 24px;
+}
+
+.sesion-head {
+  margin-bottom: 20px;
+
+  h2 {
+    margin: 0 0 4px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #1f2937;
+  }
+
+  p {
+    margin: 0;
+    color: #6b7280;
+    font-size: 13px;
+  }
+}
+
+.tarjetas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 18px;
+}
+
+.tarjeta {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.tarjeta-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  color: #111827;
+  font-weight: 600;
+  font-size: 14px;
+
+  .fuente {
+    margin-left: auto;
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: #6b7280;
+    background: #f3f4f6;
+    padding: 2px 8px;
+    border-radius: 999px;
+  }
+}
+
+.datos {
+  display: grid;
+  grid-template-columns: minmax(120px, auto) 1fr;
+  gap: 8px 16px;
+  margin: 0;
+
+  dt {
+    color: #6b7280;
+    font-size: 12.5px;
+  }
+
+  dd {
+    margin: 0;
+    color: #1f2937;
+    font-size: 13px;
+    font-weight: 500;
+    word-break: break-word;
+  }
+}
+
+.chip {
+  display: inline-block;
+  padding: 2px 9px;
+  margin: 0 4px 4px 0;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.chip-ok {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.chip-off {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.estado {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.estado-error {
+  color: #b91c1c;
+
+  .btn {
+    margin-top: 10px;
+  }
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    background: #f9fafb;
+  }
+}
+
+.ok {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 16px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid #f3f4f6;
+  color: #15803d;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.vacio {
+  color: #9ca3af;
+  font-style: italic;
+  font-size: 12.5px;
+}
