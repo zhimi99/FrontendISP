@@ -1,0 +1,181 @@
+<div class="page">
+  <!-- ============ Encabezado ============ -->
+  <div class="page-head">
+    <div>
+      <h2>Inventario</h2>
+      <p class="sub">Stock de material por ubicación y equipos serializados (ONT, routers).</p>
+    </div>
+  </div>
+
+  <!-- ============ Tarjetas de resumen ============ -->
+  <div class="stats">
+    <div class="stat">
+      <span class="stat-ico slate"><app-icon name="box" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">Materiales</span>
+        <span class="stat-value">{{ materiales().length }}</span>
+        <span class="stat-foot">en el catálogo</span>
+      </div>
+    </div>
+    <div class="stat">
+      <span class="stat-ico" [class]="bajoStock().length ? 'danger' : 'ok'"><app-icon name="box" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">Por reponer</span>
+        <span class="stat-value">{{ bajoStock().length }}</span>
+        <span class="stat-foot">bajo el mínimo</span>
+      </div>
+    </div>
+    <div class="stat">
+      <span class="stat-ico ok"><app-icon name="network" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">Equipos disponibles</span>
+        <span class="stat-value">{{ disponiblesTotal() }}</span>
+        <span class="stat-foot">listos para instalar</span>
+      </div>
+    </div>
+    <div class="stat">
+      <span class="stat-ico slate"><app-icon name="location" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">Ubicaciones</span>
+        <span class="stat-value">{{ ubicaciones().length }}</span>
+        <span class="stat-foot">bodegas y furgonetas</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Alerta de reposición ============ -->
+  @if (bajoStock().length) {
+    <div class="card alerta-repo">
+      <div class="alerta-head">
+        <app-icon name="box" [size]="16" />
+        <span>Materiales por reponer ({{ bajoStock().length }})</span>
+      </div>
+      <div class="alerta-chips">
+        @for (b of bajoStock(); track b.materialId) {
+          <div class="repo-chip">
+            <span class="repo-nombre">{{ b.nombre }}</span>
+            <span class="repo-datos">
+              {{ cantidad(b.stockTotal) }} / mín {{ cantidad(b.stockMinimo) }}
+              · faltan <strong>{{ cantidad(b.faltante) }}</strong>
+            </span>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ============ Pestañas ============ -->
+  <div class="tabs">
+    <button class="tab" [class.active]="tabActiva() === 0" (click)="setTab(0)">Stock de materiales</button>
+    <button class="tab" [class.active]="tabActiva() === 1" (click)="setTab(1)">Equipos</button>
+  </div>
+
+  <!-- ============ Pestaña: Stock de materiales ============ -->
+  @if (tabActiva() === 0) {
+    <div class="filters card">
+      <div class="field grow">
+        <label>Buscar</label>
+        <div class="input-ico">
+          <app-icon name="search" [size]="15" />
+          <input type="text" placeholder="Código o material…"
+                 [ngModel]="qStock()" (ngModelChange)="qStock.set($event)" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Ubicación</label>
+        <select [ngModel]="ubicacionFiltro()" (ngModelChange)="ubicacionFiltro.set($event === '' ? '' : +$event)">
+          <option value="">Todas</option>
+          @for (u of ubicaciones(); track u.id) {
+            <option [value]="u.id">{{ u.nombre }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <div class="card table-card">
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Material</th>
+              <th>Ubicación</th>
+              <th class="right">Cantidad</th>
+              <th>Unidad</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (e of existenciasFiltradas(); track e.materialId + '-' + e.ubicacionId) {
+              <tr>
+                <td class="mono muted">{{ e.codigo }}</td>
+                <td class="strong">
+                  {{ e.material }}
+                  @if (esBajo(e.materialId)) { <span class="badge danger">Bajo mínimo</span> }
+                </td>
+                <td>{{ e.ubicacion }}</td>
+                <td class="right mono strong">{{ cantidad(e.cantidad) }}</td>
+                <td class="muted">{{ unidadEtq[e.unidad] }}</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="5" class="empty">{{ mensajeStock() }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- ============ Pestaña: Equipos ============ -->
+  @if (tabActiva() === 1) {
+    <div class="filters card">
+      <div class="field grow">
+        <label>Buscar</label>
+        <div class="input-ico">
+          <app-icon name="search" [size]="15" />
+          <input type="text" placeholder="N.º de serie, marca o modelo…"
+                 [ngModel]="qEquipo()" (ngModelChange)="qEquipo.set($event)" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Estado</label>
+        <select [ngModel]="estadoFiltro()" (ngModelChange)="cambiarEstado($event)">
+          <option value="DISPONIBLE">Disponible</option>
+          <option value="ASIGNADO">Asignado</option>
+          <option value="AVERIADO">Averiado</option>
+          <option value="BAJA">Dado de baja</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card table-card">
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>N.º Serie</th>
+              <th>Tipo</th>
+              <th>Marca / Modelo</th>
+              <th>MAC</th>
+              <th>Estado</th>
+              <th>Ubicación / Contrato</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (eq of equiposFiltrados(); track eq.id) {
+              <tr>
+                <td class="mono">{{ eq.numeroSerie }}</td>
+                <td>{{ tipoEquipoEtq[eq.tipo] }}</td>
+                <td class="strong">{{ eq.marca }} <span class="muted">{{ eq.modelo }}</span></td>
+                <td class="mono muted">{{ eq.macAddress ?? '—' }}</td>
+                <td><span class="badge" [class]="estadoEquipoTono[eq.estado]">{{ estadoEquipoEtq[eq.estado] }}</span></td>
+                <td>{{ ubicacionDe(eq) }}</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="6" class="empty">{{ mensajeEquipos() }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+</div>

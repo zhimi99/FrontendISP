@@ -1,76 +1,38 @@
 /**
- * MS-OPERATIVO Y TÉCNICOS
- *
- * ATENCIÓN: este microservicio TODAVÍA NO EXISTE en el backend. Estos tipos son
- * una propuesta derivada del diagrama de arquitectura (órdenes de trabajo,
- * asignación a técnicos, control de estados, cierre con uso de materiales) y
- * deben revalidarse cuando se defina el esquema real.
+ * MS-OPERATIVO Y TÉCNICOS · esquema `operativo`
+ * Tipos derivados de OrdenDto (órdenes de trabajo). Es quien emite
+ * `orden.completada`, el evento que activa el alta del contrato.
  */
 
-export type TipoOrden = 'INSTALACION' | 'SOPORTE' | 'RETIRO' | 'MANTENIMIENTO' | 'TRASLADO';
-
-export type EstadoOrden = 'PENDIENTE' | 'ASIGNADA' | 'EN_PROCESO' | 'COMPLETADA' | 'CANCELADA';
-
+export type EstadoOrden = 'PENDIENTE' | 'ASIGNADA' | 'EN_PROCESO' | 'CERRADA' | 'CANCELADA';
+export type TipoOrden = 'INSTALACION' | 'SOPORTE' | 'RETIRO';
 export type PrioridadOrden = 'BAJA' | 'NORMAL' | 'ALTA' | 'URGENTE';
 
-export interface Tecnico {
+/** `GET /api/ordenes` — una orden de trabajo tal y como se consulta. */
+export interface Orden {
   id: number;
-  codigo: string;
-  nombre: string;
-  telefono?: string;
-  zona?: string;
-  activo: boolean;
-}
-
-/** Material consumido al cerrar la orden (descuenta del MS-INVENTARIO). */
-export interface MaterialUsado {
-  id: number;
-  ordenId: number;
-  descripcion: string;
-  cantidad: number;
-  unidad: string;
-}
-
-export interface OrdenTrabajo {
-  id: number;
-  codigo: string;
+  numero: string;
   tipo: TipoOrden;
   estado: EstadoOrden;
   prioridad: PrioridadOrden;
-  /** Referencias lógicas a contratos.contrato / contratos.cliente */
-  contratoId?: number;
-  clienteId?: number;
-  descripcion: string;
-  direccionTexto?: string;
-  latitud?: number;
-  longitud?: number;
-  tecnicoId?: number;
-  fechaCreacion: string;
-  fechaProgramada?: string;
-  fechaCierre?: string;
-  observacionCierre?: string;
-  materiales?: MaterialUsado[];
+  contratoId: number | null;
+  clienteId: number | null;
+  tecnicoUsuarioId: number | null;
+  creadaPor: number | null;
+  descripcion: string | null;
+  resultado: string | null;
+  motivoCancelacion: string | null;
+  fechaProgramada: string | null;
+  fechaAsignacion: string | null;
+  fechaInicio: string | null;
+  fechaCierre: string | null;
 }
-
-export interface OrdenVista extends OrdenTrabajo {
-  clienteNombre: string;
-  contratoCodigo?: string;
-  tecnicoNombre?: string;
-}
-
-export const TIPO_ORDEN_ETIQUETA: Record<TipoOrden, string> = {
-  INSTALACION: 'Instalación',
-  SOPORTE: 'Soporte',
-  RETIRO: 'Retiro',
-  MANTENIMIENTO: 'Mantenimiento',
-  TRASLADO: 'Traslado',
-};
 
 export const ESTADO_ORDEN_ETIQUETA: Record<EstadoOrden, string> = {
   PENDIENTE: 'Pendiente',
   ASIGNADA: 'Asignada',
   EN_PROCESO: 'En proceso',
-  COMPLETADA: 'Completada',
+  CERRADA: 'Cerrada',
   CANCELADA: 'Cancelada',
 };
 
@@ -78,8 +40,14 @@ export const ESTADO_ORDEN_TONO: Record<EstadoOrden, string> = {
   PENDIENTE: 'warn',
   ASIGNADA: 'info',
   EN_PROCESO: 'info',
-  COMPLETADA: 'ok',
+  CERRADA: 'ok',
   CANCELADA: 'neutral',
+};
+
+export const TIPO_ORDEN_ETIQUETA: Record<TipoOrden, string> = {
+  INSTALACION: 'Instalación',
+  SOPORTE: 'Soporte',
+  RETIRO: 'Retiro',
 };
 
 export const PRIORIDAD_ETIQUETA: Record<PrioridadOrden, string> = {

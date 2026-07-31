@@ -1,0 +1,136 @@
+<div class="page">
+  <!-- ============ Encabezado ============ -->
+  <div class="page-head">
+    <div>
+      <h2>Dashboard</h2>
+      <p class="sub">Vista general de la operación del ISP.</p>
+    </div>
+  </div>
+
+  @if (fallos().length) {
+    <div class="card aviso-fallos">
+      <app-icon name="invoice" [size]="15" />
+      Algunos datos no se pudieron cargar: {{ fallos().join(', ') }}. El resto del tablero es real.
+    </div>
+  }
+
+  <!-- ============ KPIs ============ -->
+  <div class="stats">
+    <div class="stat">
+      <span class="stat-ico ok"><app-icon name="users" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">Clientes activos</span>
+        <span class="stat-value">{{ clientesActivos }}</span>
+        <span class="stat-foot">de {{ clientesTotal }} clientes</span>
+      </div>
+    </div>
+    <div class="stat">
+      <span class="stat-ico warn"><app-icon name="invoice" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">Cartera por cobrar</span>
+        <span class="stat-value">{{ moneda(saldoPorCobrar) }}</span>
+        <span class="stat-foot">{{ facturasPorCobrar }} factura(s) pendientes</span>
+      </div>
+    </div>
+    <div class="stat">
+      <span class="stat-ico" [class]="moraContratos ? 'danger' : 'ok'"><app-icon name="cash" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">En mora</span>
+        <span class="stat-value">{{ moraContratos }}</span>
+        <span class="stat-foot">{{ moneda(moraSaldo) }} vencido</span>
+      </div>
+    </div>
+    <div class="stat">
+      <span class="stat-ico ok"><app-icon name="cash" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">Recaudado</span>
+        <span class="stat-value">{{ moneda(recaudado) }}</span>
+        <span class="stat-foot">{{ numeroPagos }} pago(s) confirmados</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Paneles ============ -->
+  <div class="dash-grid">
+    <!-- Clientes por estado -->
+    <div class="card dash-panel">
+      <div class="dash-head">
+        <h3 class="card-title mb0">Clientes por estado</h3>
+        <a class="link" routerLink="/clientes">Ver clientes</a>
+      </div>
+      @for (e of estados; track e) {
+        <div class="barra-row">
+          <span class="barra-lbl">
+            <span class="dot" [class]="estadoServTono[e]"></span>{{ estadoServEtq[e] }}
+          </span>
+          <div class="barra-track">
+            <div class="barra-fill" [class]="estadoServTono[e]" [style.width.%]="pctClientes(clientesPorEstado()[e])"></div>
+          </div>
+          <span class="barra-num mono">{{ clientesPorEstado()[e] }}</span>
+        </div>
+      }
+      @if (clientesTotal === 0 && !cargando()) {
+        <p class="dash-empty">Sin clientes para mostrar.</p>
+      }
+    </div>
+
+    <!-- Cobranzas y caja -->
+    <div class="card dash-panel">
+      <div class="dash-head">
+        <h3 class="card-title mb0">Cobranzas y caja</h3>
+        <a class="link" routerLink="/cobranzas">Ver cobranzas</a>
+      </div>
+      <dl class="kv2">
+        <div><dt>Recaudado (confirmado)</dt><dd class="mono strong">{{ moneda(recaudado) }}</dd></div>
+        <div><dt>Pagos registrados</dt><dd class="mono">{{ numeroPagos }}</dd></div>
+        <div><dt>Cajas abiertas</dt><dd class="mono">{{ cajasAbiertas }} / {{ cajas().length }}</dd></div>
+        <div><dt>Efectivo en cajas</dt><dd class="mono">{{ moneda(efectivoEnCajas) }}</dd></div>
+      </dl>
+    </div>
+
+    <!-- Inventario -->
+    <div class="card dash-panel">
+      <div class="dash-head">
+        <h3 class="card-title mb0">Inventario</h3>
+        <a class="link" routerLink="/inventario">Ver inventario</a>
+      </div>
+      <dl class="kv2">
+        <div><dt>Equipos disponibles</dt><dd class="mono strong">{{ equiposDisponibles }}</dd></div>
+        <div><dt>Materiales por reponer</dt><dd class="mono" [class.text-danger]="bajoStock().length">{{ bajoStock().length }}</dd></div>
+      </dl>
+      @if (bajoStock().length) {
+        <ul class="mini-list">
+          @for (b of bajoStock(); track b.materialId) {
+            <li>
+              <span class="mini-nombre">{{ b.nombre }}</span>
+              <span class="mini-datos">faltan {{ cantidad(b.faltante) }}</span>
+            </li>
+          }
+        </ul>
+      } @else if (!cargando()) {
+        <p class="dash-empty">Stock por encima del mínimo.</p>
+      }
+    </div>
+
+    <!-- Órdenes -->
+    <div class="card dash-panel">
+      <div class="dash-head">
+        <h3 class="card-title mb0">Órdenes pendientes</h3>
+        <a class="link" routerLink="/soporte">Ver soporte</a>
+      </div>
+      <div class="dash-big"><span class="dash-big-num">{{ ordenesPendientes }}</span> por asignar</div>
+      @if (ordenesTop().length) {
+        <ul class="mini-list">
+          @for (o of ordenesTop(); track o.id) {
+            <li>
+              <span class="mini-nombre">{{ o.numero }} · {{ tipoOrdenEtq[o.tipo] }}</span>
+              <span class="badge" [class]="prioridadTono[o.prioridad]">{{ prioridadEtq[o.prioridad] }}</span>
+            </li>
+          }
+        </ul>
+      } @else if (!cargando()) {
+        <p class="dash-empty">No hay órdenes pendientes.</p>
+      }
+    </div>
+  </div>
+</div>

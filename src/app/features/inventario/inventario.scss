@@ -1,0 +1,74 @@
+/* Estilos propios de Inventario; el resto se hereda de clientes.scss. */
+
+.badge.neutral {
+  background: var(--slate-soft);
+  color: var(--slate);
+}
+
+/* ============ Pestañas ============ */
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  margin: 4px 0 16px;
+}
+.tab {
+  appearance: none;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  margin-bottom: -1px;
+}
+.tab:hover {
+  color: var(--text);
+}
+.tab.active {
+  color: var(--brand);
+  border-bottom-color: var(--brand);
+}
+
+/* ============ Alerta de reposición ============ */
+.alerta-repo {
+  padding: 14px 18px;
+  margin-bottom: 18px;
+  border-left: 3px solid var(--danger);
+}
+.alerta-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: var(--danger);
+  margin-bottom: 12px;
+}
+.alerta-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+}
+.repo-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+.repo-nombre {
+  font-weight: 650;
+  font-size: 13px;
+}
+.repo-datos {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.repo-datos strong {
+  color: var(--danger);
+}

@@ -1,80 +1,127 @@
 /**
- * MS-INVENTARIO E INFRAESTRUCTURA
+ * MS-INVENTARIO · esquema `inventario`
+ * Tipos derivados de V1__init_inventario.sql y de los DTOs de la capa REST
+ * (catalogo/*, stock/*, equipos/*).
  *
- * ATENCIÓN: este microservicio TODAVÍA NO EXISTE en el backend. Estos tipos son
- * una propuesta derivada del diagrama de arquitectura (control de stock, números
- * de serie, direcciones MAC, asignación de equipos a contratos) y deben
- * revalidarse cuando se defina el esquema real.
+ * Dos naturalezas conviven y no se mezclan:
+ *  · EQUIPO   — unidad serializada (router, ONT), trazada de una en una.
+ *  · MATERIAL — a granel (cable, conectores): solo cuánto queda y dónde.
  */
 
-export type TipoEquipo = 'ROUTER' | 'ONT' | 'SPLITTER' | 'SWITCH' | 'ANTENA' | 'CABLE' | 'CONECTOR';
+export type UnidadMedida = 'UNIDAD' | 'METRO' | 'ROLLO' | 'CAJA';
+export type TipoUbicacion = 'BODEGA' | 'TECNICO';
+export type TipoEquipo = 'ROUTER' | 'ONT' | 'ONU' | 'SWITCH' | 'ANTENA' | 'SPLITTER' | 'OTRO';
+export type EstadoEquipo = 'DISPONIBLE' | 'ASIGNADO' | 'AVERIADO' | 'BAJA';
+export type TipoMovimiento = 'INGRESO' | 'EGRESO' | 'TRASLADO' | 'AJUSTE';
 
-export type EstadoEquipo = 'DISPONIBLE' | 'ASIGNADO' | 'EN_REPARACION' | 'DANIADO' | 'BAJA';
-
-export interface Bodega {
+/** `GET /api/materiales` */
+export interface Material {
   id: number;
   codigo: string;
   nombre: string;
-  ubicacion?: string;
+  unidad: UnidadMedida;
+  stockMinimo: number;
+  activo: boolean;
 }
 
-export interface Equipo {
+/** `GET /api/ubicaciones` */
+export interface Ubicacion {
   id: number;
   codigo: string;
+  nombre: string;
+  tipo: TipoUbicacion;
+  usuarioId: number | null;
+  activa: boolean;
+}
+
+/** `GET /api/materiales/bajo-stock` — lo que hay que reponer, con el faltante calculado. */
+export interface MaterialBajoStock {
+  materialId: number;
+  codigo: string;
+  nombre: string;
+  unidad: UnidadMedida;
+  stockMinimo: number;
+  stockTotal: number;
+  faltante: number;
+}
+
+/** `GET /api/existencias` — cuánto material hay en una ubicación. */
+export interface Existencia {
+  materialId: number;
+  codigo: string;
+  material: string;
+  unidad: UnidadMedida;
+  ubicacionId: number;
+  ubicacion: string;
+  cantidad: number;
+}
+
+/** `GET /api/equipos` — equipo serializado con su ubicación o contrato resueltos. */
+export interface Equipo {
+  id: number;
   tipo: TipoEquipo;
   marca: string;
   modelo: string;
-  numeroSerie?: string;
-  macAddress?: string;
+  numeroSerie: string;
+  macAddress: string | null;
   estado: EstadoEquipo;
-  bodegaId?: number;
-  /** Referencia lógica a contratos.contrato */
-  contratoId?: number;
-  costoUnitario: number;
-  fechaIngreso: string;
+  ubicacionId: number | null;
+  ubicacion: string | null;
+  contratoId: number | null;
+  observacion: string | null;
 }
 
-/** Insumos que se consumen por metro/unidad y no llevan número de serie. */
-export interface ItemStock {
+/** `GET /api/movimientos/equipo/{id}` — un asiento del libro de inventario. */
+export interface Movimiento {
   id: number;
-  codigo: string;
-  descripcion: string;
-  tipo: TipoEquipo;
-  unidad: string;
-  cantidadDisponible: number;
-  stockMinimo: number;
-  costoUnitario: number;
-  bodegaId: number;
+  tipo: TipoMovimiento;
+  equipoId: number | null;
+  equipoSerie: string | null;
+  materialId: number | null;
+  material: string | null;
+  cantidad: number;
+  origen: string | null;
+  destino: string | null;
+  contratoId: number | null;
+  ordenTrabajoId: number | null;
+  usuarioId: number | null;
+  motivo: string | null;
+  referencia: string | null;
+  fecha: string;
 }
 
-export interface EquipoVista extends Equipo {
-  bodegaNombre?: string;
-  contratoCodigo?: string;
-  clienteNombre?: string;
-}
+export const UNIDAD_ETIQUETA: Record<UnidadMedida, string> = {
+  UNIDAD: 'unidad(es)',
+  METRO: 'metro(s)',
+  ROLLO: 'rollo(s)',
+  CAJA: 'caja(s)',
+};
 
 export const TIPO_EQUIPO_ETIQUETA: Record<TipoEquipo, string> = {
   ROUTER: 'Router',
   ONT: 'ONT',
-  SPLITTER: 'Splitter',
+  ONU: 'ONU',
   SWITCH: 'Switch',
   ANTENA: 'Antena',
-  CABLE: 'Cable',
-  CONECTOR: 'Conector',
+  SPLITTER: 'Splitter',
+  OTRO: 'Otro',
 };
 
 export const ESTADO_EQUIPO_ETIQUETA: Record<EstadoEquipo, string> = {
   DISPONIBLE: 'Disponible',
   ASIGNADO: 'Asignado',
-  EN_REPARACION: 'En reparación',
-  DANIADO: 'Dañado',
+  AVERIADO: 'Averiado',
   BAJA: 'Dado de baja',
 };
 
 export const ESTADO_EQUIPO_TONO: Record<EstadoEquipo, string> = {
   DISPONIBLE: 'ok',
   ASIGNADO: 'info',
-  EN_REPARACION: 'warn',
-  DANIADO: 'danger',
+  AVERIADO: 'warn',
   BAJA: 'neutral',
+};
+
+export const TIPO_UBICACION_ETIQUETA: Record<TipoUbicacion, string> = {
+  BODEGA: 'Bodega',
+  TECNICO: 'Técnico',
 };

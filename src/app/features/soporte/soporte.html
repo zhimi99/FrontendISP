@@ -1,0 +1,102 @@
+<div class="page">
+  <!-- ============ Encabezado ============ -->
+  <div class="page-head">
+    <div>
+      <h2>Soporte / Operativo</h2>
+      <p class="sub">Órdenes de trabajo: instalaciones, soporte y retiros.</p>
+    </div>
+  </div>
+
+  <!-- ============ Tarjetas de resumen (órdenes abiertas) ============ -->
+  <div class="stats">
+    <div class="stat">
+      <span class="stat-ico slate"><app-icon name="support" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">Órdenes abiertas</span>
+        <span class="stat-value">{{ totalAbiertas }}</span>
+        <span class="stat-foot">requieren gestión</span>
+      </div>
+    </div>
+    <div class="stat">
+      <span class="stat-ico" [class]="pendientes ? 'warn' : 'ok'"><app-icon name="support" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">Pendientes</span>
+        <span class="stat-value">{{ pendientes }}</span>
+        <span class="stat-foot">por asignar</span>
+      </div>
+    </div>
+    <div class="stat">
+      <span class="stat-ico ok"><app-icon name="support" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">En curso</span>
+        <span class="stat-value">{{ asignadas + enProceso }}</span>
+        <span class="stat-foot">asignadas o en proceso</span>
+      </div>
+    </div>
+    <div class="stat">
+      <span class="stat-ico" [class]="urgentes ? 'danger' : 'ok'"><app-icon name="support" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">Prioridad alta</span>
+        <span class="stat-value">{{ urgentes }}</span>
+        <span class="stat-foot">urgentes o altas</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Filtros ============ -->
+  <div class="filters card">
+    <div class="field grow">
+      <label>Buscar</label>
+      <div class="input-ico">
+        <app-icon name="search" [size]="15" />
+        <input type="text" placeholder="N.º de orden, cliente o descripción…"
+               [ngModel]="q()" (ngModelChange)="q.set($event)" />
+      </div>
+    </div>
+    <div class="field">
+      <label>Estado</label>
+      <select [ngModel]="estadoFiltro()" (ngModelChange)="cambiarEstado($event)">
+        <option value="">Abiertas (todas)</option>
+        <option value="PENDIENTE">Pendiente</option>
+        <option value="ASIGNADA">Asignada</option>
+        <option value="EN_PROCESO">En proceso</option>
+        <option value="CERRADA">Cerrada</option>
+        <option value="CANCELADA">Cancelada</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- ============ Tabla ============ -->
+  <div class="card table-card">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>N.º Orden</th>
+            <th>Tipo</th>
+            <th>Cliente</th>
+            <th>Prioridad</th>
+            <th>Programada</th>
+            <th>Técnico</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (o of ordenesFiltradas(); track o.id) {
+            <tr>
+              <td class="mono muted">{{ o.numero }}</td>
+              <td>{{ tipoEtq[o.tipo] }}</td>
+              <td class="strong">{{ clienteNombre(o) }}</td>
+              <td><span class="badge" [class]="prioridadTono[o.prioridad]">{{ prioridadEtq[o.prioridad] }}</span></td>
+              <td class="muted">{{ fecha(o.fechaProgramada) }}</td>
+              <td [class.muted]="o.tecnicoUsuarioId == null">{{ tecnicoNombre(o) }}</td>
+              <td><span class="badge" [class]="estadoTono[o.estado]">{{ estadoEtq[o.estado] }}</span></td>
+            </tr>
+          } @empty {
+            <tr><td colspan="7" class="empty">{{ mensajeTabla() }}</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

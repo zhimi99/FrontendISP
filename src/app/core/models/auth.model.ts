@@ -40,6 +40,17 @@ export interface PerfilSesion {
 }
 
 /**
+ * Resumen de `GET /api/usuarios/{id}` (MS-USUARIOS): lo mínimo para poner un nombre
+ * donde otras pantallas solo tienen un `usuario_id` (p. ej. el técnico de una orden).
+ */
+export interface UsuarioResumen {
+  id: number;
+  nombreCompleto: string;
+  cargo: string;
+  activo: boolean;
+}
+
+/**
  * Ficha del empleado que devuelve `GET /api/usuarios/yo` (MS-USUARIOS). La autoridad
  * de los datos personales y del `usuario_id`; el token solo lleva el resumen.
  */

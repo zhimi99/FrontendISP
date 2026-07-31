@@ -1,0 +1,175 @@
+/* Estilos propios del Dashboard; el resto se hereda de clientes.scss. */
+
+.badge.neutral {
+  background: var(--slate-soft);
+  color: var(--slate);
+}
+.text-danger {
+  color: var(--danger);
+}
+.link {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--brand);
+  text-decoration: none;
+}
+.link:hover {
+  text-decoration: underline;
+}
+
+.aviso-fallos {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  border-left: 3px solid var(--warn);
+  color: var(--warn);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ============ Rejilla de paneles ============ */
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+.dash-panel {
+  padding: 16px 18px;
+}
+.dash-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+/* ============ Barras de clientes por estado ============ */
+.barra-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.barra-lbl {
+  display: flex;
+  align-items: center;
+  width: 108px;
+  flex: none;
+  font-size: 13px;
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+  flex: none;
+}
+.barra-track {
+  flex: 1 1 auto;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg);
+  overflow: hidden;
+}
+.barra-fill {
+  height: 100%;
+  border-radius: 999px;
+  min-width: 2px;
+}
+.barra-num {
+  width: 32px;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dot.ok,
+.barra-fill.ok {
+  background: var(--ok);
+}
+.dot.warn,
+.barra-fill.warn {
+  background: var(--warn);
+}
+.dot.danger,
+.barra-fill.danger {
+  background: var(--danger);
+}
+.dot.info,
+.barra-fill.info {
+  background: var(--info);
+}
+.dot.neutral,
+.barra-fill.neutral {
+  background: var(--slate);
+}
+
+/* ============ Listas clave-valor y mini-listas ============ */
+.kv2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+  margin: 0;
+}
+.kv2 div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.kv2 dt {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.kv2 dd {
+  margin: 0;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.mini-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mini-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+}
+.mini-nombre {
+  font-weight: 600;
+}
+.mini-datos {
+  color: var(--danger);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+}
+
+.dash-big {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+.dash-big-num {
+  font-size: 26px;
+  font-weight: 750;
+  color: var(--text);
+  margin-right: 6px;
+}
+.dash-empty {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 10px 0 0;
+}
