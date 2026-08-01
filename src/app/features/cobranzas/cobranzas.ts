@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { catchError, forkJoin, of } from 'rxjs';
 
 import { IconComponent } from '../../shared/icon';
@@ -31,7 +32,7 @@ const FORMAS_PAGO: FormaPago[] = ['EFECTIVO', 'TRANSFERENCIA', 'DEPOSITO', 'TARJ
 @Component({
   selector: 'app-cobranzas',
   standalone: true,
-  imports: [FormsModule, IconComponent],
+  imports: [FormsModule, IconComponent, RouterLink],
   templateUrl: './cobranzas.html',
   styleUrls: ['../clientes/clientes.scss', './cobranzas.scss'],
 })
@@ -47,6 +48,10 @@ export class CobranzasComponent {
   readonly formasPago = FORMAS_PAGO;
   /** Solo COBRANZAS/ADMIN pueden registrar pagos (POST /api/pagos). */
   readonly puedeRegistrarPago = computed(() => this.auth.tieneRol('COBRANZAS', 'ADMINISTRADOR'));
+  /** Abrir/cerrar la jornada de caja: mismo perfil que recauda. */
+  readonly puedeOperarCaja = computed(() => this.auth.tieneRol('COBRANZAS', 'ADMINISTRADOR'));
+  /** Aviso de resultado de operaciones de caja (apertura/cierre y su arqueo). */
+  readonly avisoCaja = signal<{ texto: string; error: boolean } | null>(null);
 
   private readonly pagos = signal<PagoCobranzaVista[]>([]);
   readonly cajas = signal<CajaEstado[]>([]);
@@ -97,10 +102,13 @@ export class CobranzasComponent {
   readonly clientesOrdenados = computed(() =>
     [...this.clientesLista()].sort((a, b) => a.nombre.localeCompare(b.nombre)),
   );
-  /** Sesiones de caja abiertas, para cobros en efectivo. */
-  readonly sesionesAbiertas = computed(() =>
-    this.cajas().filter((c) => c.sesionAbierta),
-  );
+  /**
+   * La caja de cobranza. Por ahora la operación es de una sola caja (la matriz):
+   * el backend solo devuelve la(s) activa(s), así que se toma la primera.
+   */
+  readonly caja = computed<CajaEstado | null>(() => this.cajas()[0] ?? null);
+  /** La jornada abierta de esa caja, si la hay (necesaria para cobrar en efectivo). */
+  readonly sesionActual = computed(() => this.caja()?.sesionAbierta ?? null);
 
   /* ---------- Tarjetas de resumen ---------- */
   get totalRecaudado() {
@@ -111,11 +119,11 @@ export class CobranzasComponent {
   get numeroPagos() {
     return this.pagos().length;
   }
-  get cajasAbiertas() {
-    return this.cajas().filter((c) => c.sesionAbierta).length;
+  get cajaAbierta() {
+    return this.caja()?.sesionAbierta != null;
   }
-  get efectivoEnCajas() {
-    return this.cajas().reduce((s, c) => s + (c.sesionAbierta?.efectivoEnCaja ?? 0), 0);
+  get efectivoEnCaja() {
+    return this.caja()?.sesionAbierta?.efectivoEnCaja ?? 0;
   }
 
   /* ---------- Filtro + paginación ---------- */
@@ -236,7 +244,7 @@ export class CobranzasComponent {
     this.facturasCliente.set([]);
     this.facturaSel.set(null);
     this.formaSel.set('EFECTIVO');
-    this.sesionSel.set(this.sesionesAbiertas()[0]?.sesionAbierta?.id ?? null);
+    this.sesionSel.set(this.sesionActual()?.id ?? null);
     this.montoPago.set(null);
     this.referencia.set('');
     this.banco.set('');
@@ -335,5 +343,101 @@ export class CobranzasComponent {
     if (e.status === 403) return 'Tu rol no tiene permiso para registrar pagos.';
     if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
     return 'No se pudo registrar el pago.';
+  }
+
+  /* ---------- Abrir / cerrar caja (modal) ---------- */
+  readonly modalCaja = signal<'abrir' | 'cerrar' | null>(null);
+  readonly guardandoCaja = signal(false);
+  readonly errorCajaModal = signal<string | null>(null);
+  readonly montoInicial = signal<number | null>(null);
+  readonly montoDeclarado = signal<number | null>(null);
+  readonly obsCaja = signal('');
+
+  abrirCajaModal() {
+    this.avisoCaja.set(null);
+    this.errorCajaModal.set(null);
+    this.montoInicial.set(null);
+    this.obsCaja.set('');
+    this.modalCaja.set('abrir');
+  }
+
+  cerrarCajaModal() {
+    this.avisoCaja.set(null);
+    this.errorCajaModal.set(null);
+    this.montoDeclarado.set(null);
+    this.obsCaja.set('');
+    this.modalCaja.set('cerrar');
+  }
+
+  cerrarModalCaja() {
+    if (this.guardandoCaja()) return;
+    this.modalCaja.set(null);
+  }
+
+  confirmarAbrirCaja() {
+    const c = this.caja();
+    const m = this.montoInicial();
+    if (!c) return;
+    if (m == null || m < 0) {
+      this.errorCajaModal.set('Indica el fondo inicial (0 o más).');
+      return;
+    }
+    this.guardandoCaja.set(true);
+    this.errorCajaModal.set(null);
+    this.finanzas.abrirCaja(c.id, { montoInicial: m, observacion: this.obsCaja().trim() || null }).subscribe({
+      next: () => {
+        this.guardandoCaja.set(false);
+        this.modalCaja.set(null);
+        this.avisoCaja.set({ texto: `Caja abierta con un fondo de ${this.moneda(m)}.`, error: false });
+        this.cargar();
+      },
+      error: (e) => {
+        this.guardandoCaja.set(false);
+        this.errorCajaModal.set(this.mensajeCaja(e));
+      },
+    });
+  }
+
+  confirmarCerrarCaja() {
+    const c = this.caja();
+    const m = this.montoDeclarado();
+    if (!c) return;
+    if (m == null || m < 0) {
+      this.errorCajaModal.set('Indica el efectivo contado (0 o más).');
+      return;
+    }
+    this.guardandoCaja.set(true);
+    this.errorCajaModal.set(null);
+    this.finanzas.cerrarCaja(c.id, { montoFinalDeclarado: m, observacion: this.obsCaja().trim() || null }).subscribe({
+      next: (r) => {
+        this.guardandoCaja.set(false);
+        this.modalCaja.set(null);
+        const dif = r.diferencia ?? 0;
+        const etiqueta =
+          dif === 0
+            ? 'sin diferencia'
+            : dif < 0
+              ? `faltante de ${this.moneda(Math.abs(dif))}`
+              : `sobrante de ${this.moneda(dif)}`;
+        this.avisoCaja.set({
+          texto: `Caja cerrada. Esperado ${this.moneda(r.montoFinalSistema)}, declarado ${this.moneda(r.montoFinalDeclarado)} — ${etiqueta}.`,
+          error: dif !== 0,
+        });
+        this.cargar();
+      },
+      error: (e) => {
+        this.guardandoCaja.set(false);
+        this.errorCajaModal.set(this.mensajeCaja(e));
+      },
+    });
+  }
+
+  private mensajeCaja(e: { status?: number }): string {
+    if (e.status === 422) return 'No se pudo operar la caja: revisa su estado (¿ya estaba abierta o cerrada?).';
+    if (e.status === 400) return 'Revisa el monto: hay algún valor inválido.';
+    if (e.status === 403) return 'Tu rol no tiene permiso para abrir o cerrar la caja.';
+    if (e.status === 404) return 'La caja no existe; recarga la página.';
+    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
+    return 'No se pudo completar la operación de caja.';
   }
 }

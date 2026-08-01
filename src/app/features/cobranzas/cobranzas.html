@@ -3,18 +3,30 @@
   <div class="page-head">
     <div>
       <h2>Cobranzas / Caja</h2>
-      <p class="sub">Recaudaciones aplicadas a facturas y estado de los puntos de cobro.</p>
+      <p class="sub">Recaudaciones aplicadas a facturas y estado de la caja de la matriz.</p>
     </div>
-    @if (puedeRegistrarPago()) {
-      <button class="btn btn-primary" (click)="abrirPago()">
-        <app-icon name="cash" [size]="15" /> Nuevo pago
-      </button>
-    }
+    <div class="head-actions">
+      <a class="btn" routerLink="/reportes/cierres-caja">
+        <app-icon name="chart" [size]="15" /> Reporte de cierres
+      </a>
+      @if (puedeRegistrarPago()) {
+        <button class="btn btn-primary" (click)="abrirPago()">
+          <app-icon name="cash" [size]="15" /> Nuevo pago
+        </button>
+      }
+    </div>
   </div>
 
-  <!-- ============ Estado de las cajas ============ -->
-  <div class="caja-grid">
-    @for (c of cajas(); track c.id) {
+  @if (avisoCaja(); as a) {
+    <div class="card banner" [class.error]="a.error">
+      <span>{{ a.texto }}</span>
+      <button class="banner-x" (click)="avisoCaja.set(null)" aria-label="Cerrar">✕</button>
+    </div>
+  }
+
+  <!-- ============ Estado de la caja (matriz; una sola, sin sucursales por ahora) ============ -->
+  <div class="caja-solo">
+    @if (caja(); as c) {
       <div class="card caja-card" [class.abierta]="c.sesionAbierta">
         <div class="caja-top">
           <span class="caja-ico"><app-icon name="cash" [size]="18" /></span>
@@ -37,11 +49,19 @@
         } @else {
           <p class="caja-cerrada">Sin jornada abierta.</p>
         }
+
+        @if (puedeOperarCaja()) {
+          <div class="caja-acciones">
+            @if (c.sesionAbierta) {
+              <button class="btn" (click)="cerrarCajaModal()"><app-icon name="cash" [size]="14" /> Cerrar caja</button>
+            } @else {
+              <button class="btn btn-primary" (click)="abrirCajaModal()"><app-icon name="cash" [size]="14" /> Abrir caja</button>
+            }
+          </div>
+        }
       </div>
-    } @empty {
-      @if (!cargando()) {
-        <div class="card caja-card"><p class="caja-cerrada">No hay cajas registradas.</p></div>
-      }
+    } @else if (!cargando()) {
+      <div class="card caja-card"><p class="caja-cerrada">No hay caja de cobranza registrada.</p></div>
     }
   </div>
 
@@ -64,18 +84,18 @@
       </div>
     </div>
     <div class="stat">
-      <span class="stat-ico warn"><app-icon name="cash" [size]="20" /></span>
+      <span class="stat-ico" [class]="cajaAbierta ? 'ok' : 'warn'"><app-icon name="cash" [size]="20" /></span>
       <div class="stat-body">
-        <span class="stat-label">Cajas abiertas</span>
-        <span class="stat-value">{{ cajasAbiertas }}</span>
-        <span class="stat-foot">de {{ cajas().length }} punto(s) de cobro</span>
+        <span class="stat-label">Estado de caja</span>
+        <span class="stat-value">{{ cajaAbierta ? 'Abierta' : 'Cerrada' }}</span>
+        <span class="stat-foot">{{ caja()?.nombre ?? 'Caja de la matriz' }}</span>
       </div>
     </div>
     <div class="stat">
       <span class="stat-ico info"><app-icon name="cash" [size]="20" /></span>
       <div class="stat-body">
-        <span class="stat-label">Efectivo en cajas</span>
-        <span class="stat-value">{{ moneda(efectivoEnCajas) }}</span>
+        <span class="stat-label">Efectivo en caja</span>
+        <span class="stat-value">{{ moneda(efectivoEnCaja) }}</span>
         <span class="stat-foot">Esperado en gaveta ahora</span>
       </div>
     </div>
@@ -249,15 +269,14 @@
 
           @if (esEfectivo()) {
             <div class="field span2">
-              <label>Sesión de caja *</label>
-              @if (sesionesAbiertas().length === 0) {
-                <span class="hint hint-warn">No hay cajas abiertas: el efectivo necesita una.</span>
+              <label>Caja</label>
+              @if (sesionActual(); as s) {
+                <div class="caja-sesion-info">
+                  <span class="mono strong">{{ caja()?.nombre }} ({{ caja()?.codigo }})</span>
+                  <span class="hint">Jornada abierta desde {{ fechaHora(s.fechaApertura) }} · efectivo en caja {{ moneda(s.efectivoEnCaja) }}</span>
+                </div>
               } @else {
-                <select [ngModel]="sesionSel()" (ngModelChange)="sesionSel.set($event)">
-                  @for (c of sesionesAbiertas(); track c.id) {
-                    <option [ngValue]="c.sesionAbierta!.id">{{ c.nombre }} ({{ c.codigo }})</option>
-                  }
-                </select>
+                <span class="hint hint-warn">La caja está cerrada: el efectivo necesita una jornada abierta.</span>
               }
             </div>
           } @else {
@@ -289,6 +308,79 @@
         <button type="button" class="btn" (click)="cerrarPago()" [disabled]="guardando()">Cancelar</button>
         <button type="button" class="btn btn-primary" (click)="guardarPago()" [disabled]="guardando()">
           {{ guardando() ? 'Registrando…' : 'Registrar pago' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ============ Modal: abrir caja ============ -->
+@if (modalCaja() === 'abrir') {
+  <div class="modal-backdrop" (click)="cerrarModalCaja()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <h3>Abrir caja · {{ caja()?.nombre }}</h3>
+        <button class="modal-x" (click)="cerrarModalCaja()" [disabled]="guardandoCaja()" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="field span2">
+            <label>Fondo inicial *</label>
+            <input type="number" min="0" step="0.01" [ngModel]="montoInicial()" (ngModelChange)="montoInicial.set($event)"
+                   placeholder="0.00" />
+            <span class="hint">El efectivo con el que arranca la jornada.</span>
+          </div>
+          <div class="field span2">
+            <label>Observación</label>
+            <input type="text" [ngModel]="obsCaja()" (ngModelChange)="obsCaja.set($event)" placeholder="Opcional" />
+          </div>
+        </div>
+        @if (errorCajaModal()) { <div class="modal-error">{{ errorCajaModal() }}</div> }
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" (click)="cerrarModalCaja()" [disabled]="guardandoCaja()">Cancelar</button>
+        <button type="button" class="btn btn-primary" (click)="confirmarAbrirCaja()" [disabled]="guardandoCaja()">
+          {{ guardandoCaja() ? 'Abriendo…' : 'Abrir caja' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ============ Modal: cerrar caja ============ -->
+@if (modalCaja() === 'cerrar') {
+  <div class="modal-backdrop" (click)="cerrarModalCaja()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <h3>Cerrar caja · {{ caja()?.nombre }}</h3>
+        <button class="modal-x" (click)="cerrarModalCaja()" [disabled]="guardandoCaja()" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        @if (caja()?.sesionAbierta; as s) {
+          <div class="caja-sesion-info">
+            <span class="hint">Efectivo esperado en gaveta (inicial + cobrado):
+              <span class="mono strong">{{ moneda(s.efectivoEnCaja) }}</span></span>
+          </div>
+        }
+        <div class="form-grid">
+          <div class="field span2">
+            <label>Efectivo contado *</label>
+            <input type="number" min="0" step="0.01" [ngModel]="montoDeclarado()" (ngModelChange)="montoDeclarado.set($event)"
+                   placeholder="0.00" />
+            <span class="hint">Lo que cuentas físicamente; el sistema calcula la diferencia.</span>
+          </div>
+          <div class="field span2">
+            <label>Observación</label>
+            <input type="text" [ngModel]="obsCaja()" (ngModelChange)="obsCaja.set($event)"
+                   placeholder="Opcional (motivo de un descuadre, etc.)" />
+          </div>
+        </div>
+        @if (errorCajaModal()) { <div class="modal-error">{{ errorCajaModal() }}</div> }
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" (click)="cerrarModalCaja()" [disabled]="guardandoCaja()">Cancelar</button>
+        <button type="button" class="btn btn-primary" (click)="confirmarCerrarCaja()" [disabled]="guardandoCaja()">
+          {{ guardandoCaja() ? 'Cerrando…' : 'Cerrar caja' }}
         </button>
       </div>
     </div>

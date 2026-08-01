@@ -112,6 +112,9 @@
                   @if (o.estado === 'EN_PROCESO' && puedeOperar()) {
                     <button class="btn mini btn-primary" (click)="abrirCerrar(o)">Cerrar</button>
                   }
+                  @if (o.estado !== 'CERRADA' && o.estado !== 'CANCELADA' && puedeCancelar()) {
+                    <button class="btn mini danger" (click)="abrirCancelar(o)">Cancelar</button>
+                  }
                 </div>
               </td>
             </tr>
@@ -152,6 +155,33 @@
         <button type="button" class="btn" (click)="cerrarModal()" [disabled]="guardando()">Cancelar</button>
         <button type="button" class="btn btn-primary" (click)="confirmarAsignar()" [disabled]="guardando()">
           {{ guardando() ? 'Asignando…' : 'Asignar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ============ Modal: cancelar orden ============ -->
+@if (accion() === 'cancelar') {
+  <div class="modal-backdrop" (click)="cerrarModal()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <h3>Cancelar orden · {{ ordenAccion()?.numero }}</h3>
+        <button class="modal-x" (click)="cerrarModal()" [disabled]="guardando()" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Motivo de la cancelación *</label>
+          <textarea rows="3" [ngModel]="motivo()" (ngModelChange)="motivo.set($event)"
+                    placeholder="Por qué se anula: cliente no estaba, duplicada, error de despacho…"></textarea>
+          <span class="hint">Obligatorio: queda en la auditoría. La orden pasa a CANCELADA y no dispara efectos.</span>
+        </div>
+        @if (errorAccion()) { <div class="modal-error">{{ errorAccion() }}</div> }
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" (click)="cerrarModal()" [disabled]="guardando()">Volver</button>
+        <button type="button" class="btn btn-danger" (click)="confirmarCancelar()" [disabled]="guardando()">
+          {{ guardando() ? 'Cancelando…' : 'Cancelar orden' }}
         </button>
       </div>
     </div>

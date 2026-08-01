@@ -189,7 +189,11 @@ export interface ClienteDetalle {
   tipoCliente: TipoCliente;
   tipoIdentificacion: TipoIdentificacion;
   identificacion: string;
+  /** Nombre ya formateado para mostrar. Para editar usa los componentes crudos de abajo. */
   nombre: string;
+  nombres: string | null;
+  apellidos: string | null;
+  razonSocial: string | null;
   email: string | null;
   telefono: string | null;
   tieneWhatsapp: boolean;
@@ -197,6 +201,20 @@ export interface ClienteDetalle {
   fechaRegistro: string;
   direccionPrincipal: DireccionDetalle | null;
   contratos: ContratoResumen[];
+}
+
+/**
+ * Cuerpo de la edición de un cliente (`PUT /api/clientes/{codigo}`): solo su nombre
+ * (según el tipo) y su contacto. Identidad (tipo/identificación) y dirección no se
+ * editan aquí.
+ */
+export interface EditarClienteRequest {
+  nombres: string | null;
+  apellidos: string | null;
+  razonSocial: string | null;
+  email: string | null;
+  telefono: string | null;
+  whatsapp: string | null;
 }
 
 /** Plan del catálogo que devuelve `GET /api/planes` (para el selector del alta). */

@@ -50,8 +50,9 @@ export class SoporteComponent {
   readonly prioridadEtq = PRIORIDAD_ETIQUETA;
   readonly prioridadTono = PRIORIDAD_TONO;
 
-  /** Despacho (asigna); técnico (inicia/cierra). ADMIN puede todo. */
+  /** Despacho (asigna/cancela); técnico (inicia/cierra). ADMIN puede todo. */
   readonly puedeAsignar = computed(() => this.auth.tieneRol('SOPORTE', 'ADMINISTRADOR'));
+  readonly puedeCancelar = computed(() => this.auth.tieneRol('SOPORTE', 'ADMINISTRADOR'));
   readonly puedeOperar = computed(() => this.auth.tieneRol('TECNICO', 'ADMINISTRADOR'));
 
   private readonly abiertas = signal<Orden[]>([]);
@@ -202,8 +203,8 @@ export class SoporteComponent {
     return 'Error inesperado cargando las órdenes.';
   }
 
-  /* ---------- Acciones: asignar / iniciar / cerrar ---------- */
-  readonly accion = signal<'asignar' | 'cerrar' | null>(null);
+  /* ---------- Acciones: asignar / iniciar / cerrar / cancelar ---------- */
+  readonly accion = signal<'asignar' | 'cerrar' | 'cancelar' | null>(null);
   readonly ordenAccion = signal<Orden | null>(null);
   readonly guardando = signal(false);
   readonly errorAccion = signal<string | null>(null);
@@ -216,6 +217,8 @@ export class SoporteComponent {
   readonly tecnicoSel = signal<number | null>(null);
   // Cerrar
   readonly resultado = signal('');
+  // Cancelar
+  readonly motivo = signal('');
 
   abrirAsignar(o: Orden) {
     this.banner.set(null);
@@ -232,6 +235,14 @@ export class SoporteComponent {
     this.resultado.set('');
     this.errorAccion.set(null);
     this.accion.set('cerrar');
+  }
+
+  abrirCancelar(o: Orden) {
+    this.banner.set(null);
+    this.ordenAccion.set(o);
+    this.motivo.set('');
+    this.errorAccion.set(null);
+    this.accion.set('cancelar');
   }
 
   cerrarModal() {
@@ -293,6 +304,30 @@ export class SoporteComponent {
         this.guardando.set(false);
         this.accion.set(null);
         this.banner.set({ texto: `Orden ${o.numero} cerrada.`, error: false });
+        this.cargar();
+      },
+      error: (e) => {
+        this.guardando.set(false);
+        this.errorAccion.set(this.mensajeAccion(e));
+      },
+    });
+  }
+
+  confirmarCancelar() {
+    const o = this.ordenAccion();
+    const m = this.motivo().trim();
+    if (!o) return;
+    if (!m) {
+      this.errorAccion.set('Indica el motivo de la cancelación.');
+      return;
+    }
+    this.guardando.set(true);
+    this.errorAccion.set(null);
+    this.operativo.cancelar(o.id, m).subscribe({
+      next: () => {
+        this.guardando.set(false);
+        this.accion.set(null);
+        this.banner.set({ texto: `Orden ${o.numero} cancelada.`, error: false });
         this.cargar();
       },
       error: (e) => {

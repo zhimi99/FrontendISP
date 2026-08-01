@@ -178,6 +178,48 @@ export interface CajaEstado {
   sesionAbierta: SesionAbierta | null;
 }
 
+/** Cuerpo de la apertura de caja (`POST /api/cajas/{id}/abrir`). */
+export interface AbrirCajaRequest {
+  montoInicial: number;
+  observacion: string | null;
+}
+
+/** Cuerpo del cierre de caja (`POST /api/cajas/{id}/cerrar`). */
+export interface CerrarCajaRequest {
+  montoFinalDeclarado: number;
+  observacion: string | null;
+}
+
+/** Arqueo de una sesión de caja: lo esperado vs. lo declarado y su diferencia. */
+export interface CierreCaja {
+  sesionId: number;
+  cajaId: number;
+  cajaCodigo: string;
+  cajaNombre: string;
+  usuarioId: number;
+  fechaApertura: string;
+  fechaCierre: string;
+  montoInicial: number;
+  montoFinalSistema: number;
+  montoFinalDeclarado: number;
+  /** declarado − sistema: negativo = faltante, positivo = sobrante. */
+  diferencia: number;
+}
+
+/** Reporte de cierres de caja en un período, con su resumen agregado. */
+export interface CierresReporte {
+  desde: string;
+  hasta: string;
+  cierres: CierreCaja[];
+  resumen: {
+    cantidad: number;
+    sumaInicial: number;
+    sumaSistema: number;
+    sumaDeclarado: number;
+    sumaDiferencia: number;
+  };
+}
+
 export const FORMA_PAGO_ETIQUETA: Record<FormaPago, string> = {
   EFECTIVO: 'Efectivo',
   TRANSFERENCIA: 'Transferencia',

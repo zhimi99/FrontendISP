@@ -1,0 +1,151 @@
+<div class="page">
+  <!-- ============ Encabezado + acciones (no se imprime) ============ -->
+  <div class="page-head no-print">
+    <div>
+      <h2>Reporte de cierres de caja</h2>
+      <p class="sub">Arqueos de caja por período, listo para imprimir o guardar en PDF.</p>
+    </div>
+    <div class="head-actions">
+      <a class="btn" routerLink="/cobranzas"><app-icon name="chevron" [size]="15" /> Cobranzas</a>
+      <button class="btn btn-primary" (click)="imprimir()" [disabled]="!reporte()?.cierres?.length">
+        <app-icon name="invoice" [size]="15" /> Imprimir / PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- ============ Controles de período (no se imprimen) ============ -->
+  <div class="card rep-controls no-print">
+    <div class="seg">
+      @for (p of periodos; track p.valor) {
+        <button class="seg-btn" [class.active]="periodo() === p.valor" (click)="setPeriodo(p.valor)">{{ p.etq }}</button>
+      }
+    </div>
+
+    <div class="rep-ref">
+      @switch (periodo()) {
+        @case ('DIARIO') {
+          <div class="field">
+            <label>Día</label>
+            <input type="date" [ngModel]="dia()" (ngModelChange)="dia.set($event); generar()" />
+          </div>
+        }
+        @case ('MENSUAL') {
+          <div class="field">
+            <label>Mes</label>
+            <input type="month" [ngModel]="mes()" (ngModelChange)="mes.set($event); generar()" />
+          </div>
+        }
+        @case ('TRIMESTRAL') {
+          <div class="field">
+            <label>Trimestre</label>
+            <select [ngModel]="trimestre()" (ngModelChange)="trimestre.set($event); generar()">
+              @for (t of trimestres; track t) { <option [ngValue]="t">T{{ t }}</option> }
+            </select>
+          </div>
+          <div class="field">
+            <label>Año</label>
+            <select [ngModel]="anio()" (ngModelChange)="anio.set($event); generar()">
+              @for (y of anios; track y) { <option [ngValue]="y">{{ y }}</option> }
+            </select>
+          </div>
+        }
+        @case ('ANUAL') {
+          <div class="field">
+            <label>Año</label>
+            <select [ngModel]="anio()" (ngModelChange)="anio.set($event); generar()">
+              @for (y of anios; track y) { <option [ngValue]="y">{{ y }}</option> }
+            </select>
+          </div>
+        }
+      }
+    </div>
+
+    <button class="btn" (click)="generar()"><app-icon name="refresh" [size]="15" /> Generar</button>
+  </div>
+
+  <!-- ============ Encabezado de impresión (solo en PDF) ============ -->
+  <div class="print-only rep-print-head">
+    <div class="rep-brand">SMARTUZ · ISP</div>
+    <h1>Reporte de cierres de caja</h1>
+    <div class="rep-meta">
+      <span>{{ periodoLabel() }}</span>
+      <span>Generado: {{ fechaHora(generadoEn().toISOString()) }}</span>
+    </div>
+  </div>
+
+  <!-- ============ Resumen del período ============ -->
+  @if (reporte(); as rep) {
+    <div class="rep-chips">
+      <div class="chip">
+        <span class="chip-cap">Período</span>
+        <span class="chip-val sm">{{ periodoLabel() }}</span>
+      </div>
+      <div class="chip">
+        <span class="chip-cap">Cierres</span>
+        <span class="chip-val">{{ rep.resumen.cantidad }}</span>
+      </div>
+      <div class="chip">
+        <span class="chip-cap">Esperado</span>
+        <span class="chip-val">{{ moneda(rep.resumen.sumaSistema) }}</span>
+      </div>
+      <div class="chip">
+        <span class="chip-cap">Declarado</span>
+        <span class="chip-val">{{ moneda(rep.resumen.sumaDeclarado) }}</span>
+      </div>
+      <div class="chip" [class.alerta]="rep.resumen.sumaDiferencia !== 0">
+        <span class="chip-cap">Diferencia</span>
+        <span class="chip-val">{{ moneda(rep.resumen.sumaDiferencia) }}</span>
+      </div>
+    </div>
+  }
+
+  <!-- ============ Tabla de cierres ============ -->
+  <div class="card table-card">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha de cierre</th>
+            <th>Caja</th>
+            <th>Cajero</th>
+            <th class="right">Fondo</th>
+            <th class="right">Efectivo</th>
+            <th class="right">Esperado</th>
+            <th class="right">Declarado</th>
+            <th>Diferencia</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of reporte()?.cierres ?? []; track c.sesionId) {
+            <tr>
+              <td class="muted">{{ fechaHora(c.fechaCierre) }}</td>
+              <td class="mono">{{ c.cajaCodigo }}</td>
+              <td>{{ cajeroNombre(c) }}</td>
+              <td class="right mono">{{ moneda(c.montoInicial) }}</td>
+              <td class="right mono">{{ moneda(efectivoRecaudado(c)) }}</td>
+              <td class="right mono">{{ moneda(c.montoFinalSistema) }}</td>
+              <td class="right mono">{{ moneda(c.montoFinalDeclarado) }}</td>
+              <td><span class="badge" [class]="difTono(c.diferencia)">{{ difEtq(c.diferencia) }}</span></td>
+            </tr>
+          } @empty {
+            <tr><td colspan="8" class="empty">{{ mensajeTabla() }}</td></tr>
+          }
+        </tbody>
+        @if (reporte(); as rep) {
+          @if (rep.cierres.length) {
+            <tfoot>
+              <tr class="tot">
+                <td colspan="3">Totales ({{ rep.resumen.cantidad }} cierre(s))</td>
+                <td class="right mono">{{ moneda(rep.resumen.sumaInicial) }}</td>
+                <td class="right mono">{{ moneda(rep.resumen.sumaSistema - rep.resumen.sumaInicial) }}</td>
+                <td class="right mono">{{ moneda(rep.resumen.sumaSistema) }}</td>
+                <td class="right mono">{{ moneda(rep.resumen.sumaDeclarado) }}</td>
+                <td class="mono strong">{{ moneda(rep.resumen.sumaDiferencia) }}</td>
+              </tr>
+            </tfoot>
+          }
+        }
+      </table>
+    </div>
+  </div>
+</div>

@@ -31,7 +31,7 @@ export class App {
     { label: 'Soporte', icon: 'support', path: '/soporte' },
     { label: 'Red', icon: 'network', path: '/red' },
     { label: 'Inventario', icon: 'box', path: '/inventario' },
-    { label: 'Reportes', icon: 'chart', path: '/reportes' },
+    { label: 'Reportes', icon: 'chart', path: '/reportes/cierres-caja' },
   ];
 
   protected readonly navFoot: NavItem[] = [

@@ -1,0 +1,132 @@
+/* Reporte de cierres de caja. Base heredada de clientes.scss. */
+
+.head-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* ============ Controles de período ============ */
+.rep-controls {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px 18px;
+  margin-bottom: 18px;
+}
+
+/* Selector segmentado diario/mensual/trimestral/anual */
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.seg-btn {
+  appearance: none;
+  border: none;
+  background: var(--card);
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  cursor: pointer;
+  border-right: 1px solid var(--border-2);
+}
+.seg-btn:last-child {
+  border-right: none;
+}
+.seg-btn.active {
+  background: var(--brand);
+  color: #fff;
+}
+
+.rep-ref {
+  display: flex;
+  gap: 12px;
+}
+.rep-controls .field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.rep-controls .field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.rep-controls .field input,
+.rep-controls .field select {
+  padding: 8px 11px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+
+/* ============ Chips de resumen ============ */
+.rep-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.chip {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  min-width: 130px;
+}
+.chip.alerta {
+  border-color: var(--warn);
+  background: var(--warn-soft);
+}
+.chip-cap {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.chip-val {
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.chip-val.sm {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Fila de totales de la tabla */
+tfoot .tot td {
+  border-top: 2px solid var(--border-2);
+  font-weight: 700;
+  background: var(--bg);
+}
+
+/* ============ Encabezado de impresión ============ */
+.rep-print-head {
+  margin-bottom: 14px;
+}
+.rep-print-head .rep-brand {
+  font-weight: 700;
+  color: var(--brand-700);
+  letter-spacing: 0.04em;
+}
+.rep-print-head h1 {
+  margin: 4px 0 6px;
+  font-size: 20px;
+}
+.rep-print-head .rep-meta {
+  display: flex;
+  gap: 18px;
+  font-size: 13px;
+  color: var(--muted);
+}

@@ -4,7 +4,11 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import {
+  AbrirCajaRequest,
   CajaEstado,
+  CerrarCajaRequest,
+  CierreCaja,
+  CierresReporte,
   EstadoPago,
   PagoCobranza,
   PagoRegistrado,
@@ -42,5 +46,21 @@ export class FinanzasService {
   /** POST /api/pagos — registra una recaudación y la aplica a facturas. */
   registrarPago(req: RegistrarPagoRequest): Observable<PagoRegistrado> {
     return this.http.post<PagoRegistrado>(`${environment.apiBase}/api/pagos`, req);
+  }
+
+  /** POST /api/cajas/{cajaId}/abrir — abre la jornada; devuelve la caja con su sesión. */
+  abrirCaja(cajaId: number, req: AbrirCajaRequest): Observable<CajaEstado> {
+    return this.http.post<CajaEstado>(`${environment.apiBase}/api/cajas/${cajaId}/abrir`, req);
+  }
+
+  /** POST /api/cajas/{cajaId}/cerrar — cierra la jornada; devuelve el arqueo (diferencia). */
+  cerrarCaja(cajaId: number, req: CerrarCajaRequest): Observable<CierreCaja> {
+    return this.http.post<CierreCaja>(`${environment.apiBase}/api/cajas/${cajaId}/cerrar`, req);
+  }
+
+  /** GET /api/cajas/cierres — reporte de cierres entre dos fechas (yyyy-MM-dd, inclusive). */
+  reporteCierres(desde: string, hasta: string): Observable<CierresReporte> {
+    const params = new HttpParams().set('desde', desde).set('hasta', hasta);
+    return this.http.get<CierresReporte>(`${environment.apiBase}/api/cajas/cierres`, { params });
   }
 }

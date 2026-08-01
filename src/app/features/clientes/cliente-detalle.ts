@@ -1,12 +1,14 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { catchError, map, Observable, of, startWith, switchMap } from 'rxjs';
+import { catchError, combineLatest, map, Observable, of, startWith, switchMap } from 'rxjs';
 
 import { IconComponent } from '../../shared/icon';
 import { ClientesService } from '../../core/services/clientes.service';
 import { FacturacionService } from '../../core/services/facturacion.service';
-import { ClienteDetalle } from '../../core/models/contratos.model';
+import { AuthService } from '../../core/services/auth.service';
+import { ClienteDetalle, EditarClienteRequest } from '../../core/models/contratos.model';
 import {
   ESTADO_PAGO_ETIQUETA,
   ESTADO_PAGO_TONO,
@@ -22,7 +24,7 @@ type EstadoFacturas = { estado: 'cargando' | 'ok' | 'error'; lista: FacturaVista
 @Component({
   selector: 'app-cliente-detalle',
   standalone: true,
-  imports: [IconComponent, RouterLink],
+  imports: [IconComponent, RouterLink, FormsModule],
   templateUrl: './cliente-detalle.html',
   styleUrl: './cliente-detalle.scss',
 })
@@ -30,7 +32,11 @@ export class ClienteDetalleComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly clientesService = inject(ClientesService);
   private readonly facturacionService = inject(FacturacionService);
+  private readonly auth = inject(AuthService);
   readonly estadosMap = ESTADOS;
+
+  /** Solo soporte/ventas y administración editan al cliente (PUT /api/clientes). */
+  readonly puedeEditar = computed(() => this.auth.tieneRol('SOPORTE', 'ADMINISTRADOR'));
 
   // Mapas de etiqueta/tono para las insignias de la pestaña de Facturación.
   readonly pagoEtq = ESTADO_PAGO_ETIQUETA;
@@ -50,14 +56,18 @@ export class ClienteDetalleComponent {
   ];
   readonly tabActiva = signal(0);
 
+  /** Se incrementa para forzar una recarga de la ficha (p. ej. tras editar). */
+  private readonly recargar = signal(0);
+
   /**
    * Ficha real desde MS-CONTRATOS. `undefined` = cargando, `null` = no encontrado
-   * o error, objeto = cargada. Se recarga sola si cambia el código de la URL.
+   * o error, objeto = cargada. Se recarga sola si cambia el código de la URL, y a
+   * demanda cuando se bumpea `recargar` (tras guardar una edición).
    */
   // Sin initialValue: toSignal arranca en `undefined` (= cargando) hasta la 1ª emisión.
   private readonly detalle = toSignal(
-    this.route.paramMap.pipe(
-      map((p) => p.get('id') ?? ''),
+    combineLatest([this.route.paramMap, toObservable(this.recargar)]).pipe(
+      map(([p]) => p.get('id') ?? ''),
       switchMap((codigo) =>
         codigo
           ? this.clientesService.detalle(codigo).pipe(catchError(() => of(null)))
@@ -196,5 +206,83 @@ export class ClienteDetalleComponent {
     const f = new Date(iso);
     if (isNaN(f.getTime())) return '—';
     return `${String(f.getDate()).padStart(2, '0')}/${String(f.getMonth() + 1).padStart(2, '0')}/${f.getFullYear()}`;
+  }
+
+  /* ---------- Editar cliente (modal) ---------- */
+  readonly modalEditar = signal(false);
+  readonly guardandoEditar = signal(false);
+  readonly errorEditar = signal<string | null>(null);
+  /** El tipo no se edita aquí: decide qué campos de nombre se piden. */
+  readonly editEsEmpresa = computed(() => this.detalle()?.tipoCliente === 'EMPRESA');
+
+  readonly edNombres = signal('');
+  readonly edApellidos = signal('');
+  readonly edRazonSocial = signal('');
+  readonly edEmail = signal('');
+  readonly edTelefono = signal('');
+  readonly edWhatsapp = signal('');
+
+  abrirEditar() {
+    const det = this.detalle();
+    if (!det) return;
+    this.errorEditar.set(null);
+    this.edNombres.set(det.nombres ?? '');
+    this.edApellidos.set(det.apellidos ?? '');
+    this.edRazonSocial.set(det.razonSocial ?? '');
+    this.edEmail.set(det.email ?? '');
+    this.edTelefono.set(det.telefono ?? '');
+    this.edWhatsapp.set(det.whatsapp ?? '');
+    this.modalEditar.set(true);
+  }
+
+  cerrarEditar() {
+    if (this.guardandoEditar()) return;
+    this.modalEditar.set(false);
+  }
+
+  guardarEditar() {
+    const det = this.detalle();
+    if (!det) return;
+
+    if (this.editEsEmpresa()) {
+      if (!this.edRazonSocial().trim()) {
+        this.errorEditar.set('La razón social es obligatoria para una empresa.');
+        return;
+      }
+    } else if (!this.edNombres().trim()) {
+      this.errorEditar.set('Los nombres son obligatorios para una persona.');
+      return;
+    }
+
+    const req: EditarClienteRequest = {
+      nombres: this.editEsEmpresa() ? null : this.edNombres().trim() || null,
+      apellidos: this.editEsEmpresa() ? null : this.edApellidos().trim() || null,
+      razonSocial: this.editEsEmpresa() ? this.edRazonSocial().trim() || null : null,
+      email: this.edEmail().trim() || null,
+      telefono: this.edTelefono().trim() || null,
+      whatsapp: this.edWhatsapp().trim() || null,
+    };
+
+    this.guardandoEditar.set(true);
+    this.errorEditar.set(null);
+    this.clientesService.editar(det.codigo, req).subscribe({
+      next: () => {
+        this.guardandoEditar.set(false);
+        this.modalEditar.set(false);
+        this.recargar.update((n) => n + 1); // refresca la ficha con los datos nuevos
+      },
+      error: (e) => {
+        this.guardandoEditar.set(false);
+        this.errorEditar.set(this.mensajeEditar(e));
+      },
+    });
+  }
+
+  private mensajeEditar(e: { status?: number; error?: { mensaje?: string } }): string {
+    if (e.status === 400) return e.error?.mensaje ?? 'Revisa los datos: hay algún campo inválido.';
+    if (e.status === 404) return 'El cliente ya no existe; recarga la página.';
+    if (e.status === 403) return 'Tu rol no tiene permiso para editar clientes.';
+    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
+    return 'No se pudo guardar la edición. Inténtalo de nuevo.';
   }
 }

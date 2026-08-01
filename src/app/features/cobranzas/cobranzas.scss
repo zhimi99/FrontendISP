@@ -128,12 +128,62 @@
   }
 }
 
-/* ============ Panel de cajas ============ */
-.caja-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 14px;
+/* ============ Panel de caja (una sola: la matriz) ============ */
+.caja-solo {
+  max-width: 460px;
   margin-bottom: 18px;
+}
+/* Caja en modo lectura dentro del modal de pago (no hay selección: una sola caja). */
+.caja-sesion-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 11px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  margin-bottom: 14px;
+}
+
+/* Fila de acción (abrir/cerrar) dentro de la tarjeta de caja. */
+.caja-acciones {
+  margin-top: 14px;
+  display: flex;
+  gap: 8px;
+}
+
+/* Acciones del encabezado (reporte + nuevo pago). */
+.head-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* Aviso de resultado de operaciones de caja. */
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 16px;
+  border-left: 3px solid var(--ok);
+  font-size: 13px;
+  font-weight: 600;
+}
+.banner.error {
+  border-left-color: var(--warn);
+}
+.banner-x {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+.banner-x:hover {
+  background: var(--bg);
 }
 
 .caja-card {

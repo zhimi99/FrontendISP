@@ -87,3 +87,50 @@ button {
   background: #b3bbb2;
   background-clip: content-box;
 }
+
+/* =====================================================================
+   Impresión de reportes a PDF. Oculta el shell (sidebar/topbar) y todo lo
+   marcado con .no-print; muestra los bloques .print-only. El navegador
+   guarda como PDF desde su propio diálogo de impresión.
+   ===================================================================== */
+.print-only {
+  display: none;
+}
+
+@media print {
+  .sidebar,
+  .topbar,
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .shell,
+  .panel,
+  .content {
+    display: block !important;
+  }
+  .content {
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  body {
+    background: #fff !important;
+  }
+  .card {
+    box-shadow: none !important;
+    border-color: #ccc !important;
+  }
+  table {
+    page-break-inside: auto;
+  }
+  tr {
+    page-break-inside: avoid;
+  }
+  /* Preserva los colores de badges/acentos al imprimir. */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

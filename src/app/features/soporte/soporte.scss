@@ -49,6 +49,28 @@
   padding: 5px 12px;
   font-size: 12px;
 }
+/* Cancelar: acción destructiva; contorno rojo discreto que no compita con la acción principal de cada fila. */
+.btn.mini.danger {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: transparent;
+}
+.btn.mini.danger:hover:not(:disabled) {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+}
+
+/* Botón sólido rojo para confirmar la cancelación en el pie del modal. */
+.btn-danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+.btn-danger:hover:not(:disabled) {
+  background: var(--danger);
+  border-color: var(--danger);
+  filter: brightness(0.95);
+}
 
 /* ============ Modal (asignar / cerrar) ============ */
 .modal-backdrop {

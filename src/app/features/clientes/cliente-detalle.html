@@ -11,7 +11,9 @@
       </nav>
       <div class="crumb-actions">
         <a class="btn" routerLink="/clientes"><app-icon name="chevron" [size]="15" /> Volver</a>
-        <button class="btn"><app-icon name="pencil" [size]="15" /> Editar</button>
+        @if (puedeEditar()) {
+          <button class="btn" (click)="abrirEditar()"><app-icon name="pencil" [size]="15" /> Editar</button>
+        }
         <button class="btn btn-dark">Acciones <app-icon name="chevron" [size]="15" /></button>
       </div>
     </div>
@@ -267,6 +269,59 @@
       <h3>Cliente no encontrado</h3>
       <p>No existe un cliente con ese código, o el gateway no respondió.</p>
       <a class="btn btn-primary" routerLink="/clientes">Volver a la lista</a>
+    </div>
+  </div>
+}
+
+<!-- ============ Modal: editar cliente ============ -->
+@if (modalEditar()) {
+  <div class="modal-backdrop" (click)="cerrarEditar()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <h3>Editar cliente</h3>
+        <button class="modal-x" (click)="cerrarEditar()" [disabled]="guardandoEditar()" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          @if (editEsEmpresa()) {
+            <div class="field span2">
+              <label>Razón social *</label>
+              <input type="text" [ngModel]="edRazonSocial()" (ngModelChange)="edRazonSocial.set($event)"
+                     placeholder="Nombre legal de la empresa" />
+            </div>
+          } @else {
+            <div class="field">
+              <label>Nombres *</label>
+              <input type="text" [ngModel]="edNombres()" (ngModelChange)="edNombres.set($event)" />
+            </div>
+            <div class="field">
+              <label>Apellidos</label>
+              <input type="text" [ngModel]="edApellidos()" (ngModelChange)="edApellidos.set($event)" />
+            </div>
+          }
+          <div class="field">
+            <label>Teléfono</label>
+            <input type="text" [ngModel]="edTelefono()" (ngModelChange)="edTelefono.set($event)" />
+          </div>
+          <div class="field">
+            <label>WhatsApp</label>
+            <input type="text" [ngModel]="edWhatsapp()" (ngModelChange)="edWhatsapp.set($event)" />
+          </div>
+          <div class="field span2">
+            <label>Email</label>
+            <input type="email" [ngModel]="edEmail()" (ngModelChange)="edEmail.set($event)"
+                   placeholder="correo@ejemplo.com" />
+          </div>
+        </div>
+        <p class="modal-nota">La identificación y la dirección no se editan aquí.</p>
+        @if (errorEditar()) { <div class="modal-error">{{ errorEditar() }}</div> }
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" (click)="cerrarEditar()" [disabled]="guardandoEditar()">Cancelar</button>
+        <button type="button" class="btn btn-primary" (click)="guardarEditar()" [disabled]="guardandoEditar()">
+          {{ guardandoEditar() ? 'Guardando…' : 'Guardar cambios' }}
+        </button>
+      </div>
     </div>
   </div>
 }

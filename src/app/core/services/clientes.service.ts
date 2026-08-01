@@ -8,6 +8,7 @@ import {
   AltaClienteResponse,
   ClienteDetalle,
   ClienteListado,
+  EditarClienteRequest,
 } from '../models/contratos.model';
 
 /**
@@ -33,5 +34,13 @@ export class ClientesService {
   /** POST /api/clientes — alta de cliente y su primer contrato (queda PENDIENTE). */
   crear(request: AltaClienteRequest): Observable<AltaClienteResponse> {
     return this.http.post<AltaClienteResponse>(`${environment.apiBase}/api/clientes`, request);
+  }
+
+  /**
+   * PUT /api/clientes/{codigo} — edita nombre y contacto del cliente. Devuelve la
+   * ficha ya actualizada. 404 si no existe, 400 si falta el nombre según el tipo.
+   */
+  editar(codigo: string, request: EditarClienteRequest): Observable<ClienteDetalle> {
+    return this.http.put<ClienteDetalle>(`${environment.apiBase}/api/clientes/${codigo}`, request);
   }
 }

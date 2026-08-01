@@ -44,4 +44,12 @@ export class OperativoService {
   cerrar(id: number, resultado: string): Observable<Orden> {
     return this.http.post<Orden>(`${environment.apiBase}/api/ordenes/${id}/cerrar`, { resultado });
   }
+
+  /**
+   * POST /api/ordenes/{id}/cancelar — anula la orden con motivo obligatorio (cualquier
+   * estado no terminal → CANCELADA). Cancelar una ya cerrada/cancelada devuelve 409.
+   */
+  cancelar(id: number, motivo: string): Observable<Orden> {
+    return this.http.post<Orden>(`${environment.apiBase}/api/ordenes/${id}/cancelar`, { motivo });
+  }
 }
