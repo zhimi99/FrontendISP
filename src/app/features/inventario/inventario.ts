@@ -12,11 +12,15 @@ import {
   Existencia,
   Material,
   MaterialBajoStock,
+  Movimiento,
   TipoEquipo,
+  TipoMovimiento,
   Ubicacion,
   ESTADO_EQUIPO_ETIQUETA,
   ESTADO_EQUIPO_TONO,
   TIPO_EQUIPO_ETIQUETA,
+  TIPO_MOVIMIENTO_ETIQUETA,
+  TIPO_MOVIMIENTO_TONO,
   TIPO_UBICACION_ETIQUETA,
   UNIDAD_ETIQUETA,
 } from '../../core/models/inventario.model';
@@ -44,6 +48,10 @@ export class InventarioComponent {
   readonly tiposEquipo = TIPOS_EQUIPO;
   /** Solo TECNICO/ADMIN pueden dar de alta equipos (POST /api/equipos). */
   readonly puedeAltaEquipo = computed(() => this.auth.tieneRol('TECNICO', 'ADMINISTRADOR'));
+  /** Mover stock (ingresos y consumos) es trabajo de campo: TECNICO/ADMIN. */
+  readonly puedeMoverStock = computed(() => this.auth.tieneRol('TECNICO', 'ADMINISTRADOR'));
+  /** Aviso del resultado del último movimiento de stock. */
+  readonly avisoStock = signal<{ texto: string; error: boolean } | null>(null);
 
   readonly tipoEquipoEtq = TIPO_EQUIPO_ETIQUETA;
   readonly estadoEquipoEtq = ESTADO_EQUIPO_ETIQUETA;
@@ -62,7 +70,7 @@ export class InventarioComponent {
   readonly error = signal<string | null>(null);
   readonly equiposCargando = signal(false);
 
-  readonly tabActiva = signal<0 | 1>(0);
+  readonly tabActiva = signal<0 | 1 | 2>(0);
 
   // Filtros de la pestaña de stock
   readonly qStock = signal('');
@@ -76,12 +84,18 @@ export class InventarioComponent {
   private readonly bajoStockIds = computed(() => new Set(this.bajoStock().map((b) => b.materialId)));
 
   constructor() {
+    this.cargar();
+  }
+
+  /** Carga inicial y refresco tras un movimiento de stock. */
+  private cargar() {
+    this.cargando.set(true);
     forkJoin({
       materiales: this.inventario.listarMateriales(),
       ubicaciones: this.inventario.listarUbicaciones(),
       bajoStock: this.inventario.bajoStock(),
       existencias: this.inventario.listarExistencias(),
-      equipos: this.inventario.listarEquipos({ estado: 'DISPONIBLE' }),
+      equipos: this.inventario.listarEquipos({ estado: this.estadoFiltro() }),
     }).subscribe({
       next: (r) => {
         this.materiales.set(r.materiales);
@@ -89,7 +103,8 @@ export class InventarioComponent {
         this.bajoStock.set(r.bajoStock);
         this.existencias.set(r.existencias);
         this.equipos.set(r.equipos);
-        this.disponiblesTotal.set(r.equipos.length);
+        // El KPI cuenta disponibles; si la pestaña mira otro estado, no lo pisa.
+        if (this.estadoFiltro() === 'DISPONIBLE') this.disponiblesTotal.set(r.equipos.length);
         this.cargando.set(false);
       },
       error: (e) => {
@@ -99,8 +114,10 @@ export class InventarioComponent {
     });
   }
 
-  setTab(i: 0 | 1) {
+  setTab(i: 0 | 1 | 2) {
     this.tabActiva.set(i);
+    // El libro solo se pide cuando se mira: es la consulta más pesada de la pantalla.
+    if (i === 2 && this.movimientos().length === 0) this.cargarMovimientos();
   }
 
   /* ---------- Stock de material ---------- */
@@ -241,5 +258,188 @@ export class InventarioComponent {
     if (e.status === 403) return 'Tu rol no tiene permiso para ver el inventario.';
     if (e.status) return `El gateway respondió ${e.status} al cargar el inventario.`;
     return 'Error inesperado cargando el inventario.';
+  }
+
+  /* ---------- Historial: el libro de inventario ---------- */
+  readonly movimientos = signal<Movimiento[]>([]);
+  readonly movimientosCargando = signal(false);
+  readonly movTipoFiltro = signal<'' | TipoMovimiento>('');
+  readonly movMaterialFiltro = signal<'' | number>('');
+  readonly movUbicacionFiltro = signal<'' | number>('');
+
+  readonly tiposMovimiento: TipoMovimiento[] = ['INGRESO', 'EGRESO', 'TRASLADO', 'AJUSTE'];
+  readonly tipoMovEtq = TIPO_MOVIMIENTO_ETIQUETA;
+  readonly tipoMovTono = TIPO_MOVIMIENTO_TONO;
+
+  cargarMovimientos() {
+    this.movimientosCargando.set(true);
+    const tipo = this.movTipoFiltro();
+    const mat = this.movMaterialFiltro();
+    const ubi = this.movUbicacionFiltro();
+    this.inventario
+      .listarMovimientos({
+        tipo: tipo === '' ? undefined : tipo,
+        materialId: mat === '' ? undefined : mat,
+        ubicacionId: ubi === '' ? undefined : ubi,
+        limite: 200,
+      })
+      .subscribe({
+        next: (lista) => {
+          this.movimientos.set(lista);
+          this.movimientosCargando.set(false);
+        },
+        error: (e) => {
+          this.movimientos.set([]);
+          this.error.set(this.mensajeDeError(e));
+          this.movimientosCargando.set(false);
+        },
+      });
+  }
+
+  /** Qué se movió: el material o la unidad serializada. */
+  queSeMovio(m: Movimiento): string {
+    if (m.material) return m.material;
+    if (m.equipoSerie) return `Equipo ${m.equipoSerie}`;
+    return '—';
+  }
+
+  /** De dónde a dónde, en una sola celda legible. */
+  rutaDe(m: Movimiento): string {
+    if (m.origen && m.destino) return `${m.origen} → ${m.destino}`;
+    if (m.destino) return `→ ${m.destino}`;
+    if (m.origen) return `${m.origen} →`;
+    return '—';
+  }
+
+  readonly mensajeMovimientos = computed(() => {
+    if (this.movimientosCargando()) return 'Cargando movimientos…';
+    if (this.error()) return this.error()!;
+    return 'No hay movimientos con los filtros aplicados.';
+  });
+
+  fechaHora(iso: string | null): string {
+    if (!iso) return '—';
+    const f = new Date(iso);
+    if (isNaN(f.getTime())) return '—';
+    const d2 = (n: number) => String(n).padStart(2, '0');
+    return `${d2(f.getDate())}/${d2(f.getMonth() + 1)}/${f.getFullYear()} ${d2(f.getHours())}:${d2(f.getMinutes())}`;
+  }
+
+  /* ---------- Movimientos de stock: ingreso y consumo (modal) ---------- */
+  readonly modalStock = signal<'ingreso' | 'consumo' | null>(null);
+  readonly guardandoStock = signal(false);
+  readonly errorStock = signal<string | null>(null);
+
+  readonly materialSel = signal<number | null>(null);
+  readonly ubicacionSel = signal<number | null>(null);
+  readonly cantidadMov = signal<number | null>(null);
+  readonly referenciaMov = signal('');
+  readonly ordenMov = signal<number | null>(null);
+
+  /** Materiales ordenados por nombre para el selector. */
+  readonly materialesOrdenados = computed(() =>
+    [...this.materiales()].sort((a, b) => a.nombre.localeCompare(b.nombre)),
+  );
+
+  readonly materialActual = computed(
+    () => this.materiales().find((m) => m.id === this.materialSel()) ?? null,
+  );
+
+  /**
+   * Saldo del material elegido en la ubicación elegida. En un consumo es el techo:
+   * sacar más de lo que hay lo rechaza el backend con 422, y aquí se avisa antes.
+   */
+  readonly saldoSeleccionado = computed(() => {
+    const m = this.materialSel();
+    const u = this.ubicacionSel();
+    if (m == null || u == null) return null;
+    return this.existencias().find((e) => e.materialId === m && e.ubicacionId === u)?.cantidad ?? 0;
+  });
+
+  abrirMovimiento(tipo: 'ingreso' | 'consumo') {
+    this.avisoStock.set(null);
+    this.errorStock.set(null);
+    this.materialSel.set(null);
+    this.cantidadMov.set(null);
+    this.referenciaMov.set('');
+    this.ordenMov.set(null);
+    // Preselecciona una bodega: es el origen/destino habitual.
+    const bodega = this.ubicaciones().find((u) => u.tipo === 'BODEGA') ?? this.ubicaciones()[0];
+    this.ubicacionSel.set(bodega?.id ?? null);
+    this.modalStock.set(tipo);
+  }
+
+  cerrarMovimiento() {
+    if (this.guardandoStock()) return;
+    this.modalStock.set(null);
+  }
+
+  guardarMovimiento() {
+    const err = this.validarMovimiento();
+    if (err) {
+      this.errorStock.set(err);
+      return;
+    }
+    const esIngreso = this.modalStock() === 'ingreso';
+    const material = this.materialActual()!;
+    const cant = this.cantidadMov()!;
+    const ubic = this.ubicacionSel()!;
+
+    this.guardandoStock.set(true);
+    this.errorStock.set(null);
+
+    const peticion = esIngreso
+      ? this.inventario.ingresarMaterial({
+          materialId: material.id,
+          cantidad: cant,
+          ubicacionDestinoId: ubic,
+          referencia: this.referenciaMov().trim() || null,
+        })
+      : this.inventario.consumirMaterial({
+          materialId: material.id,
+          cantidad: cant,
+          ubicacionOrigenId: ubic,
+          ordenTrabajoId: this.ordenMov(),
+          contratoId: null,
+        });
+
+    peticion.subscribe({
+      next: () => {
+        this.guardandoStock.set(false);
+        this.modalStock.set(null);
+        const verbo = esIngreso ? 'Ingresaron' : 'Se consumieron';
+        this.avisoStock.set({
+          texto: `${verbo} ${this.cantidad(cant)} ${this.unidadEtq[material.unidad]} de ${material.nombre}.`,
+          error: false,
+        });
+        this.cargar(); // refresca existencias, bajo stock y KPIs
+      },
+      error: (e) => {
+        this.guardandoStock.set(false);
+        this.errorStock.set(this.mensajeMovimiento(e));
+      },
+    });
+  }
+
+  private validarMovimiento(): string | null {
+    if (this.materialSel() == null) return 'Elige un material.';
+    if (this.ubicacionSel() == null) return 'Elige una ubicación.';
+    const c = this.cantidadMov();
+    if (c == null || c <= 0) return 'La cantidad debe ser mayor que cero.';
+    if (this.modalStock() === 'consumo') {
+      const saldo = this.saldoSeleccionado() ?? 0;
+      if (c > saldo) return `No hay bastante: disponible ${this.cantidad(saldo)}.`;
+    }
+    return null;
+  }
+
+  private mensajeMovimiento(e: { status?: number }): string {
+    // 422 lo usa el backend tanto para stock insuficiente como para reglas de inventario.
+    if (e.status === 422) return 'No hay bastante stock en esa ubicación (o la cantidad no es válida).';
+    if (e.status === 400) return 'Revisa los datos del movimiento: hay algún campo inválido.';
+    if (e.status === 403) return 'Tu rol no tiene permiso para mover stock.';
+    if (e.status === 404) return 'El material o la ubicación ya no existen; recarga la página.';
+    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
+    return 'No se pudo registrar el movimiento.';
   }
 }

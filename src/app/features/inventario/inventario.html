@@ -5,12 +5,29 @@
       <h2>Inventario</h2>
       <p class="sub">Stock de material por ubicación y equipos serializados (ONT, routers).</p>
     </div>
-    @if (puedeAltaEquipo()) {
-      <button class="btn btn-primary" (click)="abrirAlta()">
-        <app-icon name="box" [size]="15" /> Nuevo equipo
-      </button>
-    }
+    <div class="head-actions">
+      @if (puedeMoverStock()) {
+        <button class="btn" (click)="abrirMovimiento('ingreso')">
+          <app-icon name="box" [size]="15" /> Ingreso
+        </button>
+        <button class="btn" (click)="abrirMovimiento('consumo')">
+          <app-icon name="box" [size]="15" /> Consumo
+        </button>
+      }
+      @if (puedeAltaEquipo()) {
+        <button class="btn btn-primary" (click)="abrirAlta()">
+          <app-icon name="box" [size]="15" /> Nuevo equipo
+        </button>
+      }
+    </div>
   </div>
+
+  @if (avisoStock(); as a) {
+    <div class="card banner" [class.error]="a.error">
+      <span>{{ a.texto }}</span>
+      <button class="banner-x" (click)="avisoStock.set(null)" aria-label="Cerrar">✕</button>
+    </div>
+  }
 
   <!-- ============ Tarjetas de resumen ============ -->
   <div class="stats">
@@ -73,6 +90,7 @@
   <div class="tabs">
     <button class="tab" [class.active]="tabActiva() === 0" (click)="setTab(0)">Stock de materiales</button>
     <button class="tab" [class.active]="tabActiva() === 1" (click)="setTab(1)">Equipos</button>
+    <button class="tab" [class.active]="tabActiva() === 2" (click)="setTab(2)">Movimientos</button>
   </div>
 
   <!-- ============ Pestaña: Stock de materiales ============ -->
@@ -183,6 +201,76 @@
       </div>
     </div>
   }
+
+  <!-- ============ Pestaña: libro de movimientos ============ -->
+  @if (tabActiva() === 2) {
+    <div class="filters card">
+      <div class="field">
+        <label>Tipo</label>
+        <select [ngModel]="movTipoFiltro()" (ngModelChange)="movTipoFiltro.set($event); cargarMovimientos()">
+          <option value="">Todos</option>
+          @for (t of tiposMovimiento; track t) { <option [ngValue]="t">{{ tipoMovEtq[t] }}</option> }
+        </select>
+      </div>
+      <div class="field grow">
+        <label>Material</label>
+        <select [ngModel]="movMaterialFiltro()" (ngModelChange)="movMaterialFiltro.set($event); cargarMovimientos()">
+          <option value="">Todos</option>
+          @for (m of materialesOrdenados(); track m.id) {
+            <option [ngValue]="m.id">{{ m.codigo }} · {{ m.nombre }}</option>
+          }
+        </select>
+      </div>
+      <div class="field">
+        <label>Ubicación</label>
+        <select [ngModel]="movUbicacionFiltro()" (ngModelChange)="movUbicacionFiltro.set($event); cargarMovimientos()">
+          <option value="">Todas</option>
+          @for (u of ubicaciones(); track u.id) { <option [ngValue]="u.id">{{ u.nombre }}</option> }
+        </select>
+      </div>
+      <div class="filter-btns">
+        <button class="btn" (click)="cargarMovimientos()"><app-icon name="refresh" [size]="15" /> Actualizar</button>
+      </div>
+    </div>
+
+    <div class="card table-card">
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Tipo</th>
+              <th>Qué se movió</th>
+              <th class="right">Cantidad</th>
+              <th>Ruta</th>
+              <th>Referencia / motivo</th>
+              <th>Orden</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (m of movimientos(); track m.id) {
+              <tr>
+                <td class="muted">{{ fechaHora(m.fecha) }}</td>
+                <td><span class="badge" [class]="tipoMovTono[m.tipo]">{{ tipoMovEtq[m.tipo] }}</span></td>
+                <td class="strong">{{ queSeMovio(m) }}</td>
+                <td class="right mono">{{ cantidad(m.cantidad) }}</td>
+                <td class="muted">{{ rutaDe(m) }}</td>
+                <td class="muted">{{ m.referencia ?? m.motivo ?? '—' }}</td>
+                <td class="mono muted">{{ m.ordenTrabajoId ? ('OT #' + m.ordenTrabajoId) : '—' }}</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="7" class="empty">{{ mensajeMovimientos() }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (movimientos().length) {
+        <div class="pager">
+          <span class="pager-info">Mostrando los {{ movimientos().length }} movimientos más recientes</span>
+        </div>
+      }
+    </div>
+  }
 </div>
 
 <!-- ============ Modal: alta de equipo ============ -->
@@ -243,6 +331,78 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+}
+
+<!-- ============ Modal: ingreso / consumo de material ============ -->
+@if (modalStock(); as tipo) {
+  <div class="modal-backdrop" (click)="cerrarMovimiento()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <h3>{{ tipo === 'ingreso' ? 'Ingreso de material' : 'Consumo de material' }}</h3>
+        <button class="modal-x" (click)="cerrarMovimiento()" [disabled]="guardandoStock()" aria-label="Cerrar">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="field span2">
+            <label>Material *</label>
+            <select [ngModel]="materialSel()" (ngModelChange)="materialSel.set($event)">
+              <option [ngValue]="null" disabled>Selecciona…</option>
+              @for (m of materialesOrdenados(); track m.id) {
+                <option [ngValue]="m.id">{{ m.codigo }} · {{ m.nombre }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="field span2">
+            <label>{{ tipo === 'ingreso' ? 'Ubicación de destino *' : 'Ubicación de origen *' }}</label>
+            <select [ngModel]="ubicacionSel()" (ngModelChange)="ubicacionSel.set($event)">
+              <option [ngValue]="null" disabled>Selecciona…</option>
+              @for (u of ubicaciones(); track u.id) {
+                <option [ngValue]="u.id">{{ u.nombre }} ({{ tipoUbicEtq[u.tipo] }})</option>
+              }
+            </select>
+            @if (saldoSeleccionado() !== null && materialActual(); as m) {
+              <span class="hint">
+                Saldo actual aquí: <span class="mono strong">{{ cantidad(saldoSeleccionado()!) }}</span> {{ unidadEtq[m.unidad] }}
+              </span>
+            }
+          </div>
+
+          <div class="field">
+            <label>Cantidad *</label>
+            <input type="number" min="0" step="0.01" [ngModel]="cantidadMov()" (ngModelChange)="cantidadMov.set($event)"
+                   placeholder="0" />
+            @if (materialActual(); as m) { <span class="hint">En {{ unidadEtq[m.unidad] }}.</span> }
+          </div>
+
+          @if (tipo === 'ingreso') {
+            <div class="field">
+              <label>Referencia</label>
+              <input type="text" [ngModel]="referenciaMov()" (ngModelChange)="referenciaMov.set($event)"
+                     placeholder="N.º de factura o guía" />
+            </div>
+          } @else {
+            <div class="field">
+              <label>Orden de trabajo</label>
+              <input type="number" min="1" step="1" [ngModel]="ordenMov()" (ngModelChange)="ordenMov.set($event)"
+                     placeholder="Opcional" />
+              <span class="hint">Permite saber qué gastó cada instalación.</span>
+            </div>
+          }
+        </div>
+
+        @if (errorStock()) { <div class="modal-error">{{ errorStock() }}</div> }
+      </div>
+
+      <div class="modal-foot">
+        <button type="button" class="btn" (click)="cerrarMovimiento()" [disabled]="guardandoStock()">Cancelar</button>
+        <button type="button" class="btn btn-primary" (click)="guardarMovimiento()" [disabled]="guardandoStock()">
+          {{ guardandoStock() ? 'Registrando…' : (tipo === 'ingreso' ? 'Registrar ingreso' : 'Registrar consumo') }}
+        </button>
+      </div>
     </div>
   </div>
 }

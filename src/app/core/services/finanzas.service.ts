@@ -58,6 +58,15 @@ export class FinanzasService {
     return this.http.post<CierreCaja>(`${environment.apiBase}/api/cajas/${cajaId}/cerrar`, req);
   }
 
+  /**
+   * POST /api/pagos/{id}/anular — deja el pago sin efecto y devuelve el saldo a sus
+   * facturas por evento. 422 si ya estaba anulado o si el efectivo entró por una
+   * jornada de caja ya cerrada.
+   */
+  anularPago(id: number, motivo: string): Observable<PagoCobranza> {
+    return this.http.post<PagoCobranza>(`${environment.apiBase}/api/pagos/${id}/anular`, { motivo });
+  }
+
   /** GET /api/cajas/cierres — reporte de cierres entre dos fechas (yyyy-MM-dd, inclusive). */
   reporteCierres(desde: string, hasta: string): Observable<CierresReporte> {
     const params = new HttpParams().set('desde', desde).set('hasta', hasta);

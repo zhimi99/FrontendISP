@@ -90,6 +90,24 @@ export interface Movimiento {
   fecha: string;
 }
 
+/** Cuerpo del ingreso de material comprado (`POST /api/ingresos`). */
+export interface IngresoStockRequest {
+  materialId: number;
+  cantidad: number;
+  ubicacionDestinoId: number;
+  /** Factura/guía de la compra, para poder rastrear de dónde vino. */
+  referencia: string | null;
+}
+
+/** Cuerpo del consumo de material en una instalación (`POST /api/consumos`). */
+export interface ConsumoStockRequest {
+  materialId: number;
+  cantidad: number;
+  ubicacionOrigenId: number;
+  ordenTrabajoId: number | null;
+  contratoId: number | null;
+}
+
 /** Cuerpo del alta de equipo (`POST /api/equipos`). */
 export interface AltaEquipoRequest {
   tipo: TipoEquipo;
@@ -129,6 +147,20 @@ export const ESTADO_EQUIPO_TONO: Record<EstadoEquipo, string> = {
   ASIGNADO: 'info',
   AVERIADO: 'warn',
   BAJA: 'neutral',
+};
+
+export const TIPO_MOVIMIENTO_ETIQUETA: Record<TipoMovimiento, string> = {
+  INGRESO: 'Ingreso',
+  EGRESO: 'Egreso',
+  TRASLADO: 'Traslado',
+  AJUSTE: 'Ajuste',
+};
+
+export const TIPO_MOVIMIENTO_TONO: Record<TipoMovimiento, string> = {
+  INGRESO: 'ok',
+  EGRESO: 'danger',
+  TRASLADO: 'info',
+  AJUSTE: 'warn',
 };
 
 export const TIPO_UBICACION_ETIQUETA: Record<TipoUbicacion, string> = {

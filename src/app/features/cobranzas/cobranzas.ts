@@ -50,6 +50,8 @@ export class CobranzasComponent {
   readonly puedeRegistrarPago = computed(() => this.auth.tieneRol('COBRANZAS', 'ADMINISTRADOR'));
   /** Abrir/cerrar la jornada de caja: mismo perfil que recauda. */
   readonly puedeOperarCaja = computed(() => this.auth.tieneRol('COBRANZAS', 'ADMINISTRADOR'));
+  /** Anular mueve dinero hacia atrás: el backend lo restringe a ADMIN. */
+  readonly puedeAnular = computed(() => this.auth.tieneRol('ADMINISTRADOR'));
   /** Aviso de resultado de operaciones de caja (apertura/cierre y su arqueo). */
   readonly avisoCaja = signal<{ texto: string; error: boolean } | null>(null);
 
@@ -430,6 +432,68 @@ export class CobranzasComponent {
         this.errorCajaModal.set(this.mensajeCaja(e));
       },
     });
+  }
+
+  /* ---------- Anular pago (modal) ---------- */
+  readonly pagoAnular = signal<PagoCobranzaVista | null>(null);
+  readonly anulando = signal(false);
+  readonly errorAnular = signal<string | null>(null);
+  readonly motivoAnular = signal('');
+
+  abrirAnular(p: PagoCobranzaVista) {
+    this.avisoCaja.set(null);
+    this.errorAnular.set(null);
+    this.motivoAnular.set('');
+    this.pagoAnular.set(p);
+  }
+
+  cerrarAnular() {
+    if (this.anulando()) return;
+    this.pagoAnular.set(null);
+  }
+
+  confirmarAnular() {
+    const p = this.pagoAnular();
+    const motivo = this.motivoAnular().trim();
+    if (!p) return;
+    if (!motivo) {
+      this.errorAnular.set('Indica el motivo de la anulación.');
+      return;
+    }
+    this.anulando.set(true);
+    this.errorAnular.set(null);
+    this.finanzas.anularPago(p.id, motivo).subscribe({
+      next: () => {
+        this.anulando.set(false);
+        this.pagoAnular.set(null);
+        this.avisoCaja.set({
+          texto: `Pago ${p.numeroRecibo} anulado. Las facturas que cubría recuperan su saldo.`,
+          error: false,
+        });
+        this.cargar();
+      },
+      error: (e) => {
+        this.anulando.set(false);
+        this.errorAnular.set(this.mensajeAnular(e));
+      },
+    });
+  }
+
+  private mensajeAnular(e: { status?: number; error?: { message?: string } }): string {
+    if (e.status === 422) {
+      // Spring no manda el detalle del 422 en el cuerpo por defecto, así que el texto
+      // de reserva nombra las dos causas posibles en lugar de un "no se pudo" seco.
+      return (
+        e.error?.message ||
+        'No se puede anular: el pago ya estaba anulado, o entró en efectivo por una ' +
+          'jornada de caja ya cerrada y arqueada.'
+      );
+    }
+    if (e.status === 400) return 'El motivo de la anulación es obligatorio.';
+    if (e.status === 403) return 'Solo un administrador puede anular un pago.';
+    if (e.status === 404) return 'El pago ya no existe; recarga la página.';
+    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
+    return 'No se pudo anular el pago.';
   }
 
   private mensajeCaja(e: { status?: number }): string {

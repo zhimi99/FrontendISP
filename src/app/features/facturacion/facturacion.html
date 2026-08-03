@@ -7,6 +7,13 @@
     </div>
   </div>
 
+  @if (aviso(); as a) {
+    <div class="card banner" [class.error]="a.error">
+      <span>{{ a.texto }}</span>
+      <button class="banner-x" (click)="aviso.set(null)" aria-label="Cerrar">✕</button>
+    </div>
+  }
+
   <!-- ============ Filtros ============ -->
   <div class="filters card">
     <div class="field grow">
@@ -99,6 +106,7 @@
             <th class="right">Saldo</th>
             <th>Pago</th>
             <th>SRI</th>
+            @if (puedeAnular()) { <th class="w-acc"></th> }
           </tr>
         </thead>
         <tbody>
@@ -112,10 +120,17 @@
               <td class="right mono">{{ moneda(f.saldoPendiente) }}</td>
               <td><span class="badge" [class]="pagoTono[f.estadoPago]">{{ pagoEtq[f.estadoPago] }}</span></td>
               <td><span class="badge" [class]="sriTono[f.estadoSri]">{{ sriEtq[f.estadoSri] }}</span></td>
+              @if (puedeAnular()) {
+                <td class="w-acc">
+                  @if (sePuedeAnular(f)) {
+                    <button class="btn mini danger" (click)="abrirAnular(f)">Anular</button>
+                  }
+                </td>
+              }
             </tr>
           } @empty {
             <tr>
-              <td colspan="8" class="empty">{{ mensajeTabla() }}</td>
+              <td [attr.colspan]="puedeAnular() ? 9 : 8" class="empty">{{ mensajeTabla() }}</td>
             </tr>
           }
         </tbody>
@@ -151,3 +166,37 @@
     </div>
   </div>
 </div>
+
+<!-- ============ Modal: anular factura ============ -->
+@if (facturaAnular(); as f) {
+  <div class="modal-backdrop" (click)="cerrarAnular()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <h3>Anular factura · {{ f.numeroDocumento }}</h3>
+        <button class="modal-x" (click)="cerrarAnular()" [disabled]="anulando()" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="nota">
+          <span class="mono strong">{{ f.clienteRazonSocial }} · {{ moneda(f.total) }}</span>
+          <span class="hint">
+            El comprobante queda ANULADO con su motivo. Solo procede porque todavía no
+            está autorizado por el SRI; una factura autorizada se compensa con una nota
+            de crédito.
+          </span>
+        </div>
+        <div class="field">
+          <label>Motivo de la anulación *</label>
+          <input type="text" [ngModel]="motivoAnular()" (ngModelChange)="motivoAnular.set($event)"
+                 placeholder="Error en los datos, emitida por duplicado…" />
+        </div>
+        @if (errorAnular()) { <div class="modal-error">{{ errorAnular() }}</div> }
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" (click)="cerrarAnular()" [disabled]="anulando()">Volver</button>
+        <button type="button" class="btn btn-danger" (click)="confirmarAnular()" [disabled]="anulando()">
+          {{ anulando() ? 'Anulando…' : 'Anular factura' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

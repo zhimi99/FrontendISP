@@ -158,6 +158,32 @@
   gap: 10px;
 }
 
+/* ============ Anulación: acción destructiva por fila ============ */
+.w-acc {
+  width: 1%;
+  white-space: nowrap;
+}
+.btn.mini {
+  padding: 5px 12px;
+  font-size: 12px;
+}
+.btn.mini.danger {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: transparent;
+}
+.btn.mini.danger:hover:not(:disabled) {
+  background: var(--danger-soft);
+}
+.btn-danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+.btn-danger:hover:not(:disabled) {
+  filter: brightness(0.95);
+}
+
 /* Aviso de resultado de operaciones de caja. */
 .banner {
   display: flex;

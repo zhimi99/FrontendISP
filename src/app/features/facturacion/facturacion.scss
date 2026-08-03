@@ -1,17 +1,6 @@
-/* Estilos propios de Inventario; el resto se hereda de clientes.scss. */
+/* Estilos propios de Facturación; el resto se hereda de clientes.scss. */
 
-.badge.neutral {
-  background: var(--slate-soft);
-  color: var(--slate);
-}
-
-/* Acciones del encabezado (ingreso / consumo / nuevo equipo). */
-.head-actions {
-  display: flex;
-  gap: 10px;
-}
-
-/* Aviso del resultado de un movimiento de stock. */
+/* ============ Aviso de resultado ============ */
 .banner {
   display: flex;
   align-items: center;
@@ -40,81 +29,25 @@
   background: var(--bg);
 }
 
-/* Pista bajo un campo del modal (saldo actual, unidad…). */
-.hint {
+/* ============ Acción destructiva por fila ============ */
+.w-acc {
+  width: 1%;
+  white-space: nowrap;
+}
+.btn.mini {
+  padding: 5px 12px;
   font-size: 12px;
-  color: var(--muted);
 }
-
-/* ============ Pestañas ============ */
-.tabs {
-  display: flex;
-  gap: 4px;
-  border-bottom: 1px solid var(--border);
-  margin: 4px 0 16px;
-}
-.tab {
-  appearance: none;
+.btn.mini.danger {
+  border-color: var(--danger);
+  color: var(--danger);
   background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  padding: 10px 16px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--muted);
-  cursor: pointer;
-  margin-bottom: -1px;
 }
-.tab:hover {
-  color: var(--text);
-}
-.tab.active {
-  color: var(--brand);
-  border-bottom-color: var(--brand);
+.btn.mini.danger:hover:not(:disabled) {
+  background: var(--danger-soft);
 }
 
-/* ============ Alerta de reposición ============ */
-.alerta-repo {
-  padding: 14px 18px;
-  margin-bottom: 18px;
-  border-left: 3px solid var(--danger);
-}
-.alerta-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 700;
-  color: var(--danger);
-  margin-bottom: 12px;
-}
-.alerta-chips {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 10px;
-}
-.repo-chip {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--bg);
-}
-.repo-nombre {
-  font-weight: 650;
-  font-size: 13px;
-}
-.repo-datos {
-  font-size: 12px;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-.repo-datos strong {
-  color: var(--danger);
-}
-
-/* ============ Modal de alta ============ */
+/* ============ Modal de anulación ============ */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -127,7 +60,7 @@
 }
 .modal {
   width: 100%;
-  max-width: 540px;
+  max-width: 520px;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -144,7 +77,7 @@
 }
 .modal-head h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: 15px;
 }
 .modal-x {
   appearance: none;
@@ -171,15 +104,6 @@
   padding: 14px 18px;
   border-top: 1px solid var(--border);
 }
-
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-}
-.form-grid .field.span2 {
-  grid-column: 1 / -1;
-}
 .modal .field {
   display: flex;
   flex-direction: column;
@@ -190,8 +114,7 @@
   font-weight: 600;
   color: var(--muted);
 }
-.modal .field input,
-.modal .field select {
+.modal .field input {
   width: 100%;
   padding: 9px 11px;
   border: 1px solid var(--border-2);
@@ -200,14 +123,25 @@
   color: var(--text);
   font-size: 14px;
 }
-.modal .field input:focus,
-.modal .field select:focus {
+.modal .field input:focus {
   outline: none;
   border-color: var(--brand);
 }
-.field-error {
-  color: var(--danger);
+
+/* Recuadro con el detalle del comprobante y la advertencia fiscal. */
+.nota {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+.hint {
   font-size: 12px;
+  color: var(--muted);
 }
 .modal-error {
   margin-top: 14px;
@@ -219,8 +153,11 @@
   font-weight: 600;
 }
 
-@media (max-width: 520px) {
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
+.btn-danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+.btn-danger:hover:not(:disabled) {
+  filter: brightness(0.95);
 }

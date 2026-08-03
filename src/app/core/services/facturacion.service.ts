@@ -22,4 +22,15 @@ export class FacturacionService {
   mora(): Observable<MoraContrato[]> {
     return this.http.get<MoraContrato[]>(`${environment.apiBase}/api/mora`);
   }
+
+  /**
+   * POST /api/facturas/{id}/anular — deja el comprobante sin efecto. Solo procede si
+   * todavía NO está AUTORIZADA por el SRI: una autorizada se compensa con una nota de
+   * crédito, y el backend responde 422 explicándolo.
+   */
+  anular(id: number, motivo: string): Observable<FacturaVista> {
+    return this.http.post<FacturaVista>(`${environment.apiBase}/api/facturas/${id}/anular`, {
+      motivo,
+    });
+  }
 }
