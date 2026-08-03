@@ -28,6 +28,9 @@ import {
 /** Tipos de equipo disponibles en el selector del alta. */
 const TIPOS_EQUIPO: TipoEquipo[] = ['ROUTER', 'ONT', 'ONU', 'SWITCH', 'ANTENA', 'SPLITTER', 'OTRO'];
 
+/** Las cuatro operaciones de stock, cada una con su propio POST en el backend. */
+type TipoMovimientoUi = 'ingreso' | 'consumo' | 'traslado' | 'ajuste';
+
 /**
  * Inventario sobre datos reales (MS-INVENTARIO). Dos vistas: stock de material
  * (existencias por ubicación) y equipos serializados por estado. La alerta de
@@ -48,8 +51,13 @@ export class InventarioComponent {
   readonly tiposEquipo = TIPOS_EQUIPO;
   /** Solo TECNICO/ADMIN pueden dar de alta equipos (POST /api/equipos). */
   readonly puedeAltaEquipo = computed(() => this.auth.tieneRol('TECNICO', 'ADMINISTRADOR'));
-  /** Mover stock (ingresos y consumos) es trabajo de campo: TECNICO/ADMIN. */
+  /** Mover stock (ingresos, consumos y traslados) es trabajo de campo: TECNICO/ADMIN. */
   readonly puedeMoverStock = computed(() => this.auth.tieneRol('TECNICO', 'ADMINISTRADOR'));
+  /**
+   * El ajuste hace desaparecer (o aparecer) material sin que salga por una
+   * instalación: el backend lo restringe a ADMIN y aquí se refleja igual.
+   */
+  readonly puedeAjustar = computed(() => this.auth.tieneRol('ADMINISTRADOR'));
   /** Aviso del resultado del último movimiento de stock. */
   readonly avisoStock = signal<{ texto: string; error: boolean } | null>(null);
 
@@ -325,8 +333,8 @@ export class InventarioComponent {
     return `${d2(f.getDate())}/${d2(f.getMonth() + 1)}/${f.getFullYear()} ${d2(f.getHours())}:${d2(f.getMinutes())}`;
   }
 
-  /* ---------- Movimientos de stock: ingreso y consumo (modal) ---------- */
-  readonly modalStock = signal<'ingreso' | 'consumo' | null>(null);
+  /* ---------- Movimientos de stock: ingreso, consumo, traslado y ajuste ---------- */
+  readonly modalStock = signal<TipoMovimientoUi | null>(null);
   readonly guardandoStock = signal(false);
   readonly errorStock = signal<string | null>(null);
 
@@ -335,6 +343,35 @@ export class InventarioComponent {
   readonly cantidadMov = signal<number | null>(null);
   readonly referenciaMov = signal('');
   readonly ordenMov = signal<number | null>(null);
+  /** Solo traslado: a dónde va. */
+  readonly ubicacionDestinoSel = signal<number | null>(null);
+  /** Solo ajuste: true si el conteo encontró MÁS de lo que decía el sistema. */
+  readonly ajusteSobra = signal(false);
+  readonly motivoAjuste = signal('');
+
+  /** Título y verbo del modal según la operación. */
+  readonly tituloMovimiento = computed(() => {
+    switch (this.modalStock()) {
+      case 'ingreso':
+        return 'Ingreso de material';
+      case 'consumo':
+        return 'Consumo de material';
+      case 'traslado':
+        return 'Traslado entre ubicaciones';
+      case 'ajuste':
+        return 'Ajuste por conteo físico';
+      default:
+        return '';
+    }
+  });
+
+  /** Saldo del material en la ubicación de destino de un traslado. */
+  readonly saldoDestino = computed(() => {
+    const m = this.materialSel();
+    const u = this.ubicacionDestinoSel();
+    if (m == null || u == null) return null;
+    return this.existencias().find((e) => e.materialId === m && e.ubicacionId === u)?.cantidad ?? 0;
+  });
 
   /** Materiales ordenados por nombre para el selector. */
   readonly materialesOrdenados = computed(() =>
@@ -356,16 +393,21 @@ export class InventarioComponent {
     return this.existencias().find((e) => e.materialId === m && e.ubicacionId === u)?.cantidad ?? 0;
   });
 
-  abrirMovimiento(tipo: 'ingreso' | 'consumo') {
+  abrirMovimiento(tipo: TipoMovimientoUi) {
     this.avisoStock.set(null);
     this.errorStock.set(null);
     this.materialSel.set(null);
     this.cantidadMov.set(null);
     this.referenciaMov.set('');
     this.ordenMov.set(null);
+    this.ajusteSobra.set(false);
+    this.motivoAjuste.set('');
     // Preselecciona una bodega: es el origen/destino habitual.
     const bodega = this.ubicaciones().find((u) => u.tipo === 'BODEGA') ?? this.ubicaciones()[0];
     this.ubicacionSel.set(bodega?.id ?? null);
+    // En un traslado el destino típico es la furgoneta del técnico.
+    const furgoneta = this.ubicaciones().find((u) => u.tipo === 'TECNICO' && u.id !== bodega?.id);
+    this.ubicacionDestinoSel.set(furgoneta?.id ?? null);
     this.modalStock.set(tipo);
   }
 
@@ -380,39 +422,70 @@ export class InventarioComponent {
       this.errorStock.set(err);
       return;
     }
-    const esIngreso = this.modalStock() === 'ingreso';
+    const tipo = this.modalStock()!;
     const material = this.materialActual()!;
     const cant = this.cantidadMov()!;
     const ubic = this.ubicacionSel()!;
+    const unidad = this.unidadEtq[material.unidad];
 
     this.guardandoStock.set(true);
     this.errorStock.set(null);
 
-    const peticion = esIngreso
-      ? this.inventario.ingresarMaterial({
+    let peticion;
+    let resumen: string;
+    switch (tipo) {
+      case 'ingreso':
+        peticion = this.inventario.ingresarMaterial({
           materialId: material.id,
           cantidad: cant,
           ubicacionDestinoId: ubic,
           referencia: this.referenciaMov().trim() || null,
-        })
-      : this.inventario.consumirMaterial({
+        });
+        resumen = `Ingresaron ${this.cantidad(cant)} ${unidad} de ${material.nombre}.`;
+        break;
+      case 'consumo':
+        peticion = this.inventario.consumirMaterial({
           materialId: material.id,
           cantidad: cant,
           ubicacionOrigenId: ubic,
           ordenTrabajoId: this.ordenMov(),
           contratoId: null,
         });
+        resumen = `Se consumieron ${this.cantidad(cant)} ${unidad} de ${material.nombre}.`;
+        break;
+      case 'traslado': {
+        const destinoId = this.ubicacionDestinoSel()!;
+        peticion = this.inventario.trasladarMaterial({
+          materialId: material.id,
+          cantidad: cant,
+          ubicacionOrigenId: ubic,
+          ubicacionDestinoId: destinoId,
+        });
+        const destino = this.ubicaciones().find((u) => u.id === destinoId)?.nombre ?? 'destino';
+        resumen = `Se trasladaron ${this.cantidad(cant)} ${unidad} de ${material.nombre} a ${destino}.`;
+        break;
+      }
+      default: {
+        const sobra = this.ajusteSobra();
+        peticion = this.inventario.ajustarMaterial({
+          materialId: material.id,
+          cantidad: cant,
+          ubicacionId: ubic,
+          sobra,
+          motivo: this.motivoAjuste().trim(),
+        });
+        resumen = `Ajuste registrado: ${sobra ? 'sobraban' : 'faltaban'} ${this.cantidad(cant)} ${unidad} de ${material.nombre}.`;
+      }
+    }
 
     peticion.subscribe({
       next: () => {
         this.guardandoStock.set(false);
         this.modalStock.set(null);
-        const verbo = esIngreso ? 'Ingresaron' : 'Se consumieron';
-        this.avisoStock.set({
-          texto: `${verbo} ${this.cantidad(cant)} ${this.unidadEtq[material.unidad]} de ${material.nombre}.`,
-          error: false,
-        });
+        this.avisoStock.set({ texto: resumen, error: false });
         this.cargar(); // refresca existencias, bajo stock y KPIs
+        // Si el libro ya se había abierto, que muestre el asiento recién creado.
+        if (this.movimientos().length) this.cargarMovimientos();
       },
       error: (e) => {
         this.guardandoStock.set(false);
@@ -422,13 +495,26 @@ export class InventarioComponent {
   }
 
   private validarMovimiento(): string | null {
+    const tipo = this.modalStock();
     if (this.materialSel() == null) return 'Elige un material.';
     if (this.ubicacionSel() == null) return 'Elige una ubicación.';
     const c = this.cantidadMov();
     if (c == null || c <= 0) return 'La cantidad debe ser mayor que cero.';
-    if (this.modalStock() === 'consumo') {
+
+    // Todo lo que saca material de una ubicación tiene el saldo como techo.
+    const saleDeLaUbicacion = tipo === 'consumo' || tipo === 'traslado' || (tipo === 'ajuste' && !this.ajusteSobra());
+    if (saleDeLaUbicacion) {
       const saldo = this.saldoSeleccionado() ?? 0;
       if (c > saldo) return `No hay bastante: disponible ${this.cantidad(saldo)}.`;
+    }
+
+    if (tipo === 'traslado') {
+      const destino = this.ubicacionDestinoSel();
+      if (destino == null) return 'Elige la ubicación de destino.';
+      if (destino === this.ubicacionSel()) return 'El origen y el destino no pueden ser la misma ubicación.';
+    }
+    if (tipo === 'ajuste' && !this.motivoAjuste().trim()) {
+      return 'El ajuste necesita un motivo: es lo que permite auditarlo después.';
     }
     return null;
   }

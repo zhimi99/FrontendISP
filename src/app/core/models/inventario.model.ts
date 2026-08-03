@@ -108,6 +108,25 @@ export interface ConsumoStockRequest {
   contratoId: number | null;
 }
 
+/** Cuerpo del traslado entre ubicaciones (`POST /api/traslados`). */
+export interface TrasladoStockRequest {
+  materialId: number;
+  cantidad: number;
+  ubicacionOrigenId: number;
+  ubicacionDestinoId: number;
+}
+
+/** Cuerpo del ajuste por conteo físico (`POST /api/ajustes`). */
+export interface AjusteStockRequest {
+  materialId: number;
+  cantidad: number;
+  ubicacionId: number;
+  /** true si había MÁS de lo que decía el sistema. */
+  sobra: boolean;
+  /** Obligatorio: un ajuste sin explicación es un descuadre encubierto. */
+  motivo: string;
+}
+
 /** Cuerpo del alta de equipo (`POST /api/equipos`). */
 export interface AltaEquipoRequest {
   tipo: TipoEquipo;

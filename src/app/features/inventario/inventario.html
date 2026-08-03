@@ -13,6 +13,14 @@
         <button class="btn" (click)="abrirMovimiento('consumo')">
           <app-icon name="box" [size]="15" /> Consumo
         </button>
+        <button class="btn" (click)="abrirMovimiento('traslado')">
+          <app-icon name="box" [size]="15" /> Traslado
+        </button>
+      }
+      @if (puedeAjustar()) {
+        <button class="btn" (click)="abrirMovimiento('ajuste')" title="Cuadre tras un conteo físico">
+          <app-icon name="box" [size]="15" /> Ajuste
+        </button>
       }
       @if (puedeAltaEquipo()) {
         <button class="btn btn-primary" (click)="abrirAlta()">
@@ -340,7 +348,7 @@
   <div class="modal-backdrop" (click)="cerrarMovimiento()">
     <div class="modal" (click)="$event.stopPropagation()">
       <div class="modal-head">
-        <h3>{{ tipo === 'ingreso' ? 'Ingreso de material' : 'Consumo de material' }}</h3>
+        <h3>{{ tituloMovimiento() }}</h3>
         <button class="modal-x" (click)="cerrarMovimiento()" [disabled]="guardandoStock()" aria-label="Cerrar">✕</button>
       </div>
 
@@ -357,7 +365,14 @@
           </div>
 
           <div class="field span2">
-            <label>{{ tipo === 'ingreso' ? 'Ubicación de destino *' : 'Ubicación de origen *' }}</label>
+            <label>
+              @switch (tipo) {
+                @case ('ingreso') { Ubicación de destino * }
+                @case ('traslado') { Ubicación de origen * }
+                @case ('ajuste') { Ubicación contada * }
+                @default { Ubicación de origen * }
+              }
+            </label>
             <select [ngModel]="ubicacionSel()" (ngModelChange)="ubicacionSel.set($event)">
               <option [ngValue]="null" disabled>Selecciona…</option>
               @for (u of ubicaciones(); track u.id) {
@@ -371,6 +386,35 @@
             }
           </div>
 
+          @if (tipo === 'traslado') {
+            <div class="field span2">
+              <label>Ubicación de destino *</label>
+              <select [ngModel]="ubicacionDestinoSel()" (ngModelChange)="ubicacionDestinoSel.set($event)">
+                <option [ngValue]="null" disabled>Selecciona…</option>
+                @for (u of ubicaciones(); track u.id) {
+                  <option [ngValue]="u.id" [disabled]="u.id === ubicacionSel()">
+                    {{ u.nombre }} ({{ tipoUbicEtq[u.tipo] }})
+                  </option>
+                }
+              </select>
+              @if (saldoDestino() !== null && materialActual(); as m) {
+                <span class="hint">
+                  Allí hay ahora: <span class="mono strong">{{ cantidad(saldoDestino()!) }}</span> {{ unidadEtq[m.unidad] }}
+                </span>
+              }
+            </div>
+          }
+
+          @if (tipo === 'ajuste') {
+            <div class="field span2">
+              <label>¿Qué encontró el conteo? *</label>
+              <select [ngModel]="ajusteSobra()" (ngModelChange)="ajusteSobra.set($event)">
+                <option [ngValue]="false">Faltaba material (hay menos de lo que dice el sistema)</option>
+                <option [ngValue]="true">Sobraba material (hay más de lo que dice el sistema)</option>
+              </select>
+            </div>
+          }
+
           <div class="field">
             <label>Cantidad *</label>
             <input type="number" min="0" step="0.01" [ngModel]="cantidadMov()" (ngModelChange)="cantidadMov.set($event)"
@@ -378,19 +422,30 @@
             @if (materialActual(); as m) { <span class="hint">En {{ unidadEtq[m.unidad] }}.</span> }
           </div>
 
-          @if (tipo === 'ingreso') {
-            <div class="field">
-              <label>Referencia</label>
-              <input type="text" [ngModel]="referenciaMov()" (ngModelChange)="referenciaMov.set($event)"
-                     placeholder="N.º de factura o guía" />
-            </div>
-          } @else {
-            <div class="field">
-              <label>Orden de trabajo</label>
-              <input type="number" min="1" step="1" [ngModel]="ordenMov()" (ngModelChange)="ordenMov.set($event)"
-                     placeholder="Opcional" />
-              <span class="hint">Permite saber qué gastó cada instalación.</span>
-            </div>
+          @switch (tipo) {
+            @case ('ingreso') {
+              <div class="field">
+                <label>Referencia</label>
+                <input type="text" [ngModel]="referenciaMov()" (ngModelChange)="referenciaMov.set($event)"
+                       placeholder="N.º de factura o guía" />
+              </div>
+            }
+            @case ('consumo') {
+              <div class="field">
+                <label>Orden de trabajo</label>
+                <input type="number" min="1" step="1" [ngModel]="ordenMov()" (ngModelChange)="ordenMov.set($event)"
+                       placeholder="Opcional" />
+                <span class="hint">Permite saber qué gastó cada instalación.</span>
+              </div>
+            }
+            @case ('ajuste') {
+              <div class="field">
+                <label>Motivo *</label>
+                <input type="text" [ngModel]="motivoAjuste()" (ngModelChange)="motivoAjuste.set($event)"
+                       placeholder="Conteo físico de fin de mes, rotura, merma…" />
+                <span class="hint">Obligatorio: un ajuste sin explicación es un descuadre encubierto.</span>
+              </div>
+            }
           }
         </div>
 
@@ -400,7 +455,14 @@
       <div class="modal-foot">
         <button type="button" class="btn" (click)="cerrarMovimiento()" [disabled]="guardandoStock()">Cancelar</button>
         <button type="button" class="btn btn-primary" (click)="guardarMovimiento()" [disabled]="guardandoStock()">
-          {{ guardandoStock() ? 'Registrando…' : (tipo === 'ingreso' ? 'Registrar ingreso' : 'Registrar consumo') }}
+          @if (guardandoStock()) { Registrando… } @else {
+            @switch (tipo) {
+              @case ('ingreso') { Registrar ingreso }
+              @case ('consumo') { Registrar consumo }
+              @case ('traslado') { Registrar traslado }
+              @default { Registrar ajuste }
+            }
+          }
         </button>
       </div>
     </div>

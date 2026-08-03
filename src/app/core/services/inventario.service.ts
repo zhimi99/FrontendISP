@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import {
+  AjusteStockRequest,
   AltaEquipoRequest,
   ConsumoStockRequest,
   Equipo,
@@ -14,6 +15,7 @@ import {
   MaterialBajoStock,
   Movimiento,
   TipoMovimiento,
+  TrasladoStockRequest,
   Ubicacion,
 } from '../models/inventario.model';
 
@@ -96,5 +98,21 @@ export class InventarioService {
    */
   consumirMaterial(req: ConsumoStockRequest): Observable<Movimiento> {
     return this.http.post<Movimiento>(`${this.base}/api/consumos`, req);
+  }
+
+  /**
+   * POST /api/traslados — mueve material entre ubicaciones (cargar la furgoneta del
+   * técnico o devolver a bodega lo que sobró). No cambia el inventario total.
+   */
+  trasladarMaterial(req: TrasladoStockRequest): Observable<Movimiento> {
+    return this.http.post<Movimiento>(`${this.base}/api/traslados`, req);
+  }
+
+  /**
+   * POST /api/ajustes — cuadra el sistema con lo que se contó físicamente. Solo ADMIN:
+   * es la operación por la que se podría tapar un faltante, y exige motivo.
+   */
+  ajustarMaterial(req: AjusteStockRequest): Observable<Movimiento> {
+    return this.http.post<Movimiento>(`${this.base}/api/ajustes`, req);
   }
 }
