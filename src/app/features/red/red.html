@@ -1,0 +1,174 @@
+<div class="page">
+  <!-- ============ Encabezado ============ -->
+  <div class="page-head">
+    <div>
+      <h2>Red</h2>
+      <p class="sub">Estado de cada contrato en el RADIUS: el perfil que debería tener frente al que la red aplica.</p>
+    </div>
+    <button class="btn" (click)="cargar()"><app-icon name="refresh" [size]="15" /> Actualizar</button>
+  </div>
+
+  @if (banner(); as b) {
+    <div class="card banner" [class.error]="b.error">
+      <span>{{ b.texto }}</span>
+      <button class="banner-x" (click)="banner.set(null)" aria-label="Cerrar">✕</button>
+    </div>
+  }
+
+  <!-- ============ Tarjetas de resumen ============ -->
+  <div class="stats">
+    <div class="stat">
+      <span class="stat-ico slate"><app-icon name="network" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">Abonados</span>
+        <span class="stat-value">{{ total }}</span>
+        <span class="stat-foot">con estado de red</span>
+      </div>
+    </div>
+    <div class="stat">
+      <span class="stat-ico" [class]="desincronizados ? 'danger' : 'ok'"><app-icon name="network" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">Desincronizados</span>
+        <span class="stat-value">{{ desincronizados }}</span>
+        <span class="stat-foot">la red no aplica su perfil</span>
+      </div>
+    </div>
+    <div class="stat">
+      <span class="stat-ico ok"><app-icon name="network" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">Activos</span>
+        <span class="stat-value">{{ activos }}</span>
+        <span class="stat-foot">servicio en marcha</span>
+      </div>
+    </div>
+    <div class="stat">
+      <span class="stat-ico warn"><app-icon name="network" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">Cortados</span>
+        <span class="stat-value">{{ cortados }}</span>
+        <span class="stat-foot">suspendidos o cortados</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Filtros ============ -->
+  <div class="filters card">
+    <div class="field grow">
+      <label>Buscar</label>
+      <div class="input-ico">
+        <app-icon name="search" [size]="15" />
+        <input type="text" placeholder="Contrato, usuario PPPoE, perfil o NAS…"
+               [ngModel]="q()" (ngModelChange)="q.set($event)" />
+      </div>
+    </div>
+    <div class="field">
+      <label>Sincronización</label>
+      <select [ngModel]="filtroSync()" (ngModelChange)="cambiarFiltro($event)">
+        <option value="">Todos</option>
+        <option value="no">Solo desincronizados</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- ============ Tabla ============ -->
+  <div class="card table-card">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Contrato</th>
+            <th>Usuario PPPoE</th>
+            <th>Servicio</th>
+            <th>Perfil deseado</th>
+            <th>Perfil aplicado</th>
+            <th>Sincronía</th>
+            <th>Última sync</th>
+            <th class="w-acc">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (a of filtrados(); track a.contratoId) {
+            <tr [class.desync]="!a.sincronizado">
+              <td class="mono strong">{{ a.contratoCodigo }}</td>
+              <td class="mono muted">{{ a.pppoeUsuario ?? '—' }}</td>
+              <td>{{ a.estadoServicio ?? '—' }}</td>
+              <td class="mono">{{ a.perfilDeseado ?? '—' }}</td>
+              <td class="mono" [class.muted]="a.sincronizado" [class.dif]="!a.sincronizado">
+                {{ a.perfilAplicado ?? '—' }}
+              </td>
+              <td>
+                <span class="badge" [class]="a.sincronizado ? 'ok' : 'danger'">
+                  {{ a.sincronizado ? 'Sincronizado' : 'Desincronizado' }}
+                </span>
+              </td>
+              <td class="muted">{{ fechaHora(a.ultimaSync) }}</td>
+              <td class="w-acc">
+                <div class="acc">
+                  <button class="btn mini" (click)="verDetalle(a)">Bitácora</button>
+                  @if (puedeResincronizar() && !a.sincronizado) {
+                    <button class="btn mini btn-primary" [disabled]="procesandoId() === a.contratoId"
+                            (click)="resincronizar(a)">
+                      {{ procesandoId() === a.contratoId ? '…' : 'Re-sincronizar' }}
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="8" class="empty">{{ mensajeTabla() }}</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Panel lateral: bitácora del abonado ============ -->
+@if (detalle(); as d) {
+  <div class="modal-backdrop" (click)="cerrarDetalle()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <h3>Bitácora de red · {{ d.contratoCodigo }}</h3>
+        <button class="modal-x" (click)="cerrarDetalle()" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <dl class="kv">
+          <div><dt>Usuario PPPoE</dt><dd class="mono">{{ d.pppoeUsuario ?? '—' }}</dd></div>
+          <div><dt>Conexión</dt><dd>{{ d.tipoConexion ?? '—' }}</dd></div>
+          <div><dt>NAS</dt><dd class="mono">{{ d.nasIdentificador ?? '—' }} <span class="muted">{{ d.nasIp }}</span></dd></div>
+          <div><dt>Servicio</dt><dd>{{ d.estadoServicio ?? '—' }}</dd></div>
+          <div><dt>Perfil deseado</dt><dd class="mono">{{ d.perfilDeseado ?? '—' }}</dd></div>
+          <div><dt>Perfil aplicado</dt><dd class="mono">{{ d.perfilAplicado ?? '—' }}</dd></div>
+          <div><dt>Último evento</dt><dd>{{ d.ultimoEvento ?? '—' }}</dd></div>
+          <div><dt>Última sync</dt><dd>{{ fechaHora(d.ultimaSync) }}</dd></div>
+        </dl>
+
+        <h4 class="sub-titulo">Operaciones sobre la red</h4>
+        <div class="table-scroll bitacora">
+          <table>
+            <thead>
+              <tr><th>Fecha</th><th>Acción</th><th>Perfil</th><th>Canal</th><th>Resultado</th><th>Detalle</th></tr>
+            </thead>
+            <tbody>
+              @for (o of d.operaciones; track $index) {
+                <tr>
+                  <td class="muted">{{ fechaHora(o.fecha) }}</td>
+                  <td class="strong">{{ o.accion ?? '—' }}</td>
+                  <td class="mono">{{ o.perfil ?? '—' }}</td>
+                  <td class="muted">{{ o.canal ?? '—' }}</td>
+                  <td><span class="badge" [class]="tonoResultado(o.resultado)">{{ o.resultado ?? '—' }}</span></td>
+                  <td class="muted">{{ o.detalle ?? '—' }}</td>
+                </tr>
+              } @empty {
+                <tr><td colspan="6" class="empty">Sin operaciones registradas.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" (click)="cerrarDetalle()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+}

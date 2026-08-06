@@ -1,0 +1,122 @@
+<div class="tab-head">
+  <div>
+    <h3>Planes de internet</h3>
+    <p class="sub">Qué se vende, a qué velocidad y a qué precio.</p>
+  </div>
+  <div class="tab-acc">
+    <button class="btn" (click)="cargar()"><app-icon name="refresh" [size]="15" /> Actualizar</button>
+    <button class="btn btn-primary" (click)="abrir(null)"><app-icon name="plus" [size]="15" /> Nuevo plan</button>
+  </div>
+</div>
+
+@if (banner(); as b) {
+  <div class="card banner" [class.error]="b.error">
+    <span>{{ b.texto }}</span>
+    <button class="banner-x" (click)="banner.set(null)" aria-label="Cerrar">✕</button>
+  </div>
+}
+
+<div class="card table-card">
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Plan</th>
+          <th>Velocidad</th>
+          <th class="right">Precio mensual</th>
+          <th>Estado</th>
+          <th class="w-acc">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (p of lista(); track p.id) {
+          <tr [class.inactivo]="!p.activo">
+            <td class="mono strong">{{ p.codigo }}</td>
+            <td>{{ p.nombre }}</td>
+            <td class="mono muted">{{ p.velocidad }}</td>
+            <td class="right mono">{{ moneda(p.precioMensual) }}</td>
+            <td>
+              <span class="badge" [class]="p.activo ? 'ok' : 'neutral'">
+                {{ p.activo ? 'En venta' : 'Retirado' }}
+              </span>
+            </td>
+            <td class="w-acc">
+              <div class="acc">
+                <button class="btn mini" (click)="abrir(p)">Editar</button>
+                <button class="btn mini" [class.danger]="p.activo"
+                        [disabled]="procesandoId() === p.id" (click)="cambiarEstado(p)">
+                  {{ procesandoId() === p.id ? '…' : (p.activo ? 'Retirar' : 'Reactivar') }}
+                </button>
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="6" class="empty">{{ mensajeTabla() }}</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+@if (creando() || editando()) {
+  <div class="modal-backdrop" (click)="cerrar()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <h3>{{ creando() ? 'Nuevo plan' : 'Editar plan' }}</h3>
+        <button class="modal-x" (click)="cerrar()" [disabled]="guardando()" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        @if (!creando()) {
+          <div class="identidad">
+            <span class="hint">
+              El <strong>precio nuevo rige desde la siguiente facturación</strong>: las facturas ya
+              emitidas conservan su total.
+            </span>
+            <span class="hint">
+              La velocidad nueva llega a la red cuando el abonado se resincroniza.
+            </span>
+          </div>
+        }
+
+        <div class="form-grid">
+          <div class="field">
+            <label>Código *</label>
+            <input type="text" [ngModel]="pCodigo()" (ngModelChange)="pCodigo.set($event)"
+                   [disabled]="!creando()" placeholder="PLAN-50" />
+            @if (!creando()) {
+              <span class="hint">No se edita: identifica el plan en el contrato firmado.</span>
+            }
+          </div>
+          <div class="field">
+            <label>Precio mensual (USD) *</label>
+            <input type="number" min="0" step="0.01" [ngModel]="pPrecio()" (ngModelChange)="pPrecio.set($event)" />
+            <span class="hint">Sin IVA: lo aplica la facturación al emitir.</span>
+          </div>
+          <div class="field span2">
+            <label>Nombre *</label>
+            <input type="text" [ngModel]="pNombre()" (ngModelChange)="pNombre.set($event)"
+                   placeholder="Hogar 50 Mbps" />
+          </div>
+          <div class="field">
+            <label>Bajada (Mbps) *</label>
+            <input type="number" min="0.125" step="0.5" [ngModel]="pBajada()" (ngModelChange)="pBajada.set($event)" />
+          </div>
+          <div class="field">
+            <label>Subida (Mbps) *</label>
+            <input type="number" min="0.125" step="0.5" [ngModel]="pSubida()" (ngModelChange)="pSubida.set($event)" />
+            <span class="hint">Alimenta el perfil de RADIUS.</span>
+          </div>
+        </div>
+
+        @if (errorForm()) { <div class="modal-error">{{ errorForm() }}</div> }
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" (click)="cerrar()" [disabled]="guardando()">Cancelar</button>
+        <button type="button" class="btn btn-primary" (click)="guardar()" [disabled]="guardando()">
+          {{ guardando() ? 'Guardando…' : 'Guardar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

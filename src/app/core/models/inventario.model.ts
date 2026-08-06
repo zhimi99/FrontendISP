@@ -34,6 +34,38 @@ export interface Ubicacion {
   activa: boolean;
 }
 
+/**
+ * Mantenimiento del catálogo (solo ADMIN).
+ *
+ * El código no aparece en las peticiones de edición: es la referencia que quedó
+ * escrita en cada movimiento del histórico y en los papeles de bodega. Tampoco el
+ * tipo de una ubicación, que es lo que da sentido a los movimientos ya registrados.
+ */
+export interface CrearMaterialRequest {
+  codigo: string;
+  nombre: string;
+  unidad: UnidadMedida;
+  stockMinimo: number;
+}
+
+export interface EditarMaterialRequest {
+  nombre: string;
+  unidad: UnidadMedida;
+  stockMinimo: number;
+}
+
+export interface CrearUbicacionRequest {
+  codigo: string;
+  nombre: string;
+  tipo: TipoUbicacion;
+  usuarioId: number | null;
+}
+
+export interface EditarUbicacionRequest {
+  nombre: string;
+  usuarioId: number | null;
+}
+
 /** `GET /api/materiales/bajo-stock` — lo que hay que reponer, con el faltante calculado. */
 export interface MaterialBajoStock {
   materialId: number;

@@ -1,0 +1,275 @@
+<div class="tab-head">
+  <div>
+    <h3>Plantilla</h3>
+    <p class="sub">Alta, ficha y quién sigue trabajando. El alta crea también su cuenta de acceso.</p>
+  </div>
+  <div class="tab-acc">
+    <button class="btn" (click)="cargar()"><app-icon name="refresh" [size]="15" /> Actualizar</button>
+    <button class="btn btn-primary" (click)="abrirAlta()"><app-icon name="plus" [size]="15" /> Nuevo empleado</button>
+  </div>
+</div>
+
+@if (banner(); as b) {
+  <div class="card banner" [class.error]="b.error">
+    <span>{{ b.texto }}</span>
+    <button class="banner-x" (click)="banner.set(null)" aria-label="Cerrar">✕</button>
+  </div>
+}
+
+<!-- Los permisos siguen sin gestionarse aquí, y conviene decir dónde sí. -->
+<div class="card nota-keycloak">
+  <app-icon name="gear" [size]="18" />
+  <div>
+    <strong>El rol se asigna al dar de alta; cambiarlo después se hace en Keycloak.</strong>
+    <span>
+      Los permisos viven en el proveedor de identidad, no en esta base. Desde aquí se
+      crea la cuenta con su rol inicial, se mantiene la ficha y se da de alta o de baja.
+    </span>
+  </div>
+</div>
+
+<!-- ============ Tarjetas de resumen ============ -->
+<div class="stats">
+  <div class="stat">
+    <span class="stat-ico slate"><app-icon name="users" [size]="20" /></span>
+    <div class="stat-body">
+      <span class="stat-label">Empleados</span>
+      <span class="stat-value">{{ total }}</span>
+      <span class="stat-foot">en el registro</span>
+    </div>
+  </div>
+  <div class="stat">
+    <span class="stat-ico ok"><app-icon name="users" [size]="20" /></span>
+    <div class="stat-body">
+      <span class="stat-label">Activos</span>
+      <span class="stat-value">{{ activos }}</span>
+      <span class="stat-foot">pueden entrar hoy</span>
+    </div>
+  </div>
+  <div class="stat">
+    <span class="stat-ico warn"><app-icon name="users" [size]="20" /></span>
+    <div class="stat-body">
+      <span class="stat-label">Dados de baja</span>
+      <span class="stat-value">{{ inactivos }}</span>
+      <span class="stat-foot">su histórico se conserva</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Filtros ============ -->
+<div class="filters card">
+  <div class="field grow">
+    <label>Buscar</label>
+    <div class="input-ico">
+      <app-icon name="search" [size]="15" />
+      <input type="text" placeholder="Nombre, usuario, cédula o cargo…"
+             [ngModel]="q()" (ngModelChange)="q.set($event)" />
+    </div>
+  </div>
+  <div class="field">
+    <label>Mostrar</label>
+    <select [ngModel]="verInactivos()" (ngModelChange)="verInactivos.set($event)">
+      <option [ngValue]="true">Todos</option>
+      <option [ngValue]="false">Solo activos</option>
+    </select>
+  </div>
+</div>
+
+<!-- ============ Tabla ============ -->
+<div class="card table-card">
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Empleado</th>
+          <th>Usuario</th>
+          <th>Cédula</th>
+          <th>Cargo</th>
+          <th>Contacto</th>
+          <th>Ingreso</th>
+          <th>Estado</th>
+          <th class="w-acc">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (e of filtrados(); track e.id) {
+          <tr [class.inactivo]="!e.activo">
+            <td class="strong">{{ nombre(e) }}</td>
+            <td class="mono muted">{{ e.usuario }}</td>
+            <td class="mono muted">{{ e.cedula }}</td>
+            <td>{{ e.cargo ?? '—' }}</td>
+            <td class="muted">
+              {{ e.email ?? '—' }}
+              @if (e.telefono) { <span class="mono"> · {{ e.telefono }}</span> }
+            </td>
+            <td class="muted">{{ fecha(e.fechaIngreso) }}</td>
+            <td>
+              <span class="badge" [class]="e.activo ? 'ok' : 'neutral'">
+                {{ e.activo ? 'Activo' : 'Dado de baja' }}
+              </span>
+              @if (!e.activo && e.fechaSalida) {
+                <span class="hint"> desde {{ fecha(e.fechaSalida) }}</span>
+              }
+            </td>
+            <td class="w-acc">
+              <div class="acc">
+                <button class="btn mini" (click)="abrirEdicion(e)">Editar</button>
+                <button class="btn mini" [class.danger]="e.activo"
+                        [disabled]="procesandoId() === e.id" (click)="cambiarEstado(e)">
+                  {{ procesandoId() === e.id ? '…' : (e.activo ? 'Dar de baja' : 'Reincorporar') }}
+                </button>
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="8" class="empty">{{ mensajeTabla() }}</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ============ Modal: alta ============ -->
+@if (creando()) {
+  <div class="modal-backdrop" (click)="cerrarAlta()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <h3>Nuevo empleado</h3>
+        <button class="modal-x" (click)="cerrarAlta()" [disabled]="guardandoAlta()" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="identidad">
+          <span class="hint">
+            Se creará su <strong>cuenta de acceso</strong> y su ficha en la misma operación.
+          </span>
+          <span class="hint">
+            El usuario y la cédula son su identidad: después no se pueden cambiar.
+          </span>
+        </div>
+
+        <div class="form-grid">
+          <div class="field">
+            <label>Nombres *</label>
+            <input type="text" [ngModel]="nNombres()" (ngModelChange)="nNombres.set($event)"
+                   (blur)="sugerirUsuario()" />
+          </div>
+          <div class="field">
+            <label>Apellidos *</label>
+            <input type="text" [ngModel]="nApellidos()" (ngModelChange)="nApellidos.set($event)"
+                   (blur)="sugerirUsuario()" />
+          </div>
+          <div class="field">
+            <label>Usuario *</label>
+            <input type="text" [ngModel]="nUsuario()" (ngModelChange)="nUsuario.set($event)"
+                   placeholder="nombre.apellido" />
+            <span class="hint">Minúsculas, sin tildes ni espacios.</span>
+          </div>
+          <div class="field">
+            <label>Cédula o RUC *</label>
+            <input type="text" [ngModel]="nCedula()" (ngModelChange)="nCedula.set($event)"
+                   placeholder="0102030405" inputmode="numeric" />
+          </div>
+          <div class="field">
+            <label>Correo *</label>
+            <input type="email" [ngModel]="nEmail()" (ngModelChange)="nEmail.set($event)"
+                   placeholder="nombre@smartuz.net" />
+            <span class="hint">Por aquí recupera la contraseña si la olvida.</span>
+          </div>
+          <div class="field">
+            <label>Teléfono</label>
+            <input type="text" [ngModel]="nTelefono()" (ngModelChange)="nTelefono.set($event)"
+                   placeholder="09…" />
+          </div>
+          <div class="field">
+            <label>Rol *</label>
+            <select [ngModel]="nRol()" (ngModelChange)="nRol.set($event)">
+              @for (r of roles; track r) {
+                <option [ngValue]="r">{{ rolEtiqueta[r] }}</option>
+              }
+            </select>
+            <span class="hint">Define qué puede hacer en el sistema.</span>
+          </div>
+          <div class="field">
+            <label>Cargo</label>
+            <input type="text" [ngModel]="nCargo()" (ngModelChange)="nCargo.set($event)"
+                   placeholder="Técnico de campo, cajera…" />
+            <span class="hint">Descriptivo; no da permisos.</span>
+          </div>
+          <div class="field span2">
+            <label>Contraseña temporal *</label>
+            <input type="text" [ngModel]="nPassword()" (ngModelChange)="nPassword.set($event)"
+                   placeholder="mínimo 8 caracteres" />
+            <span class="hint">
+              No se guarda en ninguna parte ni se puede volver a consultar: apúntala ahora y
+              entrégasela en persona. El sistema le pedirá cambiarla al entrar por primera vez.
+            </span>
+          </div>
+        </div>
+
+        @if (errorAlta()) { <div class="modal-error">{{ errorAlta() }}</div> }
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" (click)="cerrarAlta()" [disabled]="guardandoAlta()">Cancelar</button>
+        <button type="button" class="btn btn-primary" (click)="guardarAlta()" [disabled]="guardandoAlta()">
+          {{ guardandoAlta() ? 'Creando cuenta…' : 'Dar de alta' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ============ Modal: editar ficha ============ -->
+@if (editando(); as e) {
+  <div class="modal-backdrop" (click)="cerrarEdicion()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <h3>Editar ficha · {{ nombre(e) }}</h3>
+        <button class="modal-x" (click)="cerrarEdicion()" [disabled]="guardando()" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="identidad">
+          <span class="hint">
+            Usuario <span class="mono strong">{{ e.usuario }}</span> ·
+            cédula <span class="mono strong">{{ e.cedula }}</span>
+          </span>
+          <span class="hint">Son la identidad del empleado y no se editan: las gobierna Keycloak.</span>
+        </div>
+
+        <div class="form-grid">
+          <div class="field">
+            <label>Nombres *</label>
+            <input type="text" [ngModel]="fNombres()" (ngModelChange)="fNombres.set($event)" />
+          </div>
+          <div class="field">
+            <label>Apellidos *</label>
+            <input type="text" [ngModel]="fApellidos()" (ngModelChange)="fApellidos.set($event)" />
+          </div>
+          <div class="field">
+            <label>Correo</label>
+            <input type="email" [ngModel]="fEmail()" (ngModelChange)="fEmail.set($event)"
+                   placeholder="nombre@smartuz.net" />
+          </div>
+          <div class="field">
+            <label>Teléfono</label>
+            <input type="text" [ngModel]="fTelefono()" (ngModelChange)="fTelefono.set($event)"
+                   placeholder="09…" />
+          </div>
+          <div class="field span2">
+            <label>Cargo</label>
+            <input type="text" [ngModel]="fCargo()" (ngModelChange)="fCargo.set($event)"
+                   placeholder="Técnico de campo, cajera…" />
+            <span class="hint">Es descriptivo: los permisos se asignan por rol en Keycloak.</span>
+          </div>
+        </div>
+
+        @if (errorEdicion()) { <div class="modal-error">{{ errorEdicion() }}</div> }
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" (click)="cerrarEdicion()" [disabled]="guardando()">Cancelar</button>
+        <button type="button" class="btn btn-primary" (click)="guardarEdicion()" [disabled]="guardando()">
+          {{ guardando() ? 'Guardando…' : 'Guardar cambios' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

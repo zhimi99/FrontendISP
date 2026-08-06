@@ -249,6 +249,31 @@ export interface PlanCatalogo {
   velocidadBajadaKbps: number;
   velocidadSubidaKbps: number;
   precioMensual: number;
+  /** El selector del alta solo recibe activos; el mantenimiento pide `?todos=true`. */
+  activo: boolean;
+}
+
+/**
+ * Mantenimiento del catálogo de planes (solo ADMIN).
+ *
+ * Las velocidades van en kbps porque es la unidad del perfil de RADIUS y del
+ * rate-limit del Mikrotik. El precio es sin impuestos: el IVA lo aplica
+ * MS-FACTURACIÓN al emitir, que es quien conoce el porcentaje vigente en cada fecha.
+ */
+export interface CrearPlanRequest {
+  codigo: string;
+  nombre: string;
+  velocidadBajadaKbps: number;
+  velocidadSubidaKbps: number;
+  precioMensual: number;
+}
+
+/** Igual, sin el código: es la referencia del plan en el contrato firmado. */
+export interface EditarPlanRequest {
+  nombre: string;
+  velocidadBajadaKbps: number;
+  velocidadSubidaKbps: number;
+  precioMensual: number;
 }
 
 /** Cuerpo del alta de cliente (`POST /api/clientes`). */

@@ -1,0 +1,158 @@
+/* Estilos propios de Red; el resto se hereda de clientes.scss. */
+
+.badge.neutral {
+  background: var(--slate-soft);
+  color: var(--slate);
+}
+
+/* Una fila desincronizada es el motivo de esta pantalla: que se note. */
+tr.desync td {
+  background: var(--danger-soft);
+}
+/* El perfil que la red aplica cuando NO coincide con el deseado. */
+.dif {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+/* ============ Aviso de resultado ============ */
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 16px;
+  border-left: 3px solid var(--ok);
+  font-size: 13px;
+  font-weight: 600;
+}
+.banner.error {
+  border-left-color: var(--danger);
+  color: var(--danger);
+}
+.banner-x {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+.banner-x:hover {
+  background: var(--bg);
+}
+
+/* ============ Acciones por fila ============ */
+.w-acc {
+  width: 1%;
+  white-space: nowrap;
+}
+.acc {
+  display: flex;
+  gap: 6px;
+}
+.btn.mini {
+  padding: 5px 12px;
+  font-size: 12px;
+}
+
+/* ============ Panel de bitácora ============ */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 6vh 16px 16px;
+  z-index: 60;
+}
+.modal {
+  width: 100%;
+  max-width: 860px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-height: 86vh;
+  overflow: auto;
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-head h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.modal-x {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.modal-x:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+.modal-body {
+  padding: 18px;
+}
+.modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--border);
+}
+
+/* Ficha de datos del abonado */
+.kv {
+  margin: 0 0 18px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px 18px;
+}
+.kv div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.kv dt {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.kv dd {
+  margin: 0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.sub-titulo {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.bitacora table {
+  font-size: 13px;
+}
+
+@media (max-width: 620px) {
+  .kv {
+    grid-template-columns: 1fr;
+  }
+}

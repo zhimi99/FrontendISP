@@ -7,6 +7,10 @@ import {
   AjusteStockRequest,
   AltaEquipoRequest,
   ConsumoStockRequest,
+  CrearMaterialRequest,
+  CrearUbicacionRequest,
+  EditarMaterialRequest,
+  EditarUbicacionRequest,
   Equipo,
   EstadoEquipo,
   Existencia,
@@ -25,14 +29,21 @@ export class InventarioService {
   private readonly http = inject(HttpClient);
   private readonly base = environment.apiBase;
 
-  /** GET /api/materiales — catálogo de materiales activos. */
-  listarMateriales(): Observable<Material[]> {
-    return this.http.get<Material[]>(`${this.base}/api/materiales`);
+  /**
+   * GET /api/materiales — catálogo de materiales activos.
+   *
+   * `todos` solo lo usa la pantalla de mantenimiento: en un ingreso o un traslado,
+   * ofrecer material retirado sería invitar a usarlo.
+   */
+  listarMateriales(todos = false): Observable<Material[]> {
+    const params = todos ? new HttpParams().set('todos', true) : undefined;
+    return this.http.get<Material[]>(`${this.base}/api/materiales`, { params });
   }
 
   /** GET /api/ubicaciones — bodegas y furgonetas de técnicos. */
-  listarUbicaciones(): Observable<Ubicacion[]> {
-    return this.http.get<Ubicacion[]>(`${this.base}/api/ubicaciones`);
+  listarUbicaciones(todos = false): Observable<Ubicacion[]> {
+    const params = todos ? new HttpParams().set('todos', true) : undefined;
+    return this.http.get<Ubicacion[]>(`${this.base}/api/ubicaciones`, { params });
   }
 
   /** GET /api/materiales/bajo-stock — lo que hay que reponer. */
@@ -114,5 +125,46 @@ export class InventarioService {
    */
   ajustarMaterial(req: AjusteStockRequest): Observable<Movimiento> {
     return this.http.post<Movimiento>(`${this.base}/api/ajustes`, req);
+  }
+
+  /* ============ Mantenimiento de los maestros (solo ADMIN) ============ */
+
+  /** POST /api/materiales — el código se normaliza a mayúsculas en el servidor. */
+  crearMaterial(req: CrearMaterialRequest): Observable<Material> {
+    return this.http.post<Material>(`${this.base}/api/materiales`, req);
+  }
+
+  /**
+   * PUT /api/materiales/{id} — nombre, unidad y stock mínimo. Responde 422 si se
+   * intenta cambiar la unidad de un material que ya tiene movimientos.
+   */
+  editarMaterial(id: number, req: EditarMaterialRequest): Observable<Material> {
+    return this.http.put<Material>(`${this.base}/api/materiales/${id}`, req);
+  }
+
+  /** POST .../desactivar — 422 si todavía queda existencia en alguna ubicación. */
+  desactivarMaterial(id: number): Observable<Material> {
+    return this.http.post<Material>(`${this.base}/api/materiales/${id}/desactivar`, {});
+  }
+
+  activarMaterial(id: number): Observable<Material> {
+    return this.http.post<Material>(`${this.base}/api/materiales/${id}/activar`, {});
+  }
+
+  crearUbicacion(req: CrearUbicacionRequest): Observable<Ubicacion> {
+    return this.http.post<Ubicacion>(`${this.base}/api/ubicaciones`, req);
+  }
+
+  editarUbicacion(id: number, req: EditarUbicacionRequest): Observable<Ubicacion> {
+    return this.http.put<Ubicacion>(`${this.base}/api/ubicaciones/${id}`, req);
+  }
+
+  /** POST .../desactivar — 422 si la ubicación aún guarda material o equipos. */
+  desactivarUbicacion(id: number): Observable<Ubicacion> {
+    return this.http.post<Ubicacion>(`${this.base}/api/ubicaciones/${id}/desactivar`, {});
+  }
+
+  activarUbicacion(id: number): Observable<Ubicacion> {
+    return this.http.post<Ubicacion>(`${this.base}/api/ubicaciones/${id}/activar`, {});
   }
 }

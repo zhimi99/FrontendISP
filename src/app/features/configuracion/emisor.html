@@ -1,0 +1,118 @@
+<div class="tab-head">
+  <div>
+    <h3>Emisor ante el SRI</h3>
+    <p class="sub">Con estos datos sale impreso cada comprobante que emite el sistema.</p>
+  </div>
+  <div class="tab-acc">
+    <button class="btn" (click)="cargar()"><app-icon name="refresh" [size]="15" /> Recargar</button>
+  </div>
+</div>
+
+@if (banner(); as b) {
+  <div class="card banner" [class.error]="b.error">
+    <span>{{ b.texto }}</span>
+    <button class="banner-x" (click)="banner.set(null)" aria-label="Cerrar">✕</button>
+  </div>
+}
+
+@if (cargando()) {
+  <div class="card tab-empty"><p>Cargando los datos del emisor…</p></div>
+} @else if (error()) {
+  <div class="card tab-empty"><p>{{ error() }}</p></div>
+} @else if (emisor(); as e) {
+  @if (!puedeEditar()) {
+    <div class="card nota-keycloak">
+      <app-icon name="gear" [size]="18" />
+      <div>
+        <strong>Solo de lectura.</strong>
+        <span>Cambiar los datos del emisor afecta a la validez fiscal de lo que se emita después, así que lo hace un administrador.</span>
+      </div>
+    </div>
+  }
+
+  <div class="card ficha-emisor">
+    <div class="form-grid">
+      <div class="field">
+        <label>RUC *</label>
+        <input type="text" [ngModel]="ruc()" (ngModelChange)="ruc.set($event)"
+               [disabled]="!puedeEditar() || !e.rucEditable" inputmode="numeric" />
+        @if (!e.rucEditable) {
+          <span class="hint">
+            Bloqueado: ya hay {{ e.facturasEmitidas }} comprobante(s) emitidos que lo llevan
+            dentro de su clave de acceso.
+          </span>
+        } @else {
+          <span class="hint">Todavía editable: no se ha emitido ningún comprobante.</span>
+        }
+      </div>
+      <div class="field">
+        <label>Ambiente *</label>
+        <select [ngModel]="ambiente()" (ngModelChange)="ambiente.set($event)" [disabled]="!puedeEditar()">
+          @for (a of ambientes; track a) { <option [ngValue]="a">{{ a }}</option> }
+        </select>
+        <span class="hint">En PRUEBAS los comprobantes no tienen validez fiscal.</span>
+      </div>
+
+      <div class="field span2">
+        <label>Razón social *</label>
+        <input type="text" [ngModel]="razonSocial()" (ngModelChange)="razonSocial.set($event)"
+               [disabled]="!puedeEditar()" />
+      </div>
+      <div class="field span2">
+        <label>Nombre comercial</label>
+        <input type="text" [ngModel]="nombreComercial()" (ngModelChange)="nombreComercial.set($event)"
+               [disabled]="!puedeEditar()" />
+      </div>
+      <div class="field span2">
+        <label>Dirección de la matriz *</label>
+        <input type="text" [ngModel]="direccionMatriz()" (ngModelChange)="direccionMatriz.set($event)"
+               [disabled]="!puedeEditar()" />
+      </div>
+
+      <div class="field">
+        <label>Contribuyente especial</label>
+        <input type="text" [ngModel]="contribuyenteEspecial()"
+               (ngModelChange)="contribuyenteEspecial.set($event)"
+               [disabled]="!puedeEditar()" placeholder="N.º de resolución" />
+        <span class="hint">Vacío si la empresa no lo es.</span>
+      </div>
+      <div class="field">
+        <label>Certificado de firma</label>
+        <input type="text" [ngModel]="certificadoAlias()" (ngModelChange)="certificadoAlias.set($event)"
+               [disabled]="!puedeEditar()" placeholder="alias del certificado" />
+        <span class="hint">Solo el alias: el archivo y su contraseña viven en el gestor de secretos.</span>
+      </div>
+
+      <div class="field span2 check">
+        <label>
+          <input type="checkbox" [ngModel]="obligadoContabilidad()"
+                 (ngModelChange)="obligadoContabilidad.set($event)" [disabled]="!puedeEditar()" />
+          Obligado a llevar contabilidad
+        </label>
+      </div>
+    </div>
+
+    @if (avisoProduccion()) {
+      <div class="aviso-produccion">
+        <app-icon name="bell" [size]="18" />
+        <div>
+          <strong>Vas a pasar a PRODUCCIÓN.</strong>
+          <span>
+            A partir de ahí los comprobantes tienen validez fiscal ante el SRI, y no se
+            podrá volver a PRUEBAS una vez haya facturas autorizadas. Necesitas el
+            certificado de firma configurado.
+          </span>
+        </div>
+      </div>
+    }
+
+    @if (puedeEditar()) {
+      <div class="ficha-foot">
+        <span class="hint">{{ e.facturasEmitidas }} comprobante(s) emitidos hasta hoy.</span>
+        <button class="btn btn-primary" (click)="guardar()" [disabled]="guardando()">
+          {{ guardando() ? 'Guardando…' : 'Guardar cambios' }}
+        </button>
+      </div>
+    }
+  </div>
+}

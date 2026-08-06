@@ -17,6 +17,66 @@ export interface Usuario {
   iniciales: string;
 }
 
+/** Ficha completa de un empleado (`GET /api/usuarios`, solo ADMIN). */
+export interface EmpleadoFicha {
+  id: number;
+  usuario: string;
+  cedula: string;
+  nombres: string;
+  apellidos: string;
+  nombreCompleto?: string;
+  email: string | null;
+  telefono: string | null;
+  cargo: string | null;
+  activo: boolean;
+  fechaIngreso: string | null;
+  fechaSalida: string | null;
+}
+
+/** Datos editables de la ficha. La identidad (usuario, cédula) no se toca. */
+export interface EditarEmpleadoRequest {
+  nombres: string;
+  apellidos: string;
+  email: string | null;
+  telefono: string | null;
+  cargo: string | null;
+}
+
+/**
+ * Alta de un empleado (`POST /api/usuarios`, solo ADMIN): crea a la vez su cuenta en
+ * Keycloak y su ficha.
+ *
+ * `passwordTemporal` no se guarda en ninguna base ni vuelve en la respuesta: viaja
+ * hasta Keycloak marcada como temporal, que obliga a cambiarla en el primer inicio de
+ * sesión. Quien da el alta se la comunica a la persona por otro canal.
+ */
+export interface CrearEmpleadoRequest {
+  usuario: string;
+  cedula: string;
+  nombres: string;
+  apellidos: string;
+  email: string;
+  telefono: string | null;
+  cargo: string | null;
+  rol: RolKeycloak;
+  passwordTemporal: string;
+  fechaIngreso: string | null;
+}
+
+/**
+ * El rol tal y como lo nombra el realm de Keycloak (ADMIN, no ADMINISTRADOR): es lo
+ * que el backend valida contra su lista cerrada.
+ */
+export type RolKeycloak = 'ADMIN' | 'FINANZAS' | 'COBRANZAS' | 'TECNICO' | 'SOPORTE';
+
+export const ROL_KEYCLOAK_ETIQUETA: Record<RolKeycloak, string> = {
+  ADMIN: 'Administrador',
+  FINANZAS: 'Finanzas',
+  COBRANZAS: 'Cobranzas',
+  TECNICO: 'Técnico de campo',
+  SOPORTE: 'Soporte / atención',
+};
+
 export const ROL_ETIQUETA: Record<Rol, string> = {
   ADMINISTRADOR: 'Administrador',
   FINANZAS: 'Finanzas',

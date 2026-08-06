@@ -1,0 +1,233 @@
+<div class="tab-head">
+  <div>
+    <h3>Materiales y bodegas</h3>
+    <p class="sub">El vocabulario del inventario: qué se almacena y dónde puede estar.</p>
+  </div>
+  <div class="tab-acc">
+    <button class="btn" (click)="cargar()"><app-icon name="refresh" [size]="15" /> Actualizar</button>
+    @if (seccion() === 'materiales') {
+      <button class="btn btn-primary" (click)="abrirMaterial(null)">
+        <app-icon name="plus" [size]="15" /> Nuevo material
+      </button>
+    } @else {
+      <button class="btn btn-primary" (click)="abrirUbicacion(null)">
+        <app-icon name="plus" [size]="15" /> Nueva ubicación
+      </button>
+    }
+  </div>
+</div>
+
+@if (banner(); as b) {
+  <div class="card banner" [class.error]="b.error">
+    <span>{{ b.texto }}</span>
+    <button class="banner-x" (click)="banner.set(null)" aria-label="Cerrar">✕</button>
+  </div>
+}
+
+<div class="subtabs">
+  <button class="subtab" [class.active]="seccion() === 'materiales'" (click)="seccion.set('materiales')">
+    Materiales ({{ materiales().length }})
+  </button>
+  <button class="subtab" [class.active]="seccion() === 'ubicaciones'" (click)="seccion.set('ubicaciones')">
+    Ubicaciones ({{ ubicaciones().length }})
+  </button>
+</div>
+
+@if (seccion() === 'materiales') {
+  <div class="card table-card">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Material</th>
+            <th>Unidad</th>
+            <th class="right">Stock mínimo</th>
+            <th>Estado</th>
+            <th class="w-acc">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (m of materiales(); track m.id) {
+            <tr [class.inactivo]="!m.activo">
+              <td class="mono strong">{{ m.codigo }}</td>
+              <td>{{ m.nombre }}</td>
+              <td class="muted">{{ m.unidad }}</td>
+              <td class="right mono">{{ m.stockMinimo }}</td>
+              <td>
+                <span class="badge" [class]="m.activo ? 'ok' : 'neutral'">
+                  {{ m.activo ? 'En catálogo' : 'Retirado' }}
+                </span>
+              </td>
+              <td class="w-acc">
+                <div class="acc">
+                  <button class="btn mini" (click)="abrirMaterial(m)">Editar</button>
+                  <button class="btn mini" [class.danger]="m.activo"
+                          [disabled]="procesando() === 'mat-' + m.id" (click)="cambiarEstadoMaterial(m)">
+                    {{ procesando() === 'mat-' + m.id ? '…' : (m.activo ? 'Retirar' : 'Reactivar') }}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="6" class="empty">{{ mensajeTabla() }}</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+} @else {
+  <div class="card table-card">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Ubicación</th>
+            <th>Tipo</th>
+            <th>Técnico</th>
+            <th>Estado</th>
+            <th class="w-acc">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (u of ubicaciones(); track u.id) {
+            <tr [class.inactivo]="!u.activa">
+              <td class="mono strong">{{ u.codigo }}</td>
+              <td>{{ u.nombre }}</td>
+              <td class="muted">{{ tipoEtiqueta[u.tipo] }}</td>
+              <td class="muted">{{ nombreTecnico(u.usuarioId) }}</td>
+              <td>
+                <span class="badge" [class]="u.activa ? 'ok' : 'neutral'">
+                  {{ u.activa ? 'Operativa' : 'Dada de baja' }}
+                </span>
+              </td>
+              <td class="w-acc">
+                <div class="acc">
+                  <button class="btn mini" (click)="abrirUbicacion(u)">Editar</button>
+                  <button class="btn mini" [class.danger]="u.activa"
+                          [disabled]="procesando() === 'ubi-' + u.id" (click)="cambiarEstadoUbicacion(u)">
+                    {{ procesando() === 'ubi-' + u.id ? '…' : (u.activa ? 'Dar de baja' : 'Reactivar') }}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="6" class="empty">{{ mensajeTabla() }}</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}
+
+<!-- ============ Modal: material ============ -->
+@if (creandoMaterial() || editandoMaterial()) {
+  <div class="modal-backdrop" (click)="cerrarMaterial()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <h3>{{ creandoMaterial() ? 'Nuevo material' : 'Editar material' }}</h3>
+        <button class="modal-x" (click)="cerrarMaterial()" [disabled]="guardandoMaterial()" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="field">
+            <label>Código *</label>
+            <input type="text" [ngModel]="mCodigo()" (ngModelChange)="mCodigo.set($event)"
+                   [disabled]="!creandoMaterial()" placeholder="CAB-DROP" />
+            <span class="hint">
+              @if (creandoMaterial()) {
+                Se guarda en mayúsculas. Es como se pide en bodega.
+              } @else {
+                No se edita: quedó escrito en cada movimiento del histórico.
+              }
+            </span>
+          </div>
+          <div class="field">
+            <label>Unidad *</label>
+            <select [ngModel]="mUnidad()" (ngModelChange)="mUnidad.set($event)">
+              @for (u of unidades; track u) { <option [ngValue]="u">{{ u }}</option> }
+            </select>
+            @if (!creandoMaterial()) {
+              <span class="hint">Si el material ya tiene movimientos, no se podrá cambiar.</span>
+            }
+          </div>
+          <div class="field span2">
+            <label>Nombre *</label>
+            <input type="text" [ngModel]="mNombre()" (ngModelChange)="mNombre.set($event)"
+                   placeholder="Cable drop fibra óptica 1 hilo" />
+          </div>
+          <div class="field span2">
+            <label>Stock mínimo</label>
+            <input type="number" min="0" step="0.01" [ngModel]="mMinimo()" (ngModelChange)="mMinimo.set($event)" />
+            <span class="hint">Por debajo de aquí sale en «qué reponer». Cero = no se vigila.</span>
+          </div>
+        </div>
+
+        @if (errorMaterial()) { <div class="modal-error">{{ errorMaterial() }}</div> }
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" (click)="cerrarMaterial()" [disabled]="guardandoMaterial()">Cancelar</button>
+        <button type="button" class="btn btn-primary" (click)="guardarMaterial()" [disabled]="guardandoMaterial()">
+          {{ guardandoMaterial() ? 'Guardando…' : 'Guardar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ============ Modal: ubicación ============ -->
+@if (creandoUbicacion() || editandoUbicacion()) {
+  <div class="modal-backdrop" (click)="cerrarUbicacion()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <h3>{{ creandoUbicacion() ? 'Nueva ubicación' : 'Editar ubicación' }}</h3>
+        <button class="modal-x" (click)="cerrarUbicacion()" [disabled]="guardandoUbicacion()" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="field">
+            <label>Código *</label>
+            <input type="text" [ngModel]="uCodigo()" (ngModelChange)="uCodigo.set($event)"
+                   [disabled]="!creandoUbicacion()" placeholder="BOD-02" />
+          </div>
+          <div class="field">
+            <label>Tipo *</label>
+            <select [ngModel]="uTipo()" (ngModelChange)="alCambiarTipo($event)"
+                    [disabled]="!creandoUbicacion()">
+              @for (t of tipos; track t) { <option [ngValue]="t">{{ tipoEtiqueta[t] }}</option> }
+            </select>
+            @if (!creandoUbicacion()) {
+              <span class="hint">No se cambia: da sentido a los movimientos ya registrados.</span>
+            }
+          </div>
+          <div class="field span2">
+            <label>Nombre *</label>
+            <input type="text" [ngModel]="uNombre()" (ngModelChange)="uNombre.set($event)"
+                   placeholder="Bodega Matriz" />
+          </div>
+          @if (uTipo() === 'TECNICO') {
+            <div class="field span2">
+              <label>Técnico *</label>
+              <select [ngModel]="uUsuarioId()" (ngModelChange)="uUsuarioId.set($event)">
+                <option [ngValue]="null">— Selecciona —</option>
+                @for (t of tecnicos(); track t.id) {
+                  <option [ngValue]="t.id">{{ t.nombreCompleto }} · {{ t.cargo }}</option>
+                }
+              </select>
+              <span class="hint">Cada técnico lleva una sola furgoneta.</span>
+            </div>
+          }
+        </div>
+
+        @if (errorUbicacion()) { <div class="modal-error">{{ errorUbicacion() }}</div> }
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" (click)="cerrarUbicacion()" [disabled]="guardandoUbicacion()">Cancelar</button>
+        <button type="button" class="btn btn-primary" (click)="guardarUbicacion()" [disabled]="guardandoUbicacion()">
+          {{ guardandoUbicacion() ? 'Guardando…' : 'Guardar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

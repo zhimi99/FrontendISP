@@ -20,17 +20,38 @@ export type EstadoSri =
 /** Estado de cobro; lo actualiza MS-FINANZAS con el evento pago.aplicado */
 export type EstadoPagoFactura = 'PENDIENTE' | 'PARCIAL' | 'PAGADA' | 'ANULADA';
 
+/**
+ * `GET /api/emisor` — los datos del ISP ante el SRI.
+ *
+ * `certificadoAlias` es solo la referencia al certificado de firma: ni el .p12 ni su
+ * contraseña pasan nunca por esta API.
+ */
 export interface Emisor {
   id: number;
   ruc: string;
   razonSocial: string;
-  nombreComercial?: string;
+  nombreComercial: string | null;
   direccionMatriz: string;
   ambiente: AmbienteSri;
-  contribuyenteEspecial?: string;
+  contribuyenteEspecial: string | null;
   obligadoContabilidad: boolean;
-  certificadoAlias?: string;
+  certificadoAlias: string | null;
   activo: boolean;
+  /** Cuántos comprobantes se han emitido ya: es lo que bloquea el RUC. */
+  facturasEmitidas: number;
+  rucEditable: boolean;
+}
+
+/** Cuerpo de `PUT /api/emisor` (solo ADMIN). */
+export interface EditarEmisorRequest {
+  ruc: string;
+  razonSocial: string;
+  nombreComercial: string | null;
+  direccionMatriz: string;
+  ambiente: AmbienteSri;
+  contribuyenteEspecial: string | null;
+  obligadoContabilidad: boolean;
+  certificadoAlias: string | null;
 }
 
 export interface FacturaDetalle {

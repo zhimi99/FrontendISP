@@ -9,7 +9,8 @@ import { ContratosComponent } from './features/contratos/contratos';
 import { FacturacionComponent } from './features/facturacion/facturacion';
 import { InventarioComponent } from './features/inventario/inventario';
 import { CierresCajaComponent } from './features/reportes/cierres-caja';
-import { PlaceholderComponent } from './features/placeholder/placeholder';
+import { ConfiguracionComponent } from './features/configuracion/configuracion';
+import { RedComponent } from './features/red/red';
 import { SesionComponent } from './features/sesion/sesion';
 import { SoporteComponent } from './features/soporte/soporte';
 
@@ -28,11 +29,11 @@ export const routes: Routes = [
   { path: 'facturacion', component: FacturacionComponent },
   { path: 'cobranzas', component: CobranzasComponent },
   { path: 'soporte', component: SoporteComponent },
-  { path: 'red', component: PlaceholderComponent, data: { titulo: 'Red', icono: 'network' } },
+  { path: 'red', component: RedComponent },
   { path: 'inventario', component: InventarioComponent },
   { path: 'reportes', pathMatch: 'full', redirectTo: 'reportes/cierres-caja' },
   { path: 'reportes/cierres-caja', component: CierresCajaComponent },
-  { path: 'configuracion', component: PlaceholderComponent, data: { titulo: 'Configuración', icono: 'gear' } },
+  { path: 'configuracion', component: ConfiguracionComponent },
 
   { path: '**', redirectTo: 'dashboard' },
 ];
