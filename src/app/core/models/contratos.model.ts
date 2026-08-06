@@ -8,6 +8,8 @@ export type TipoCliente = 'PERSONA' | 'EMPRESA';
 export type TipoIdentificacion = 'CEDULA' | 'RUC' | 'PASAPORTE';
 export type TipoConexion = 'PPPOE' | 'HOTSPOT';
 export type OrigenCambio = 'SISTEMA' | 'USUARIO';
+/** Forma en que se cobra una oferta de servicio. */
+export type ModalidadCobro = 'RECURRENTE' | 'UNICO';
 
 /** Máquina de estados del servicio: PENDIENTE → ACTIVO → SUSPENDIDO → CORTADO → RETIRADO */
 export type EstadoServicio = 'PENDIENTE' | 'ACTIVO' | 'SUSPENDIDO' | 'CORTADO' | 'RETIRADO';
@@ -151,16 +153,30 @@ export interface RedDetalle {
   sincronizadoRed: boolean;
 }
 
-/** Un contrato del cliente en la ficha de detalle. */
+/** Un contrato del cliente en la ficha de detalle: cada uno representa un servicio vendido. */
 export interface ContratoResumen {
   /** PK numérico del contrato: referencia lógica que usa factura.contrato_id. */
   id: number;
   codigo: string;
-  plan: string;
-  velocidad: string;
-  precioMensual: number;
+  /** Tipo y oferta vienen del catálogo extensible, no de un enum fijo de la interfaz. */
+  tipoServicioCodigo: string;
+  tipoServicioNombre: string;
+  ofertaCodigo: string;
+  ofertaNombre: string;
+  modalidadCobro: ModalidadCobro;
+  precioAcordado: number;
+  requiereInstalacion: boolean;
+  usaRed: boolean;
+  sujetoMora: boolean;
+  detallesServicio: string | null;
+  /** Puede ser nula para servicios que no se prestan en un domicilio. */
+  direccion: DireccionDetalle | null;
+  /** Solo se completan en servicios de Internet. */
+  plan: string | null;
+  velocidad: string | null;
   estadoServicio: EstadoServicio;
-  diaCorte: number;
+  /** Solo aplica a servicios recurrentes sujetos a mora. */
+  diaCorte: number | null;
   fechaAlta: string | null;
   fechaInstalacion: string | null;
   fechaBaja: string | null;
@@ -168,11 +184,14 @@ export interface ContratoResumen {
 }
 
 export interface DireccionDetalle {
+  /** PK que permite reutilizar el domicilio al contratar otro servicio. */
+  id: number;
   etiqueta: string | null;
   direccionTexto: string;
   referencia: string | null;
   latitud: number | null;
   longitud: number | null;
+  esPrincipal: boolean;
 }
 
 /**
@@ -202,6 +221,8 @@ export interface ClienteDetalle {
   /** Solo indica disponibilidad; la ruta privada del archivo nunca se expone. */
   tieneIdentificacion: boolean;
   direccionPrincipal: DireccionDetalle | null;
+  /** Todas las direcciones disponibles para contratar servicios adicionales. */
+  direcciones: DireccionDetalle[];
   contratos: ContratoResumen[];
 }
 
@@ -254,6 +275,49 @@ export interface AltaClienteResponse {
   clienteCodigo: string;
   contratoCodigo: string;
   estadoServicio: EstadoServicio;
+}
+
+/** Oferta activa del catálogo extensible que puede venderse a un cliente. */
+export interface OfertaServicioCatalogo {
+  codigo: string;
+  nombre: string;
+  descripcion: string | null;
+  tipoCodigo: string;
+  tipoNombre: string;
+  modalidadCobro: ModalidadCobro;
+  precioReferencial: number;
+  requiereDireccion: boolean;
+  requiereInstalacion: boolean;
+  usaRed: boolean;
+  sujetoMora: boolean;
+  requierePlanInternet: boolean;
+}
+
+/** Domicilio que se crea junto con un contrato adicional. */
+export interface NuevaDireccionContratoRequest {
+  etiqueta: string | null;
+  direccionTexto: string;
+  referencia: string | null;
+  latitud: number | null;
+  longitud: number | null;
+}
+
+/** Cuerpo de `POST /api/clientes/{codigo}/contratos`. */
+export interface CrearContratoServicioRequest {
+  ofertaCodigo: string;
+  direccionId: number | null;
+  nuevaDireccion: NuevaDireccionContratoRequest | null;
+  planCodigo: string | null;
+  precioAcordado: number | null;
+  diaCorte: number | null;
+  observaciones: string | null;
+}
+
+/** Resultado de registrar un servicio adicional para el cliente. */
+export interface CrearContratoServicioResponse {
+  contratoCodigo: string;
+  estadoServicio: EstadoServicio;
+  requiereInstalacion: boolean;
 }
 
 /** Fila de la grilla de contratos que devuelve `GET /api/contratos`. */

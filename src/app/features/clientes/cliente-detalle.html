@@ -13,6 +13,9 @@
         <a class="btn" routerLink="/clientes"><app-icon name="chevron" [size]="15" /> Volver</a>
         @if (puedeEditar()) {
           <button class="btn" (click)="abrirEditar()"><app-icon name="pencil" [size]="15" /> Editar</button>
+          <button class="btn btn-primary" type="button" (click)="abrirAgregarServicio()">
+            <app-icon name="plus" [size]="15" /> Agregar servicio
+          </button>
         }
         <button class="btn btn-dark">Acciones <app-icon name="chevron" [size]="15" /></button>
       </div>
@@ -79,7 +82,7 @@
               <div class="metric-ico ink"><app-icon name="network" [size]="22" /></div>
               <div class="metric-body">
                 <span class="metric-cap">Servicio Contratado</span>
-                <span class="metric-main">{{ v.base.plan }}</span>
+                <span class="metric-main">{{ v.base.servicio }}</span>
                 <span class="metric-sub">{{ v.base.velocidad }}</span>
                 <span class="metric-sub">Desde: {{ v.base.fechaRegistro }}</span>
               </div>
@@ -88,9 +91,9 @@
             <div class="card metric">
               <div class="metric-ico warn"><app-icon name="invoice" [size]="22" /></div>
               <div class="metric-body">
-                <span class="metric-cap">Mensualidad</span>
+                <span class="metric-cap">Valor recurrente contratado</span>
                 <span class="metric-main">{{ '$' + v.valorTotal.toFixed(2) }}</span>
-                <span class="metric-sub">Suma de planes activos</span>
+                <span class="metric-sub">Servicios recurrentes no retirados</span>
                 <span class="metric-sub">Vencimiento y mora: MS-FACTURACION</span>
               </div>
             </div>
@@ -111,8 +114,13 @@
             <div class="card panel">
               <h3 class="card-title">Información del Servicio</h3>
               <dl class="kv">
-                <div><dt>Plan contratado</dt><dd class="strong">{{ v.base.plan }}</dd></div>
-                <div><dt>Velocidad</dt><dd>{{ v.base.velocidad }}</dd></div>
+                <div><dt>Servicio contratado</dt><dd class="strong">{{ v.base.servicio }}</dd></div>
+                @if (v.base.plan) {
+                  <div><dt>Plan de Internet</dt><dd>{{ v.base.plan }}</dd></div>
+                }
+                @if (v.base.velocidad) {
+                  <div><dt>Velocidad</dt><dd>{{ v.base.velocidad }}</dd></div>
+                }
                 <div><dt>Tecnología</dt><dd>{{ v.tecnologia }}</dd></div>
                 <div><dt>IP / Usuario</dt><dd class="mono">{{ v.ipUsuario }}</dd></div>
                 <div><dt>OLT</dt><dd class="mono">{{ v.olt }}</dd></div>
@@ -133,6 +141,72 @@
                 <span class="map-addr">{{ v.base.direccion }}</span>
                 <button class="btn btn-primary btn-sm"><app-icon name="location" [size]="14" /> Ver en mapa</button>
               </div>
+            </div>
+          </div>
+        } @else if (tabActiva() === 1) {
+          <!-- ============ Servicios y contratos del cliente ============ -->
+          <div class="card servicios-tab">
+            <div class="servicios-head-tab">
+              <div>
+                <h3 class="card-title mb0">Servicios del cliente</h3>
+                <p class="sub">Cada servicio conserva su contrato, dirección y condiciones comerciales.</p>
+              </div>
+              @if (puedeEditar()) {
+                <button type="button" class="btn btn-primary" (click)="abrirAgregarServicio()">
+                  <app-icon name="plus" [size]="15" /> Agregar contrato / servicio
+                </button>
+              }
+            </div>
+
+            @if (avisoServicio(); as aviso) {
+              <div class="servicio-banner" [class.error]="aviso.error">
+                <span>{{ aviso.texto }}</span>
+                <button type="button" class="banner-x" aria-label="Cerrar" (click)="avisoServicio.set(null)">×</button>
+              </div>
+            }
+
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Contrato</th>
+                    <th>Servicio</th>
+                    <th>Dirección</th>
+                    <th>Cobro</th>
+                    <th>Estado</th>
+                    <th>Fecha de alta</th>
+                    <th class="right">Precio</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (s of v.servicios; track s.id) {
+                    <tr>
+                      <td class="mono muted">{{ s.id }}</td>
+                      <td>
+                        <div class="strong">{{ s.servicio }}</div>
+                        <div class="servicio-sub">{{ s.tipo }}</div>
+                        @if (s.plan) {
+                          <div class="servicio-sub">{{ s.plan }}@if (s.velocidad) { · {{ s.velocidad }} }</div>
+                        }
+                        @if (s.requiereInstalacion) {
+                          <div class="servicio-chip">Requiere instalación</div>
+                        }
+                      </td>
+                      <td class="servicio-direccion">{{ s.direccion }}</td>
+                      <td>{{ modalidadEtiqueta(s.modalidad) }}</td>
+                      <td><span class="badge" [class]="estadosMap[s.estado].tono">{{ estadosMap[s.estado].texto }}</span></td>
+                      <td class="muted">{{ s.fechaInicio }}</td>
+                      <td class="right mono">{{ moneda(s.precio) }}</td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="7" class="empty">
+                        Este cliente todavía no tiene servicios registrados.
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
             </div>
           </div>
         } @else if (tabActiva() === 2) {
@@ -212,56 +286,6 @@
       </section>
     </div>
 
-    <!-- ============ Servicios del cliente ============ -->
-    <div class="card servicios">
-      <div class="servicios-head">
-        <h3 class="card-title mb0">Servicios del Cliente</h3>
-      </div>
-      <div class="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>ID Servicio</th>
-              <th>Servicio</th>
-              <th>Plan</th>
-              <th>Velocidad</th>
-              <th>Estado</th>
-              <th>Fecha inicio</th>
-              <th class="right">Precio</th>
-              <th class="w-acc">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (s of v.servicios; track s.id) {
-              <tr>
-                <td class="mono">{{ s.id }}</td>
-                <td class="strong">{{ s.servicio }}</td>
-                <td>{{ s.plan }}</td>
-                <td>{{ s.velocidad }}</td>
-                <td><span class="badge" [class]="estadosMap[s.estado].tono">{{ estadosMap[s.estado].texto }}</span></td>
-                <td class="muted">{{ s.fechaInicio }}</td>
-                <td class="right mono">{{ '$' + s.precio.toFixed(2) }}</td>
-                <td class="w-acc">
-                  <div class="acc">
-                    <button class="acc-btn" title="Ver"><app-icon name="eye" [size]="16" /></button>
-                    <button class="acc-btn" title="Editar"><app-icon name="pencil" [size]="16" /></button>
-                    <button class="acc-btn" title="Más"><app-icon name="dots" [size]="16" /></button>
-                  </div>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-      <div class="servicios-foot">
-        <span class="muted">Mostrando 1 a {{ v.servicios.length }} de {{ v.servicios.length }} servicios</span>
-        <div class="pages">
-          <button class="pg" disabled>Anterior</button>
-          <button class="pg active">1</button>
-          <button class="pg" disabled>Siguiente</button>
-        </div>
-      </div>
-    </div>
   </div>
 } @else if (cargando()) {
   <!-- Cargando la ficha -->
@@ -279,6 +303,224 @@
       <h3>Cliente no encontrado</h3>
       <p>No existe un cliente con ese código, o el gateway no respondió.</p>
       <a class="btn btn-primary" routerLink="/clientes">Volver a la lista</a>
+    </div>
+  </div>
+}
+
+<!-- ============ Modal: agregar contrato / servicio ============ -->
+@if (modalServicio()) {
+  <div class="modal-backdrop" (click)="cerrarAgregarServicio()">
+    <div class="modal modal-servicio" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <div>
+          <h3>Agregar contrato / servicio</h3>
+          <p class="modal-sub">Registra otro servicio para este cliente sin alterar sus contratos existentes.</p>
+        </div>
+        <button class="modal-x" type="button" (click)="cerrarAgregarServicio()" [disabled]="guardandoServicio()" aria-label="Cerrar">×</button>
+      </div>
+
+      <div class="modal-body">
+        @if (cargandoCatalogosServicio()) {
+          <div class="servicio-modal-estado"><app-icon name="refresh" [size]="20" /> Cargando ofertas y planes…</div>
+        } @else if (errorCatalogosServicio()) {
+          <div class="servicio-modal-estado error">
+            <span>{{ errorCatalogosServicio() }}</span>
+            <button type="button" class="btn" (click)="abrirAgregarServicio()">Reintentar</button>
+          </div>
+        } @else {
+          <div class="form-grid servicio-form-grid">
+            <div class="field span2">
+              <label>Oferta de servicio <span class="req">*</span></label>
+              <select
+                [ngModel]="ofertaServicioCodigo()"
+                (ngModelChange)="onOfertaServicioChange($event)"
+              >
+                <option value="" disabled>Selecciona una oferta disponible</option>
+                @for (oferta of ofertasServicio(); track oferta.codigo) {
+                  <option [value]="oferta.codigo">
+                    {{ oferta.tipoNombre }} · {{ oferta.nombre }} · {{ moneda(oferta.precioReferencial) }}
+                  </option>
+                }
+              </select>
+              @if (!ofertasServicio().length) {
+                <span class="hint">No hay ofertas activas disponibles en el catálogo.</span>
+              }
+            </div>
+
+            @if (ofertaServicioSeleccionada(); as oferta) {
+              <div class="servicio-oferta span2">
+                <div>
+                  <strong>{{ oferta.nombre }}</strong>
+                  <span>{{ oferta.tipoNombre }} · {{ modalidadEtiqueta(oferta.modalidadCobro) }}</span>
+                </div>
+                <span class="servicio-oferta-precio">{{ moneda(oferta.precioReferencial) }}</span>
+                @if (oferta.descripcion) {
+                  <p>{{ oferta.descripcion }}</p>
+                }
+              </div>
+
+              @if (servicioRequiereDireccion()) {
+                <div class="field span2">
+                  <label>Dirección de prestación <span class="req">*</span></label>
+                  <div class="direccion-mode">
+                    <button
+                      type="button"
+                      class="direccion-mode-btn"
+                      [class.active]="modoDireccionServicio() === 'EXISTENTE'"
+                      (click)="cambiarModoDireccionServicio('EXISTENTE')"
+                      [disabled]="!direccionesCliente().length"
+                    >
+                      Usar dirección existente
+                    </button>
+                    <button
+                      type="button"
+                      class="direccion-mode-btn"
+                      [class.active]="modoDireccionServicio() === 'NUEVA'"
+                      (click)="cambiarModoDireccionServicio('NUEVA')"
+                    >
+                      Registrar nueva dirección
+                    </button>
+                  </div>
+
+                  @if (modoDireccionServicio() === 'EXISTENTE') {
+                    @if (direccionesCliente().length) {
+                      <select
+                        [ngModel]="direccionServicioId()"
+                        (ngModelChange)="onDireccionServicioChange($event)"
+                      >
+                        @for (direccion of direccionesCliente(); track direccion.id) {
+                          <option [value]="direccion.id">{{ direccionEtiqueta(direccion) }}</option>
+                        }
+                      </select>
+                    } @else {
+                      <span class="hint">Este cliente aún no tiene direcciones para reutilizar.</span>
+                    }
+                  } @else {
+                    <div class="form-grid direccion-nueva-grid">
+                      <div class="field">
+                        <label>Etiqueta</label>
+                        <input
+                          type="text"
+                          placeholder="Ej. Local centro"
+                          [ngModel]="nuevaDireccionEtiqueta()"
+                          (ngModelChange)="nuevaDireccionEtiqueta.set($event)"
+                        />
+                      </div>
+                      <div class="field span2">
+                        <label>Dirección <span class="req">*</span></label>
+                        <input
+                          type="text"
+                          placeholder="Calle, número y sector"
+                          [ngModel]="nuevaDireccionTexto()"
+                          (ngModelChange)="nuevaDireccionTexto.set($event)"
+                        />
+                      </div>
+                      <div class="field span2">
+                        <label>Referencia</label>
+                        <input
+                          type="text"
+                          placeholder="Ej. Portón verde, frente al parque"
+                          [ngModel]="nuevaDireccionReferencia()"
+                          (ngModelChange)="nuevaDireccionReferencia.set($event)"
+                        />
+                      </div>
+                      <div class="field">
+                        <label>Latitud</label>
+                        <input
+                          type="text"
+                          inputmode="decimal"
+                          placeholder="-2.92361"
+                          [ngModel]="nuevaDireccionLatitud()"
+                          (ngModelChange)="nuevaDireccionLatitud.set($event)"
+                        />
+                      </div>
+                      <div class="field">
+                        <label>Longitud</label>
+                        <input
+                          type="text"
+                          inputmode="decimal"
+                          placeholder="-78.78028"
+                          [ngModel]="nuevaDireccionLongitud()"
+                          (ngModelChange)="nuevaDireccionLongitud.set($event)"
+                        />
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+
+              @if (servicioRequierePlanInternet()) {
+                <div class="field span2">
+                  <label>Plan de Internet <span class="req">*</span></label>
+                  <select [ngModel]="planServicioCodigo()" (ngModelChange)="planServicioCodigo.set($event)">
+                    <option value="" disabled>Selecciona un plan activo</option>
+                    @for (plan of planesServicio(); track plan.codigo) {
+                      <option [value]="plan.codigo">
+                        {{ plan.nombre }} · {{ plan.velocidad }} · {{ moneda(plan.precioMensual) }}
+                      </option>
+                    }
+                  </select>
+                  <span class="hint">Este servicio usa red: el plan define la velocidad y el perfil técnico.</span>
+                </div>
+              }
+
+              <div class="field">
+                <label>Precio acordado (USD)</label>
+                <input
+                  type="text"
+                  inputmode="decimal"
+                  placeholder="0.00"
+                  [ngModel]="precioAcordadoServicio()"
+                  (ngModelChange)="precioAcordadoServicio.set($event)"
+                />
+                @if (servicioRequierePlanInternet()) {
+                  <span class="hint">Si lo dejas vacío, se aplicará el precio del plan seleccionado.</span>
+                } @else {
+                  <span class="hint">Si lo dejas vacío, se aplicará el valor referencial: {{ moneda(oferta.precioReferencial) }}.</span>
+                }
+              </div>
+
+              @if (servicioSujetoMora()) {
+                <div class="field">
+                  <label>Día de corte</label>
+                  <select [ngModel]="diaCorteServicio()" (ngModelChange)="onDiaCorteServicioChange($event)">
+                    @for (dia of diasCorte; track dia) {
+                      <option [value]="dia">Día {{ dia }}</option>
+                    }
+                  </select>
+                  <span class="hint">Se usará para la facturación recurrente.</span>
+                </div>
+              }
+
+              <div class="field span2">
+                <label>Observaciones</label>
+                <textarea
+                  rows="3"
+                  maxlength="2000"
+                  placeholder="Alcance del servicio, indicaciones comerciales o técnicas…"
+                  [ngModel]="observacionesServicio()"
+                  (ngModelChange)="observacionesServicio.set($event)"
+                ></textarea>
+              </div>
+            }
+          </div>
+          @if (errorServicio()) {
+            <div class="modal-error">{{ errorServicio() }}</div>
+          }
+        }
+      </div>
+
+      <div class="modal-foot">
+        <button type="button" class="btn" (click)="cerrarAgregarServicio()" [disabled]="guardandoServicio()">Cancelar</button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          (click)="guardarServicio()"
+          [disabled]="guardandoServicio() || cargandoCatalogosServicio() || !ofertasServicio().length"
+        >
+          {{ guardandoServicio() ? 'Registrando…' : 'Registrar servicio' }}
+        </button>
+      </div>
     </div>
   </div>
 }

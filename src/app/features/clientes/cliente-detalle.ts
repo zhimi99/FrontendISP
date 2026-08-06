@@ -3,13 +3,23 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { catchError, combineLatest, map, Observable, of, startWith, Subscription, switchMap } from 'rxjs';
+import { catchError, combineLatest, forkJoin, map, Observable, of, startWith, Subscription, switchMap } from 'rxjs';
 
 import { IconComponent } from '../../shared/icon';
 import { ClientesService } from '../../core/services/clientes.service';
+import { ContratosService } from '../../core/services/contratos.service';
 import { FacturacionService } from '../../core/services/facturacion.service';
+import { PlanesService } from '../../core/services/planes.service';
 import { AuthService } from '../../core/services/auth.service';
-import { ClienteDetalle, EditarClienteRequest } from '../../core/models/contratos.model';
+import {
+  ClienteDetalle,
+  CrearContratoServicioRequest,
+  DireccionDetalle,
+  EditarClienteRequest,
+  NuevaDireccionContratoRequest,
+  OfertaServicioCatalogo,
+  PlanCatalogo,
+} from '../../core/models/contratos.model';
 import {
   ESTADO_PAGO_ETIQUETA,
   ESTADO_PAGO_TONO,
@@ -21,6 +31,7 @@ import { EstadoCliente, ESTADOS } from './clientes.data';
 
 /** Estado de la carga perezosa de facturas para la pestaña de Facturación. */
 type EstadoFacturas = { estado: 'cargando' | 'ok' | 'error'; lista: FacturaVista[] };
+type ModoDireccionServicio = 'EXISTENTE' | 'NUEVA';
 
 @Component({
   selector: 'app-cliente-detalle',
@@ -32,7 +43,9 @@ type EstadoFacturas = { estado: 'cargando' | 'ok' | 'error'; lista: FacturaVista
 export class ClienteDetalleComponent implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly clientesService = inject(ClientesService);
+  private readonly contratosService = inject(ContratosService);
   private readonly facturacionService = inject(FacturacionService);
+  private readonly planesService = inject(PlanesService);
   private readonly auth = inject(AuthService);
   private readonly sanitizer = inject(DomSanitizer);
   readonly estadosMap = ESTADOS;
@@ -96,6 +109,8 @@ export class ClienteDetalleComponent implements OnDestroy {
     const det = this.detalle();
     return det ? this.armarVista(det) : null;
   });
+  /** Direcciones propias del cliente que se pueden reutilizar al vender otro servicio. */
+  readonly direccionesCliente = computed(() => this.detalle()?.direcciones ?? []);
 
   /**
    * Facturas del cliente (MS-FACTURACION) para la pestaña de Facturación. Se cargan
@@ -129,6 +144,258 @@ export class ClienteDetalleComponent implements OnDestroy {
 
   setTab(i: number) {
     this.tabActiva.set(i);
+  }
+
+  /* ---------- Agregar contrato / servicio ---------- */
+  readonly modalServicio = signal(false);
+  readonly cargandoCatalogosServicio = signal(false);
+  readonly errorCatalogosServicio = signal<string | null>(null);
+  readonly guardandoServicio = signal(false);
+  readonly errorServicio = signal<string | null>(null);
+  readonly avisoServicio = signal<{ texto: string; error: boolean } | null>(null);
+  readonly ofertasServicio = signal<OfertaServicioCatalogo[]>([]);
+  readonly planesServicio = signal<PlanCatalogo[]>([]);
+
+  readonly ofertaServicioCodigo = signal('');
+  readonly modoDireccionServicio = signal<ModoDireccionServicio>('EXISTENTE');
+  readonly direccionServicioId = signal<number | null>(null);
+  readonly nuevaDireccionEtiqueta = signal('');
+  readonly nuevaDireccionTexto = signal('');
+  readonly nuevaDireccionReferencia = signal('');
+  readonly nuevaDireccionLatitud = signal('');
+  readonly nuevaDireccionLongitud = signal('');
+  readonly planServicioCodigo = signal('');
+  readonly precioAcordadoServicio = signal('');
+  readonly diaCorteServicio = signal(1);
+  readonly observacionesServicio = signal('');
+
+  readonly ofertaServicioSeleccionada = computed(
+    () => this.ofertasServicio().find((oferta) => oferta.codigo === this.ofertaServicioCodigo()) ?? null,
+  );
+  readonly servicioRequiereDireccion = computed(
+    () => this.ofertaServicioSeleccionada()?.requiereDireccion ?? false,
+  );
+  readonly servicioRequierePlanInternet = computed(
+    () => this.ofertaServicioSeleccionada()?.requierePlanInternet ?? false,
+  );
+  readonly servicioSujetoMora = computed(
+    () => this.ofertaServicioSeleccionada()?.sujetoMora ?? false,
+  );
+  readonly diasCorte = Array.from({ length: 28 }, (_, i) => i + 1);
+  private cargaCatalogosServicio?: Subscription;
+  private altaServicio?: Subscription;
+
+  abrirAgregarServicio() {
+    if (!this.puedeEditar()) return;
+
+    const primeraDireccion = this.direccionesCliente()[0] ?? null;
+    this.ofertaServicioCodigo.set('');
+    this.modoDireccionServicio.set(primeraDireccion ? 'EXISTENTE' : 'NUEVA');
+    this.direccionServicioId.set(primeraDireccion?.id ?? null);
+    this.nuevaDireccionEtiqueta.set('');
+    this.nuevaDireccionTexto.set('');
+    this.nuevaDireccionReferencia.set('');
+    this.nuevaDireccionLatitud.set('');
+    this.nuevaDireccionLongitud.set('');
+    this.planServicioCodigo.set('');
+    this.precioAcordadoServicio.set('');
+    this.diaCorteServicio.set(1);
+    this.observacionesServicio.set('');
+    this.errorServicio.set(null);
+    this.errorCatalogosServicio.set(null);
+    this.modalServicio.set(true);
+    this.cargarCatalogosServicio();
+  }
+
+  cerrarAgregarServicio() {
+    if (this.guardandoServicio()) return;
+    this.modalServicio.set(false);
+    this.errorServicio.set(null);
+  }
+
+  onOfertaServicioChange(codigo: string) {
+    this.ofertaServicioCodigo.set(codigo);
+    const oferta = this.ofertasServicio().find((item) => item.codigo === codigo) ?? null;
+    // Vacío conserva la regla comercial del backend: precio del plan para Internet
+    // o precio referencial de la oferta para los demás servicios.
+    this.precioAcordadoServicio.set('');
+    if (!oferta?.requierePlanInternet) this.planServicioCodigo.set('');
+    if (!oferta?.sujetoMora) this.diaCorteServicio.set(1);
+  }
+
+  cambiarModoDireccionServicio(modo: ModoDireccionServicio) {
+    this.modoDireccionServicio.set(modo);
+    if (modo === 'EXISTENTE' && !this.direccionServicioId()) {
+      this.direccionServicioId.set(this.direccionesCliente()[0]?.id ?? null);
+    }
+  }
+
+  onDireccionServicioChange(valor: string | number | null) {
+    const direccionId = Number(valor);
+    this.direccionServicioId.set(Number.isInteger(direccionId) && direccionId > 0 ? direccionId : null);
+  }
+
+  onDiaCorteServicioChange(valor: string | number | null) {
+    const dia = Number(valor);
+    this.diaCorteServicio.set(Number.isInteger(dia) && dia >= 1 && dia <= 28 ? dia : 1);
+  }
+
+  guardarServicio() {
+    const cliente = this.detalle();
+    const oferta = this.ofertaServicioSeleccionada();
+    if (!cliente || !oferta) {
+      this.errorServicio.set('Selecciona una oferta de servicio para continuar.');
+      return;
+    }
+
+    let direccionId: number | null = null;
+    let nuevaDireccion: NuevaDireccionContratoRequest | null = null;
+    if (oferta.requiereDireccion) {
+      if (this.modoDireccionServicio() === 'EXISTENTE') {
+        direccionId = this.direccionServicioId();
+        if (!direccionId) {
+          this.errorServicio.set('Selecciona una dirección existente o registra una nueva.');
+          return;
+        }
+      } else {
+        nuevaDireccion = this.construirNuevaDireccion();
+        if (!nuevaDireccion) return;
+      }
+    }
+
+    const planCodigo = this.planServicioCodigo().trim();
+    if (oferta.requierePlanInternet && !planCodigo) {
+      this.errorServicio.set('Selecciona un plan de Internet para este servicio.');
+      return;
+    }
+
+    const precioTexto = this.precioAcordadoServicio().trim();
+    const precioAcordado = precioTexto ? this.numeroFormulario(precioTexto) : null;
+    if (precioTexto && (!this.esMontoValido(precioTexto) || precioAcordado == null || precioAcordado < 0)) {
+      this.errorServicio.set('El precio acordado debe ser un valor numérico igual o mayor que cero.');
+      return;
+    }
+
+    const solicitud: CrearContratoServicioRequest = {
+      ofertaCodigo: oferta.codigo,
+      direccionId,
+      nuevaDireccion,
+      planCodigo: oferta.requierePlanInternet ? planCodigo : null,
+      precioAcordado,
+      diaCorte: oferta.sujetoMora ? this.diaCorteServicio() : null,
+      observaciones: this.observacionesServicio().trim() || null,
+    };
+
+    this.guardandoServicio.set(true);
+    this.errorServicio.set(null);
+    this.altaServicio?.unsubscribe();
+    this.altaServicio = this.contratosService.agregarServicio(cliente.codigo, solicitud).subscribe({
+      next: (respuesta) => {
+        this.guardandoServicio.set(false);
+        this.altaServicio = undefined;
+        this.modalServicio.set(false);
+        this.tabActiva.set(1);
+        this.avisoServicio.set({
+          texto: `Servicio ${respuesta.contratoCodigo} registrado con estado ${respuesta.estadoServicio.toLowerCase()}${
+            respuesta.requiereInstalacion ? '; requiere coordinación de instalación.' : '.'
+          }`,
+          error: false,
+        });
+        this.recargar.update((n) => n + 1);
+      },
+      error: (e) => {
+        this.guardandoServicio.set(false);
+        this.altaServicio = undefined;
+        this.errorServicio.set(this.mensajeErrorServicio(e));
+      },
+    });
+  }
+
+  direccionEtiqueta(direccion: DireccionDetalle): string {
+    return `${direccion.etiqueta?.trim() || 'Dirección'} — ${direccion.direccionTexto}`;
+  }
+
+  modalidadEtiqueta(modalidad: string): string {
+    return modalidad === 'UNICO' ? 'Cobro único' : 'Recurrente';
+  }
+
+  private cargarCatalogosServicio() {
+    this.cargaCatalogosServicio?.unsubscribe();
+    this.cargandoCatalogosServicio.set(true);
+    this.errorCatalogosServicio.set(null);
+    this.cargaCatalogosServicio = forkJoin({
+      ofertas: this.contratosService.listarOfertasServicio(),
+      planes: this.planesService.listar(),
+    }).subscribe({
+      next: ({ ofertas, planes }) => {
+        this.ofertasServicio.set(ofertas);
+        this.planesServicio.set(planes);
+        this.cargandoCatalogosServicio.set(false);
+        this.cargaCatalogosServicio = undefined;
+      },
+      error: (e) => {
+        this.cargandoCatalogosServicio.set(false);
+        this.errorCatalogosServicio.set(this.mensajeErrorCatalogosServicio(e));
+        this.cargaCatalogosServicio = undefined;
+      },
+    });
+  }
+
+  private construirNuevaDireccion(): NuevaDireccionContratoRequest | null {
+    const direccionTexto = this.nuevaDireccionTexto().trim();
+    if (!direccionTexto) {
+      this.errorServicio.set('La dirección nueva es obligatoria para este servicio.');
+      return null;
+    }
+
+    const latitudTexto = this.nuevaDireccionLatitud().trim();
+    const longitudTexto = this.nuevaDireccionLongitud().trim();
+    const latitud = latitudTexto ? this.numeroFormulario(latitudTexto) : null;
+    const longitud = longitudTexto ? this.numeroFormulario(longitudTexto) : null;
+    if (latitudTexto && (latitud == null || latitud < -90 || latitud > 90)) {
+      this.errorServicio.set('La latitud debe estar entre -90 y 90.');
+      return null;
+    }
+    if (longitudTexto && (longitud == null || longitud < -180 || longitud > 180)) {
+      this.errorServicio.set('La longitud debe estar entre -180 y 180.');
+      return null;
+    }
+
+    return {
+      etiqueta: this.nuevaDireccionEtiqueta().trim() || null,
+      direccionTexto,
+      referencia: this.nuevaDireccionReferencia().trim() || null,
+      latitud,
+      longitud,
+    };
+  }
+
+  private numeroFormulario(valor: string): number | null {
+    const numero = Number(valor.trim().replace(',', '.'));
+    return Number.isFinite(numero) ? numero : null;
+  }
+
+  private esMontoValido(valor: string): boolean {
+    return /^\d+(?:[.,]\d{1,2})?$/.test(valor.trim());
+  }
+
+  private mensajeErrorCatalogosServicio(e: { status?: number }): string {
+    if (e.status === 403) return 'Tu rol no tiene permiso para consultar las ofertas de servicio.';
+    if (e.status === 0) return 'No se pudo contactar el gateway para cargar las ofertas.';
+    return 'No se pudieron cargar las ofertas y planes disponibles. Inténtalo nuevamente.';
+  }
+
+  private mensajeErrorServicio(e: {
+    status?: number;
+    error?: { detail?: string; detalle?: string; mensaje?: string };
+  }): string {
+    if (e.status === 400 || e.status === 422) {
+      return e.error?.detail ?? e.error?.detalle ?? e.error?.mensaje ?? 'Revisa los datos del servicio.';
+    }
+    if (e.status === 403) return 'Tu rol no tiene permiso para agregar servicios.';
+    if (e.status === 404) return 'El cliente, la oferta o el plan ya no existen. Recarga la ficha.';
+    if (e.status === 0) return 'No se pudo contactar el gateway para registrar el servicio.';
+    return 'No se pudo registrar el servicio. Inténtalo nuevamente.';
   }
 
   abrirIdentificacion() {
@@ -167,6 +434,8 @@ export class ClienteDetalleComponent implements OnDestroy {
 
   ngOnDestroy() {
     this.cargaIdentificacion?.unsubscribe();
+    this.cargaCatalogosServicio?.unsubscribe();
+    this.altaServicio?.unsubscribe();
     this.liberarVistaIdentificacion();
   }
 
@@ -201,23 +470,32 @@ export class ClienteDetalleComponent implements OnDestroy {
   /* ---------- Derivación de la vista desde datos reales ---------- */
   private armarVista(det: ClienteDetalle) {
     // Los contratos llegan ordenados por fecha de alta desc: el primero es el vigente.
-    const principal = det.contratos[0] ?? null;
+    const principal =
+      det.contratos.find((contrato) => contrato.usaRed && contrato.estadoServicio !== 'RETIRADO') ??
+      det.contratos.find((contrato) => contrato.estadoServicio !== 'RETIRADO') ??
+      det.contratos.find((contrato) => contrato.usaRed) ??
+      det.contratos[0] ??
+      null;
     const estado = (principal?.estadoServicio ?? 'PENDIENTE') as EstadoCliente;
     const red = principal?.red ?? null;
 
     const servicios = det.contratos.map((c) => ({
       id: c.codigo,
-      servicio: det.tipoCliente === 'EMPRESA' ? 'Internet Corporativo' : 'Internet Residencial',
+      servicio: c.ofertaNombre,
+      tipo: c.tipoServicioNombre,
       plan: c.plan,
       velocidad: c.velocidad,
+      modalidad: c.modalidadCobro,
+      direccion: c.direccion?.direccionTexto ?? 'Sin dirección asociada',
+      requiereInstalacion: c.requiereInstalacion,
       estado: c.estadoServicio as EstadoCliente,
       fechaInicio: this.fmt(c.fechaAlta),
-      precio: c.precioMensual,
+      precio: c.precioAcordado,
     }));
 
     const valorTotal = det.contratos
-      .filter((c) => c.estadoServicio !== 'RETIRADO')
-      .reduce((s, c) => s + (c.precioMensual ?? 0), 0);
+      .filter((c) => c.estadoServicio !== 'RETIRADO' && c.modalidadCobro === 'RECURRENTE')
+      .reduce((s, c) => s + (c.precioAcordado ?? 0), 0);
 
     return {
       base: {
@@ -230,7 +508,8 @@ export class ClienteDetalleComponent implements OnDestroy {
         direccion: det.direccionPrincipal?.direccionTexto ?? '—',
         fechaRegistro: this.fmt(det.fechaRegistro),
         tieneIdentificacion: det.tieneIdentificacion,
-        plan: principal?.plan ?? '—',
+        servicio: principal?.ofertaNombre ?? '—',
+        plan: principal?.plan ?? null,
         velocidad: principal?.velocidad ?? '',
         estado,
       },
