@@ -33,6 +33,18 @@
       <p class="muted fs-13">
         El contrato queda pendiente hasta que se complete la orden de instalación, que lo activa.
       </p>
+      @if (identificacionCargada()) {
+        <p class="done-document ok">
+          <app-icon name="contract" [size]="16" /> La identificación quedó adjunta de forma privada.
+        </p>
+      } @else if (errorCargaIdentificacion()) {
+        <div class="done-document error">
+          <span>{{ errorCargaIdentificacion() }}</span>
+          <button class="btn" type="button" (click)="reintentarCargaIdentificacion()" [disabled]="enviando()">
+            {{ enviando() ? 'Subiendo…' : 'Reintentar carga' }}
+          </button>
+        </div>
+      }
       <div class="done-actions">
         <button class="btn" (click)="crearOtro()"><app-icon name="plus" [size]="15" /> Crear otro</button>
         <button class="btn" (click)="irALista()">Ir a la lista</button>
@@ -104,6 +116,37 @@
                 <span class="err-msg">Ingresa un número válido ({{ idHelp() }}).</span>
               } @else {
                 <span class="hint">{{ idHelp() }}</span>
+              }
+            </div>
+
+            <div class="field span-2">
+              <label>Foto o documento de identificación <span class="optional">Opcional</span></label>
+              <div class="file-control">
+                <label class="file-picker" [class.selected]="archivoIdentificacion()">
+                  <input
+                    #archivoIdentificacionInput
+                    class="file-input"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,application/pdf"
+                    (change)="onArchivoIdentificacionSeleccionado($event)"
+                  />
+                  <app-icon name="contract" [size]="18" />
+                  @if (archivoIdentificacion(); as archivo) {
+                    <span class="file-name">{{ archivo.name }}</span>
+                  } @else {
+                    <span>Seleccionar archivo</span>
+                  }
+                </label>
+                @if (archivoIdentificacion()) {
+                  <button type="button" class="file-clear" (click)="quitarArchivoIdentificacion(archivoIdentificacionInput)">
+                    Quitar
+                  </button>
+                }
+              </div>
+              @if (errorArchivoIdentificacion()) {
+                <span class="err-msg">{{ errorArchivoIdentificacion() }}</span>
+              } @else {
+                <span class="hint">JPG, PNG, WebP o PDF. Máximo 10 MB. Se guarda de forma privada.</span>
               }
             </div>
 

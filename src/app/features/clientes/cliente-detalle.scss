@@ -264,6 +264,28 @@
   text-align: right;
 }
 
+.identificacion-row dd {
+  display: flex;
+}
+.btn-identificacion {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--brand);
+  border-radius: 6px;
+  background: var(--brand-soft);
+  color: var(--brand-700);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 5px 8px;
+  cursor: pointer;
+}
+.btn-identificacion:hover {
+  background: var(--brand);
+  color: #fff;
+}
+
 .cliente-datos dd.wrap {
   word-break: break-all;
   font-weight: 500;
@@ -865,6 +887,36 @@ tbody tr:hover {
   color: var(--danger);
   font-size: 13px;
   font-weight: 600;
+}
+
+/* ============ Modal: identificación privada ============ */
+.modal.modal-identificacion {
+  max-width: 900px;
+}
+.identificacion-body {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+}
+.identificacion-estado {
+  color: var(--muted);
+  font-size: 13px;
+}
+.identificacion-imagen {
+  display: block;
+  max-width: 100%;
+  max-height: 68vh;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  background: #fff;
+}
+.identificacion-pdf {
+  width: 100%;
+  height: 68vh;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: #fff;
 }
 @media (max-width: 520px) {
   .form-grid {

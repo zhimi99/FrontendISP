@@ -19,6 +19,8 @@ type TipoId = 'CEDULA' | 'RUC' | 'PASAPORTE';
   styleUrl: './cliente-nuevo.scss',
 })
 export class ClienteNuevoComponent {
+  private static readonly MAX_TAMANO_IDENTIFICACION = 10 * 1024 * 1024;
+
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
   private readonly clientesService = inject(ClientesService);
@@ -34,6 +36,12 @@ export class ClienteNuevoComponent {
   readonly errorAlta = signal<string | null>(null);
   /** Código real asignado por el backend al guardar. */
   readonly codigoNuevo = signal('');
+  /** Archivo opcional: se carga tras crear el cliente y obtener su código. */
+  readonly archivoIdentificacion = signal<File | null>(null);
+  readonly errorArchivoIdentificacion = signal<string | null>(null);
+  readonly subiendoIdentificacion = signal(false);
+  readonly identificacionCargada = signal(false);
+  readonly errorCargaIdentificacion = signal<string | null>(null);
 
   readonly form = this.fb.group({
     tipoCliente: this.fb.control<TipoCliente>('PERSONA', { nonNullable: true }),
@@ -169,12 +177,17 @@ export class ClienteNuevoComponent {
     }
 
     this.enviando.set(true);
+    this.identificacionCargada.set(false);
+    this.errorCargaIdentificacion.set(null);
     this.clientesService.crear(this.construirRequest()).subscribe({
       next: (r) => {
         this.codigoNuevo.set(r.clienteCodigo);
-        this.guardado.set(true);
-        this.enviando.set(false);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        const archivo = this.archivoIdentificacion();
+        if (archivo) {
+          this.cargarIdentificacion(r.clienteCodigo, archivo);
+        } else {
+          this.finalizarAlta();
+        }
       },
       error: (e) => {
         this.errorAlta.set(this.mensajeDeError(e));
@@ -182,6 +195,79 @@ export class ClienteNuevoComponent {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       },
     });
+  }
+
+  /** Selección local; el backend vuelve a validar tamaño, MIME y firma real. */
+  onArchivoIdentificacionSeleccionado(evento: Event) {
+    const input = evento.target as HTMLInputElement;
+    const archivo = input.files?.[0] ?? null;
+    this.errorArchivoIdentificacion.set(null);
+    this.identificacionCargada.set(false);
+    this.errorCargaIdentificacion.set(null);
+
+    if (!archivo) {
+      this.archivoIdentificacion.set(null);
+      return;
+    }
+    if (!this.esFormatoIdentificacionPermitido(archivo)) {
+      this.archivoIdentificacion.set(null);
+      this.errorArchivoIdentificacion.set('Usa una imagen JPG, PNG, WebP o un archivo PDF.');
+      input.value = '';
+      return;
+    }
+    if (archivo.size > ClienteNuevoComponent.MAX_TAMANO_IDENTIFICACION) {
+      this.archivoIdentificacion.set(null);
+      this.errorArchivoIdentificacion.set('El archivo no puede superar 10 MB.');
+      input.value = '';
+      return;
+    }
+    this.archivoIdentificacion.set(archivo);
+  }
+
+  quitarArchivoIdentificacion(input: HTMLInputElement) {
+    input.value = '';
+    this.archivoIdentificacion.set(null);
+    this.errorArchivoIdentificacion.set(null);
+    this.errorCargaIdentificacion.set(null);
+    this.identificacionCargada.set(false);
+  }
+
+  reintentarCargaIdentificacion() {
+    const archivo = this.archivoIdentificacion();
+    const codigo = this.codigoNuevo();
+    if (!archivo || !codigo || this.enviando()) return;
+
+    this.enviando.set(true);
+    this.errorCargaIdentificacion.set(null);
+    this.cargarIdentificacion(codigo, archivo);
+  }
+
+  private cargarIdentificacion(codigo: string, archivo: File) {
+    this.subiendoIdentificacion.set(true);
+    this.clientesService.subirIdentificacion(codigo, archivo).subscribe({
+      next: () => {
+        this.identificacionCargada.set(true);
+        this.subiendoIdentificacion.set(false);
+        this.finalizarAlta();
+      },
+      error: (e) => {
+        // El cliente ya existe: no se intenta crearlo de nuevo; se ofrece reintento.
+        this.errorCargaIdentificacion.set(this.mensajeErrorIdentificacion(e));
+        this.subiendoIdentificacion.set(false);
+        this.finalizarAlta();
+      },
+    });
+  }
+
+  private finalizarAlta() {
+    this.guardado.set(true);
+    this.enviando.set(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  private esFormatoIdentificacionPermitido(archivo: File): boolean {
+    const tipos = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+    return tipos.includes(archivo.type) || /\.(jpe?g|png|webp|pdf)$/i.test(archivo.name);
   }
 
   private construirRequest(): AltaClienteRequest {
@@ -221,12 +307,31 @@ export class ClienteNuevoComponent {
     return 'No se pudo registrar el cliente. Inténtalo de nuevo.';
   }
 
+  private mensajeErrorIdentificacion(e: {
+    status?: number;
+    error?: { mensaje?: string; detail?: string };
+  }): string {
+    if (e.status === 400) {
+      return e.error?.detail ?? e.error?.mensaje ?? 'El archivo de identificación no es válido.';
+    }
+    if (e.status === 403) return 'Tu rol no tiene permiso para adjuntar la identificación.';
+    if (e.status === 413) return 'El archivo supera el tamaño máximo permitido de 10 MB.';
+    if (e.status === 503) return 'El almacenamiento de identificaciones no está disponible. Reintenta.';
+    if (e.status === 0) return 'No se pudo contactar el gateway para subir la identificación.';
+    return 'El cliente fue creado, pero no se pudo adjuntar su identificación. Reintenta la carga.';
+  }
+
   crearOtro() {
     this.form.reset({ tipoCliente: 'PERSONA', tipoId: 'CEDULA', diaCorte: 5 });
     this.enviado.set(false);
     this.guardado.set(false);
     this.errorAlta.set(null);
     this.codigoNuevo.set('');
+    this.archivoIdentificacion.set(null);
+    this.errorArchivoIdentificacion.set(null);
+    this.subiendoIdentificacion.set(false);
+    this.identificacionCargada.set(false);
+    this.errorCargaIdentificacion.set(null);
   }
 
   irADetalle() {

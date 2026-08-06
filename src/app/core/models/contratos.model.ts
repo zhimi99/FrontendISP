@@ -199,6 +199,8 @@ export interface ClienteDetalle {
   tieneWhatsapp: boolean;
   whatsapp: string | null;
   fechaRegistro: string;
+  /** Solo indica disponibilidad; la ruta privada del archivo nunca se expone. */
+  tieneIdentificacion: boolean;
   direccionPrincipal: DireccionDetalle | null;
   contratos: ContratoResumen[];
 }

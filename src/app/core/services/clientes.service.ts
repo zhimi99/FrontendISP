@@ -37,6 +37,22 @@ export class ClientesService {
   }
 
   /**
+   * Carga o reemplaza el documento privado. HttpClient añade el boundary multipart.
+   */
+  subirIdentificacion(codigo: string, archivo: File): Observable<void> {
+    const cuerpo = new FormData();
+    cuerpo.append('archivo', archivo, archivo.name);
+    return this.http.put<void>(`${environment.apiBase}/api/clientes/${codigo}/identificacion`, cuerpo);
+  }
+
+  /** Descarga autenticada; la vista lo presenta desde un Blob URL privado. */
+  obtenerIdentificacion(codigo: string): Observable<Blob> {
+    return this.http.get(`${environment.apiBase}/api/clientes/${codigo}/identificacion`, {
+      responseType: 'blob',
+    });
+  }
+
+  /**
    * PUT /api/clientes/{codigo} — edita nombre y contacto del cliente. Devuelve la
    * ficha ya actualizada. 404 si no existe, 400 si falta el nombre según el tipo.
    */

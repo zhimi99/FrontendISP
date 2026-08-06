@@ -35,6 +35,16 @@
         <dl class="cliente-datos">
           <div><dt><app-icon name="contract" [size]="15" /> Código Cliente</dt><dd class="mono">{{ v.base.codigo }}</dd></div>
           <div><dt><app-icon name="contract" [size]="15" /> {{ v.base.tipoId }}</dt><dd class="mono">{{ v.base.identificacion }}</dd></div>
+          @if (v.base.tieneIdentificacion && puedeEditar()) {
+            <div class="identificacion-row">
+              <dt><app-icon name="contract" [size]="15" /> Documento</dt>
+              <dd>
+                <button type="button" class="btn-identificacion" (click)="abrirIdentificacion()">
+                  <app-icon name="eye" [size]="14" /> Ver identificación
+                </button>
+              </dd>
+            </div>
+          }
           <div><dt><app-icon name="phone" [size]="15" /> Teléfono</dt><dd>{{ v.base.telefono }}</dd></div>
           <div><dt><app-icon name="invoice" [size]="15" /> Email</dt><dd class="wrap">{{ v.email }}</dd></div>
           <div class="split"><dt><app-icon name="location" [size]="15" /> Dirección</dt><dd>{{ v.base.direccion }}</dd></div>
@@ -269,6 +279,34 @@
       <h3>Cliente no encontrado</h3>
       <p>No existe un cliente con ese código, o el gateway no respondió.</p>
       <a class="btn btn-primary" routerLink="/clientes">Volver a la lista</a>
+    </div>
+  </div>
+}
+
+<!-- ============ Modal: identificación privada ============ -->
+@if (modalIdentificacion()) {
+  <div class="modal-backdrop" (click)="cerrarIdentificacion()">
+    <div class="modal modal-identificacion" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <h3>Identificación del cliente</h3>
+        <button class="modal-x" type="button" (click)="cerrarIdentificacion()" aria-label="Cerrar">×</button>
+      </div>
+      <div class="modal-body identificacion-body">
+        @if (cargandoIdentificacion()) {
+          <div class="identificacion-estado">Cargando identificación…</div>
+        } @else if (errorIdentificacion()) {
+          <div class="modal-error">{{ errorIdentificacion() }}</div>
+        } @else if (urlIdentificacion()) {
+          @if (esPdfIdentificacion()) {
+            <iframe class="identificacion-pdf" [src]="recursoIdentificacion()" sandbox="" title="Documento de identificación"></iframe>
+          } @else {
+            <img class="identificacion-imagen" [src]="urlIdentificacion()" alt="Documento de identificación del cliente" />
+          }
+        }
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-primary" (click)="cerrarIdentificacion()">Cerrar</button>
+      </div>
     </div>
   </div>
 }

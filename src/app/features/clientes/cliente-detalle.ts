@@ -1,8 +1,9 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnDestroy, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { catchError, combineLatest, map, Observable, of, startWith, switchMap } from 'rxjs';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { catchError, combineLatest, map, Observable, of, startWith, Subscription, switchMap } from 'rxjs';
 
 import { IconComponent } from '../../shared/icon';
 import { ClientesService } from '../../core/services/clientes.service';
@@ -28,11 +29,12 @@ type EstadoFacturas = { estado: 'cargando' | 'ok' | 'error'; lista: FacturaVista
   templateUrl: './cliente-detalle.html',
   styleUrl: './cliente-detalle.scss',
 })
-export class ClienteDetalleComponent {
+export class ClienteDetalleComponent implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly clientesService = inject(ClientesService);
   private readonly facturacionService = inject(FacturacionService);
   private readonly auth = inject(AuthService);
+  private readonly sanitizer = inject(DomSanitizer);
   readonly estadosMap = ESTADOS;
 
   /** Solo soporte/ventas y administración editan al cliente (PUT /api/clientes). */
@@ -55,6 +57,17 @@ export class ClienteDetalleComponent {
     'Ubicación',
   ];
   readonly tabActiva = signal(0);
+  readonly modalIdentificacion = signal(false);
+  readonly cargandoIdentificacion = signal(false);
+  readonly errorIdentificacion = signal<string | null>(null);
+  readonly urlIdentificacion = signal<string | null>(null);
+  readonly tipoArchivoIdentificacion = signal<string | null>(null);
+  readonly esPdfIdentificacion = computed(() => this.tipoArchivoIdentificacion() === 'application/pdf');
+  readonly recursoIdentificacion = computed<SafeResourceUrl | null>(() => {
+    const url = this.urlIdentificacion();
+    return url ? this.sanitizer.bypassSecurityTrustResourceUrl(url) : null;
+  });
+  private cargaIdentificacion?: Subscription;
 
   /** Se incrementa para forzar una recarga de la ficha (p. ej. tras editar). */
   private readonly recargar = signal(0);
@@ -118,6 +131,59 @@ export class ClienteDetalleComponent {
     this.tabActiva.set(i);
   }
 
+  abrirIdentificacion() {
+    const det = this.detalle();
+    if (!det?.tieneIdentificacion || this.cargandoIdentificacion()) return;
+
+    this.cargaIdentificacion?.unsubscribe();
+    this.liberarVistaIdentificacion();
+    this.modalIdentificacion.set(true);
+    this.cargandoIdentificacion.set(true);
+    this.errorIdentificacion.set(null);
+
+    this.cargaIdentificacion = this.clientesService.obtenerIdentificacion(det.codigo).subscribe({
+      next: (archivo) => {
+        this.urlIdentificacion.set(URL.createObjectURL(archivo));
+        this.tipoArchivoIdentificacion.set(archivo.type || 'application/octet-stream');
+        this.cargandoIdentificacion.set(false);
+        this.cargaIdentificacion = undefined;
+      },
+      error: (e) => {
+        this.errorIdentificacion.set(this.mensajeErrorIdentificacion(e));
+        this.cargandoIdentificacion.set(false);
+        this.cargaIdentificacion = undefined;
+      },
+    });
+  }
+
+  cerrarIdentificacion() {
+    this.cargaIdentificacion?.unsubscribe();
+    this.cargaIdentificacion = undefined;
+    this.cargandoIdentificacion.set(false);
+    this.modalIdentificacion.set(false);
+    this.errorIdentificacion.set(null);
+    this.liberarVistaIdentificacion();
+  }
+
+  ngOnDestroy() {
+    this.cargaIdentificacion?.unsubscribe();
+    this.liberarVistaIdentificacion();
+  }
+
+  private liberarVistaIdentificacion() {
+    const url = this.urlIdentificacion();
+    if (url) URL.revokeObjectURL(url);
+    this.urlIdentificacion.set(null);
+    this.tipoArchivoIdentificacion.set(null);
+  }
+
+  private mensajeErrorIdentificacion(e: { status?: number }): string {
+    if (e.status === 404) return 'Este cliente aún no tiene una identificación adjunta.';
+    if (e.status === 403) return 'Tu rol no tiene permiso para ver la identificación.';
+    if (e.status === 0) return 'No se pudo contactar el gateway para recuperar la identificación.';
+    return 'No se pudo cargar la identificación. Inténtalo de nuevo.';
+  }
+
   moneda(n: number): string {
     return '$' + (n ?? 0).toFixed(2);
   }
@@ -163,6 +229,7 @@ export class ClienteDetalleComponent {
         telefono: det.telefono ?? '—',
         direccion: det.direccionPrincipal?.direccionTexto ?? '—',
         fechaRegistro: this.fmt(det.fechaRegistro),
+        tieneIdentificacion: det.tieneIdentificacion,
         plan: principal?.plan ?? '—',
         velocidad: principal?.velocidad ?? '',
         estado,
