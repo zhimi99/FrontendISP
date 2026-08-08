@@ -167,7 +167,7 @@
               <td class="muted">{{ fechaHora(p.fecha) }}</td>
               <td class="strong">{{ p.clienteNombre }}</td>
               <td>
-                {{ formaEtq[p.formaPago] }}
+                {{ etiquetaForma(p.formaPago) }}
                 @if (p.cajaCodigo) { <span class="mono muted">· {{ p.cajaCodigo }}</span> }
               </td>
               <td class="mono muted">{{ facturasDe(p) }}</td>
@@ -271,7 +271,7 @@
           <div class="field">
             <label>Forma de pago *</label>
             <select [ngModel]="formaSel()" (ngModelChange)="formaSel.set($event)">
-              @for (fp of formasPago; track fp) { <option [value]="fp">{{ formaEtq[fp] }}</option> }
+              @for (fp of formasPago(); track fp.codigo) { <option [value]="fp.codigo">{{ fp.nombre }}</option> }
             </select>
           </div>
 
@@ -332,7 +332,7 @@
       </div>
       <div class="modal-body">
         <div class="caja-sesion-info">
-          <span class="mono strong">{{ p.clienteNombre }} · {{ moneda(p.monto) }} · {{ formaEtq[p.formaPago] }}</span>
+          <span class="mono strong">{{ p.clienteNombre }} · {{ moneda(p.monto) }} · {{ etiquetaForma(p.formaPago) }}</span>
           <span class="hint">
             El recibo no se borra: queda ANULADO con su motivo. Las facturas que cubrió
             ({{ facturasDe(p) }}) recuperan su saldo.

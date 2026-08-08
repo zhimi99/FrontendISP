@@ -58,15 +58,15 @@
         <h3 class="card-title mb0">Clientes por estado</h3>
         <a class="link" routerLink="/clientes">Ver clientes</a>
       </div>
-      @for (e of estados; track e) {
+      @for (e of estados(); track e.codigo) {
         <div class="barra-row">
           <span class="barra-lbl">
-            <span class="dot" [class]="estadoServTono[e]"></span>{{ estadoServEtq[e] }}
+            <span class="dot" [class]="tonoDe(e.codigo)"></span>{{ e.nombre }}
           </span>
           <div class="barra-track">
-            <div class="barra-fill" [class]="estadoServTono[e]" [style.width.%]="pctClientes(clientesPorEstado()[e])"></div>
+            <div class="barra-fill" [class]="tonoDe(e.codigo)" [style.width.%]="pctClientes(clientesPorEstado()[e.codigo])"></div>
           </div>
-          <span class="barra-num mono">{{ clientesPorEstado()[e] }}</span>
+          <span class="barra-num mono">{{ clientesPorEstado()[e.codigo] }}</span>
         </div>
       }
       @if (clientesTotal === 0 && !cargando()) {

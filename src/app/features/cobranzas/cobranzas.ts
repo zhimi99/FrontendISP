@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { catchError, forkJoin, of } from 'rxjs';
 
 import { IconComponent } from '../../shared/icon';
+import { CatalogosService, OpcionCatalogo } from '../../core/services/catalogos.service';
 import { FinanzasService } from '../../core/services/finanzas.service';
 import { ClientesService } from '../../core/services/clientes.service';
 import { FacturacionService } from '../../core/services/facturacion.service';
@@ -14,15 +15,11 @@ import {
   CajaEstado,
   EstadoPago,
   FormaPago,
-  FORMA_PAGO_ETIQUETA,
   ESTADO_PAGO_FIN_ETIQUETA,
   ESTADO_PAGO_FIN_TONO,
   PagoCobranzaVista,
   RegistrarPagoRequest,
 } from '../../core/models/finanzas.model';
-
-/** Formas de pago para el selector del alta. */
-const FORMAS_PAGO: FormaPago[] = ['EFECTIVO', 'TRANSFERENCIA', 'DEPOSITO', 'TARJETA', 'CHEQUE', 'PASARELA'];
 
 /**
  * Cobranzas / Caja sobre datos reales (GET /api/pagos + /api/cajas). El nombre del
@@ -41,11 +38,24 @@ export class CobranzasComponent {
   private readonly clientesService = inject(ClientesService);
   private readonly facturacion = inject(FacturacionService);
   private readonly auth = inject(AuthService);
+  private readonly catalogos = inject(CatalogosService);
 
-  readonly formaEtq = FORMA_PAGO_ETIQUETA;
   readonly estadoEtq = ESTADO_PAGO_FIN_ETIQUETA;
   readonly estadoTono = ESTADO_PAGO_FIN_TONO;
-  readonly formasPago = FORMAS_PAGO;
+
+  /** Medios de recaudación del selector: los que admite el backend, no una copia. */
+  readonly formasPago = signal<OpcionCatalogo[]>([]);
+
+  /**
+   * Nombre de una forma de pago para pintarla en la lista.
+   *
+   * Se resuelve contra el catálogo del backend. Si el pago trae una forma que el
+   * catálogo aún no ha traído —o una recién añadida al dominio— se muestra su código
+   * en vez de dejar la celda vacía, que es lo que hacía el mapa fijo anterior.
+   */
+  etiquetaForma(codigo: FormaPago | string): string {
+    return this.formasPago().find((f) => f.codigo === codigo)?.nombre ?? codigo;
+  }
   /** Solo COBRANZAS/ADMIN pueden registrar pagos (POST /api/pagos). */
   readonly puedeRegistrarPago = computed(() => this.auth.tieneRol('COBRANZAS', 'ADMINISTRADOR'));
   /** Abrir/cerrar la jornada de caja: mismo perfil que recauda. */
@@ -70,6 +80,7 @@ export class CobranzasComponent {
 
   constructor() {
     this.cargar();
+    this.catalogos.formasPago().subscribe((opciones) => this.formasPago.set(opciones));
   }
 
   private cargar() {
