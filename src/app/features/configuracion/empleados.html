@@ -1,7 +1,6 @@
 <div class="tab-head">
   <div>
     <h3>Plantilla</h3>
-    <p class="sub">Alta, ficha y quién sigue trabajando. El alta crea también su cuenta de acceso.</p>
   </div>
   <div class="tab-acc">
     <button class="btn" (click)="cargar()"><app-icon name="refresh" [size]="15" /> Actualizar</button>
@@ -15,18 +14,6 @@
     <button class="banner-x" (click)="banner.set(null)" aria-label="Cerrar">✕</button>
   </div>
 }
-
-<!-- Los permisos siguen sin gestionarse aquí, y conviene decir dónde sí. -->
-<div class="card nota-keycloak">
-  <app-icon name="gear" [size]="18" />
-  <div>
-    <strong>El rol se asigna al dar de alta; cambiarlo después se hace en Keycloak.</strong>
-    <span>
-      Los permisos viven en el proveedor de identidad, no en esta base. Desde aquí se
-      crea la cuenta con su rol inicial, se mantiene la ficha y se da de alta o de baja.
-    </span>
-  </div>
-</div>
 
 <!-- ============ Tarjetas de resumen ============ -->
 <div class="stats">

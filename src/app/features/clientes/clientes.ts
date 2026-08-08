@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
 import { IconComponent } from '../../shared/icon';
+import { AuthService } from '../../core/services/auth.service';
 import { ClientesService } from '../../core/services/clientes.service';
 import { ClienteListado } from '../../core/models/contratos.model';
 import { ClienteFila, EstadoCliente, ESTADOS } from './clientes.data';
@@ -16,7 +17,18 @@ import { ClienteFila, EstadoCliente, ESTADOS } from './clientes.data';
 })
 export class ClientesComponent {
   private readonly clientesService = inject(ClientesService);
+  private readonly auth = inject(AuthService);
   readonly estadosMap = ESTADOS;
+
+  /**
+   * Contratar un servicio nuevo para un abonado ya existente. Son los mismos roles
+   * que el backend exige en POST /api/clientes/{codigo}/contratos: si se ofreciera
+   * el botón a alguien más, el alta moriría en un 403 al final del formulario.
+   */
+  readonly puedeCrearContrato = computed(() => this.auth.tieneRol('ADMINISTRADOR', 'SOPORTE'));
+
+  /** Editar la ficha del abonado: los mismos roles que PUT /api/clientes/{codigo}. */
+  readonly puedeEditar = computed(() => this.auth.tieneRol('SOPORTE', 'ADMINISTRADOR'));
 
   /* -------- Datos reales (MS-CONTRATOS, vía gateway) -------- */
   private readonly datos = signal<ClienteFila[]>([]);
