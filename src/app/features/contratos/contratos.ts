@@ -1,6 +1,6 @@
 import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subscription, forkJoin } from 'rxjs';
 
 import { IconComponent } from '../../shared/icon';
@@ -40,6 +40,8 @@ export class ContratosComponent implements OnDestroy {
   private readonly clientesService = inject(ClientesService);
   private readonly planesService = inject(PlanesService);
   private readonly auth = inject(AuthService);
+  private readonly ruta = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   readonly estadosMap = ESTADOS;
 
   /** Crear, renegociar y dar de baja: los mismos roles que el backend autoriza. */
@@ -95,6 +97,12 @@ export class ContratosComponent implements OnDestroy {
 
   constructor() {
     this.cargarContratos();
+
+    // Llegada desde la lista de clientes: "crear contrato" trae el abonado en la URL
+    // y aquí se abre el alta con él ya elegido. El formulario vive solo en este
+    // módulo; clientes no lo duplica, lo invoca.
+    const abonado = this.ruta.snapshot.queryParamMap.get('nuevoPara');
+    if (abonado && this.puedeGestionar()) this.abrirNuevoContratoPara(abonado);
   }
 
   private cargarContratos() {
@@ -218,9 +226,38 @@ export class ContratosComponent implements OnDestroy {
     this.cargarCatalogos();
   }
 
-  /** Clientes, ofertas y planes: lo que el formulario necesita para autocompletarse. */
-  private cargarCatalogos() {
-    if (this.clientes().length && this.ofertas().length && this.planes().length) return;
+  /**
+   * Alta con el abonado ya decidido, viniendo de su fila en la lista de clientes.
+   * El catálogo llega por red, así que la preselección espera a tenerlo.
+   */
+  private abrirNuevoContratoPara(codigoCliente: string) {
+    this.limpiarFormulario();
+    this.modalNuevo.set(true);
+    this.cargarCatalogos(() => {
+      const cliente = this.clientes().find((c) => c.codigo === codigoCliente);
+      if (cliente) this.elegirCliente(cliente);
+      else this.errorFormulario.set(`No se encontró el cliente ${codigoCliente}.`);
+    });
+
+    // Se consume el parámetro: si no, recargar la página volvería a abrir el alta
+    // de un contrato que quizá ya se creó. replaceUrl evita ensuciar el historial.
+    this.router.navigate([], {
+      relativeTo: this.ruta,
+      queryParams: {},
+      replaceUrl: true,
+    });
+  }
+
+  /**
+   * Clientes, ofertas y planes: lo que el formulario necesita para autocompletarse.
+   * `alTerminar` corre también cuando ya estaban en memoria, para que quien dependa
+   * del catálogo no se quede esperando un evento que no va a llegar.
+   */
+  private cargarCatalogos(alTerminar?: () => void) {
+    if (this.clientes().length && this.ofertas().length && this.planes().length) {
+      alTerminar?.();
+      return;
+    }
 
     this.suscripciones.push(
       forkJoin({
@@ -232,6 +269,7 @@ export class ContratosComponent implements OnDestroy {
           this.clientes.set(clientes);
           this.ofertas.set(ofertas);
           this.planes.set(planes);
+          alTerminar?.();
         },
         error: () => this.errorFormulario.set('No se pudieron cargar los catálogos.'),
       }),

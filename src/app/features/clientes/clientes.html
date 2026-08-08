@@ -152,8 +152,31 @@
                   <a class="acc-btn" title="Ver detalle" [routerLink]="['/clientes', c.codigo]">
                     <app-icon name="eye" [size]="16" />
                   </a>
-                  <button class="acc-btn" title="Editar"><app-icon name="pencil" [size]="16" /></button>
-                  <button class="acc-btn" title="Más"><app-icon name="dots" [size]="16" /></button>
+                  @if (puedeCrearContrato()) {
+                    <!-- Lleva al alta de contratos con este abonado ya elegido. Un
+                         cliente puede contratar varios servicios, así que se ofrece
+                         tenga o no contrato vigente. -->
+                    <a
+                      class="acc-btn"
+                      title="Crear contrato para este cliente"
+                      [routerLink]="['/contratos']"
+                      [queryParams]="{ nuevoPara: c.codigo }"
+                    >
+                      <app-icon name="contract" [size]="16" />
+                    </a>
+                  }
+                  @if (puedeEditar()) {
+                    <!-- El formulario de edición vive en la ficha del cliente; aquí
+                         se abre directamente con ?editar=1 en vez de duplicarlo. -->
+                    <a
+                      class="acc-btn"
+                      title="Editar cliente"
+                      [routerLink]="['/clientes', c.codigo]"
+                      [queryParams]="{ editar: 1 }"
+                    >
+                      <app-icon name="pencil" [size]="16" />
+                    </a>
+                  }
                 </div>
               </td>
             </tr>

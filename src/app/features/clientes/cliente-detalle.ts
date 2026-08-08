@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnDestroy, signal } from '@angular/core';
+import { Component, computed, effect, inject, OnDestroy, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
@@ -573,6 +573,26 @@ export class ClienteDetalleComponent implements OnDestroy {
   readonly edEmail = signal('');
   readonly edTelefono = signal('');
   readonly edWhatsapp = signal('');
+
+  /**
+   * Edición pedida desde la lista de clientes, que llega como `?editar=1`.
+   *
+   * No se puede abrir el modal al construir el componente: la ficha viene por red y
+   * `abrirEditar()` se rinde mientras no esté (necesita los valores para rellenar el
+   * formulario). El efecto espera a que llegue y entonces abre. La bandera se apaga
+   * al consumirla, para que cerrar el modal no lo vuelva a abrir en el acto.
+   */
+  private readonly edicionPedidaEnLaUrl = signal(
+    this.route.snapshot.queryParamMap.get('editar') === '1',
+  );
+
+  constructor() {
+    effect(() => {
+      if (!this.edicionPedidaEnLaUrl() || !this.detalle() || !this.puedeEditar()) return;
+      this.edicionPedidaEnLaUrl.set(false);
+      this.abrirEditar();
+    });
+  }
 
   abrirEditar() {
     const det = this.detalle();
