@@ -128,7 +128,12 @@ export interface PagoCobranzaVista extends PagoCobranza {
   clienteNombre: string;
 }
 
-/** Resumen de la sesión abierta de una caja (de `GET /api/cajas`). */
+/**
+ * Resumen de la sesión abierta de una caja (de `GET /api/cajas`).
+ *
+ * Cobrar facturas y vender productos se muestran por separado, pero el efectivo de
+ * ambas cae en la misma gaveta: `efectivoEnCaja` las suma.
+ */
 export interface SesionAbierta {
   id: number;
   usuarioId: number;
@@ -136,6 +141,8 @@ export interface SesionAbierta {
   montoInicial: number;
   totalRecaudado: number;
   cantidadPagos: number;
+  totalVendido: number;
+  cantidadVentas: number;
   efectivoEnCaja: number;
 }
 
