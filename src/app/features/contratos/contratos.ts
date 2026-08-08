@@ -16,7 +16,7 @@ import {
   OfertaServicioCatalogo,
   PlanCatalogo,
 } from '../../core/models/contratos.model';
-import { EstadoCliente, ESTADOS } from '../clientes/clientes.data';
+import { EstadoCliente, ESTADOS } from '../clientes/clientes.model';
 
 /**
  * Gestión de contratos sobre datos reales.

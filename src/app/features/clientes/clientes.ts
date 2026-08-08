@@ -6,7 +6,7 @@ import { IconComponent } from '../../shared/icon';
 import { AuthService } from '../../core/services/auth.service';
 import { ClientesService } from '../../core/services/clientes.service';
 import { ClienteListado } from '../../core/models/contratos.model';
-import { ClienteFila, EstadoCliente, ESTADOS } from './clientes.data';
+import { ClienteFila, EstadoCliente, ESTADOS } from './clientes.model';
 
 @Component({
   selector: 'app-clientes',
@@ -172,12 +172,10 @@ export class ClientesComponent {
       telefono: d.telefono ?? '',
       whatsapp: d.tieneWhatsapp,
       direccion: d.direccion ?? '—',
-      zona: '', // sin origen en el dominio
       plan: d.plan ?? '—',
       velocidad: d.velocidad ?? '',
       estado: (d.estadoServicio ?? 'PENDIENTE') as EstadoCliente,
       fechaRegistro: this.formatoFecha(d.fechaRegistro),
-      vendedor: '—', // sin origen en el dominio
     };
   }
 
