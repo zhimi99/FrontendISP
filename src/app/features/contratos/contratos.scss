@@ -1,0 +1,338 @@
+/*
+ * Anchos propios de la grilla de contratos.
+ *
+ * La hoja de clientes se reutiliza por consistencia visual, pero define los anchos
+ * con `th/td:nth-child(n)` sobre `table-layout: fixed` y están calculados para SUS
+ * columnas: la primera mide 36px porque allí va un checkbox. Contratos no tiene esa
+ * columna —la primera es el código— así que heredaba 36px y, como `.mono` no hace
+ * wrap, el código se desbordaba sobre la celda del cliente y ambos se veían montados.
+ *
+ * Este archivo se carga DESPUÉS de clientes.scss, por lo que a igual especificidad
+ * gana y reasigna las ocho columnas reales. No se toca la tabla de clientes.
+ */
+
+/* 1 · Contrato (código) */
+th:nth-child(1),
+td:nth-child(1) {
+  width: 118px;
+}
+
+/* 2 · Cliente (nombre + identificación) */
+th:nth-child(2),
+td:nth-child(2) {
+  width: 208px;
+}
+
+/* 3 · Plan / Velocidad */
+th:nth-child(3),
+td:nth-child(3) {
+  width: 152px;
+}
+
+/* 4 · Estado */
+th:nth-child(4),
+td:nth-child(4) {
+  width: 112px;
+}
+
+/* 5 · Día de corte */
+th:nth-child(5),
+td:nth-child(5) {
+  width: 84px;
+}
+
+/* 6 · Usuario PPPoE */
+th:nth-child(6),
+td:nth-child(6) {
+  width: 142px;
+}
+
+/* 7 · Alta */
+th:nth-child(7),
+td:nth-child(7) {
+  width: 96px;
+}
+
+/* 8 · Acciones */
+th:nth-child(8),
+td:nth-child(8) {
+  width: 132px;
+}
+
+/* Cuatro acciones por fila necesitan más espacio que las tres de clientes. */
+.w-acc {
+  width: 132px;
+}
+
+/*
+ * El código y el nombre son la referencia de lectura de la fila: se alinean arriba
+ * para que coincidan entre sí aunque la celda del cliente ocupe dos líneas.
+ */
+tbody td {
+  vertical-align: top;
+}
+
+tbody td.mono,
+tbody td.muted {
+  padding-top: 13px;
+}
+
+/* Estado y acciones sí se centran respecto al alto de la fila. */
+tbody td:nth-child(4),
+tbody td:nth-child(8) {
+  vertical-align: middle;
+  padding-top: 12px;
+}
+
+/* El código no debe partirse ni invadir la columna vecina. */
+td:nth-child(1) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* El nombre largo se recorta con puntos suspensivos en vez de empujar la columna. */
+.cell-main,
+.cell-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Acciones del encabezado ─────────────────────────────────────────── */
+.head-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ── Modales de gestión ──────────────────────────────────────────────── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  z-index: 60;
+}
+
+.modal-form {
+  background: #fff;
+  border-radius: 12px;
+  width: min(620px, 100%);
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.24);
+}
+
+.modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-head h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.modal-sub {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.modal-x {
+  border: 0;
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.modal-body {
+  padding: 16px 18px;
+  overflow-y: auto;
+  display: grid;
+  gap: 12px;
+}
+
+.modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+}
+
+.modal-error {
+  background: var(--danger-soft, #fdecec);
+  color: #b00020;
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 12.5px;
+}
+
+/* ── Campos ──────────────────────────────────────────────────────────── */
+.form-row {
+  display: grid;
+  gap: 5px;
+  position: relative;
+}
+
+.form-row > label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.form-row input,
+.form-row select,
+.form-row textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  background: #fff;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.req {
+  color: #b00020;
+}
+
+.ayuda,
+.aviso {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.aviso {
+  background: var(--info-soft, #eef4fb);
+  border-radius: 8px;
+  padding: 9px 11px;
+}
+
+/* ── Buscador de clientes ────────────────────────────────────────────── */
+.sugerencias {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  max-height: 190px;
+  overflow-y: auto;
+  background: #fff;
+}
+
+.sugerencias button {
+  width: 100%;
+  display: grid;
+  gap: 1px;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  border-radius: 6px;
+  padding: 7px 9px;
+  cursor: pointer;
+}
+
+.sugerencias button:hover {
+  background: var(--brand-soft);
+}
+
+.sug-nombre {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.sug-meta {
+  font-size: 11.5px;
+  color: var(--faint);
+}
+
+.sug-vacio {
+  padding: 9px;
+  font-size: 12.5px;
+  color: var(--faint);
+}
+
+/* ── Vista previa del contrato ───────────────────────────────────────── */
+.previa {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  background: #fbfcfb;
+}
+
+.previa-cab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--faint);
+  margin-bottom: 9px;
+}
+
+.previa-kv {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.previa-kv > div {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.previa-kv dt {
+  font-size: 11.5px;
+  color: var(--faint);
+}
+
+.previa-kv dd {
+  margin: 0;
+  font-size: 13px;
+}
+
+.previa-pie {
+  margin: 10px 0 0;
+  font-size: 11.5px;
+  color: var(--faint);
+  line-height: 1.4;
+}
+
+/* ── Botones ─────────────────────────────────────────────────────────── */
+.btn-danger {
+  background: #b00020;
+  border-color: #b00020;
+  color: #fff;
+}
+
+.acc-btn[disabled] {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.acc-btn[disabled]:hover {
+  background: transparent;
+  color: var(--faint);
+}

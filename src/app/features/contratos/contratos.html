@@ -5,6 +5,13 @@
       <h2>Contratos</h2>
       <p class="sub">Servicios contratados y su estado en la red.</p>
     </div>
+    @if (puedeGestionar()) {
+      <div class="head-actions">
+        <button class="btn btn-primary" type="button" (click)="abrirNuevoContrato()">
+          <app-icon name="plus" [size]="15" /> Nuevo contrato
+        </button>
+      </div>
+    }
   </div>
 
   <!-- ============ Filtros ============ -->
@@ -38,7 +45,7 @@
       <label>Plan</label>
       <select [ngModel]="plan()" (ngModelChange)="plan.set($event); onFiltroCambio()">
         <option value="">Todos</option>
-        @for (p of planes(); track p) {
+        @for (p of planesFiltro(); track p) {
           <option [value]="p">{{ p }}</option>
         }
       </select>
@@ -125,9 +132,25 @@
               <td class="muted">{{ fechaCorta(c.fechaAlta) }}</td>
               <td class="w-acc">
                 <div class="acc">
+                  <button class="acc-btn" type="button" title="Ver contrato"
+                          (click)="verContrato(c)">
+                    <app-icon name="contract" [size]="16" />
+                  </button>
                   <a class="acc-btn" title="Ver cliente" [routerLink]="['/clientes', c.clienteCodigo]">
                     <app-icon name="eye" [size]="16" />
                   </a>
+                  @if (puedeGestionar()) {
+                    <button class="acc-btn" type="button" title="Editar condiciones"
+                            [disabled]="c.estadoServicio === 'RETIRADO'"
+                            (click)="abrirEditar(c)">
+                      <app-icon name="pencil" [size]="16" />
+                    </button>
+                    <button class="acc-btn" type="button" title="Dar de baja"
+                            [disabled]="c.estadoServicio === 'RETIRADO'"
+                            (click)="abrirBaja(c)">
+                      <app-icon name="logout" [size]="16" />
+                    </button>
+                  }
                 </div>
               </td>
             </tr>
@@ -169,3 +192,270 @@
     </div>
   </div>
 </div>
+
+<!-- ============ Visor del contrato ============ -->
+@if (contratoEnVisor(); as codigoContrato) {
+  <app-visor-contrato
+    [codigo]="codigoContrato"
+    [subtitulo]="nombreEnVisor()"
+    (cerrar)="contratoEnVisor.set(null)"
+  />
+}
+
+<!-- ============ Nuevo contrato ============ -->
+@if (modalNuevo()) {
+  <div class="modal-backdrop" (click)="cerrarNuevo()">
+    <div class="modal modal-form" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <div>
+          <h3>Nuevo contrato</h3>
+          <p class="modal-sub">Primero el abonado, despuÃ©s el servicio que se le vende.</p>
+        </div>
+        <button class="modal-x" type="button" (click)="cerrarNuevo()" aria-label="Cerrar">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Paso 1 Â· el abonado -->
+        <div class="form-row">
+          <label>Cliente <span class="req">*</span></label>
+          <div class="input-ico">
+            <app-icon name="search" [size]="15" />
+            <input
+              type="text"
+              placeholder="Busca por nombre, cÃ³digo o cÃ©dulaâ€¦"
+              [ngModel]="busquedaCliente()"
+              (ngModelChange)="cambiarBusquedaCliente($event)"
+            />
+          </div>
+          @if (!clienteSeleccionado() && busquedaCliente().trim().length > 1) {
+            <ul class="sugerencias">
+              @for (cli of clientesSugeridos(); track cli.codigo) {
+                <li>
+                  <button type="button" (click)="elegirCliente(cli)">
+                    <span class="sug-nombre">{{ cli.nombre }}</span>
+                    <span class="sug-meta mono">{{ cli.codigo }} Â· {{ cli.identificacion }}</span>
+                  </button>
+                </li>
+              } @empty {
+                <li class="sug-vacio">NingÃºn cliente coincide con la bÃºsqueda.</li>
+              }
+            </ul>
+          }
+        </div>
+
+        @if (clienteSeleccionado(); as cli) {
+          <!-- Paso 2 Â· el servicio -->
+          <div class="form-row">
+            <label>Servicio a contratar <span class="req">*</span></label>
+            <select [ngModel]="ofertaCodigo()" (ngModelChange)="cambiarOferta($event)">
+              <option value="">Seleccionaâ€¦</option>
+              @for (o of ofertas(); track o.codigo) {
+                <option [value]="o.codigo">{{ o.tipoNombre }} Â· {{ o.nombre }}</option>
+              }
+            </select>
+          </div>
+
+          @if (ofertaElegida(); as oferta) {
+            @if (oferta.requierePlanInternet) {
+              <div class="form-row">
+                <label>Plan de Internet <span class="req">*</span></label>
+                <select [ngModel]="planCodigo()" (ngModelChange)="cambiarPlan($event)">
+                  <option value="">Seleccionaâ€¦</option>
+                  @for (p of planes(); track p.codigo) {
+                    <option [value]="p.codigo">{{ p.nombre }} â€” {{ p.velocidad }} (${{ p.precioMensual }})</option>
+                  }
+                </select>
+              </div>
+            }
+
+            @if (oferta.requiereDireccion) {
+              <div class="form-row">
+                <label>DirecciÃ³n de instalaciÃ³n <span class="req">*</span></label>
+                <select [ngModel]="direccionId()" (ngModelChange)="direccionId.set($event)">
+                  <option [ngValue]="null">Seleccionaâ€¦</option>
+                  @for (dir of direccionesCliente(); track dir.id) {
+                    <option [ngValue]="dir.id">{{ dir.direccionTexto }}</option>
+                  }
+                </select>
+                @if (direccionesCliente().length === 0) {
+                  <p class="ayuda">
+                    Este cliente no tiene direcciones registradas. AgrÃ©gale una desde su ficha.
+                  </p>
+                }
+              </div>
+            }
+
+            <div class="form-grid">
+              <div class="form-row">
+                <label>Precio acordado (USD)</label>
+                <input type="number" min="0" step="0.01"
+                       [ngModel]="precioAcordado()" (ngModelChange)="precioAcordado.set($event)" />
+              </div>
+              @if (oferta.sujetoMora) {
+                <div class="form-row">
+                  <label>DÃ­a de pago (1â€“28)</label>
+                  <input type="number" min="1" max="28"
+                         [ngModel]="diaCorte()" (ngModelChange)="diaCorte.set($event)" />
+                </div>
+              }
+            </div>
+
+            <div class="form-row">
+              <label>Observaciones</label>
+              <textarea rows="2" [ngModel]="observaciones()" (ngModelChange)="observaciones.set($event)"></textarea>
+            </div>
+
+            <!-- Lo que quedarÃ¡ impreso en el contrato -->
+            <div class="previa">
+              <div class="previa-cab">
+                <app-icon name="contract" [size]="15" />
+                <span>AsÃ­ quedarÃ¡ el contrato</span>
+              </div>
+              <dl class="previa-kv">
+                <div><dt>Abonado</dt><dd>{{ cli.nombre }}</dd></div>
+                <div><dt>IdentificaciÃ³n</dt><dd class="mono">{{ cli.identificacion }}</dd></div>
+                <div><dt>Servicio</dt><dd>{{ oferta.nombre }}</dd></div>
+                <div><dt>Plan</dt><dd>{{ resumenPlan() }}</dd></div>
+                <div><dt>DirecciÃ³n</dt><dd>{{ resumenDireccion() }}</dd></div>
+                <div>
+                  <dt>Precio</dt>
+                  <dd>
+                    USD {{ precioMostrado() }} Â·
+                    {{ oferta.modalidadCobro === 'RECURRENTE' ? 'recurrente' : 'pago Ãºnico' }}
+                  </dd>
+                </div>
+                @if (oferta.sujetoMora) {
+                  <div><dt>DÃ­a de pago</dt><dd>{{ diaCorte() }}</dd></div>
+                }
+              </dl>
+              <p class="previa-pie">
+                Estos datos se congelan al registrar el contrato: son los que se imprimen en el PDF.
+              </p>
+            </div>
+          }
+        }
+
+        @if (errorFormulario()) {
+          <div class="modal-error">{{ errorFormulario() }}</div>
+        }
+      </div>
+
+      <div class="modal-foot">
+        <button type="button" class="btn" (click)="cerrarNuevo()">Cancelar</button>
+        <button type="button" class="btn btn-primary"
+                [disabled]="!puedeCrear() || guardando()"
+                (click)="crearContrato()">
+          {{ guardando() ? 'Registrandoâ€¦' : 'Registrar contrato' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ============ Editar condiciones ============ -->
+@if (contratoEnEdicion(); as ct) {
+  <div class="modal-backdrop" (click)="cerrarEditar()">
+    <div class="modal modal-form" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <div>
+          <h3>Editar contrato {{ ct.codigo }}</h3>
+          <p class="modal-sub">{{ ct.clienteNombre }}</p>
+        </div>
+        <button class="modal-x" type="button" (click)="cerrarEditar()" aria-label="Cerrar">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <p class="aviso">
+          Cambiar estas condiciones no altera el contrato ya emitido: el PDF sigue
+          mostrando lo que se firmÃ³.
+        </p>
+
+        <div class="form-grid">
+          <div class="form-row">
+            <label>Precio acordado (USD)</label>
+            <input type="number" min="0" step="0.01"
+                   [ngModel]="edicionPrecio()" (ngModelChange)="edicionPrecio.set($event)" />
+          </div>
+          <div class="form-row">
+            <label>DÃ­a de pago (1â€“28)</label>
+            <input type="number" min="1" max="28"
+                   [ngModel]="edicionDiaCorte()" (ngModelChange)="edicionDiaCorte.set($event)" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label>Plan de Internet</label>
+          <select [ngModel]="edicionPlan()" (ngModelChange)="edicionPlan.set($event)">
+            <option value="">Sin cambio</option>
+            @for (p of planes(); track p.codigo) {
+              <option [value]="p.codigo">{{ p.nombre }} â€” {{ p.velocidad }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label>Observaciones</label>
+          <textarea rows="2" [ngModel]="edicionObservaciones()" (ngModelChange)="edicionObservaciones.set($event)"></textarea>
+        </div>
+
+        @if (errorFormulario()) {
+          <div class="modal-error">{{ errorFormulario() }}</div>
+        }
+      </div>
+
+      <div class="modal-foot">
+        <button type="button" class="btn" (click)="cerrarEditar()">Cancelar</button>
+        <button type="button" class="btn btn-primary" [disabled]="guardando()" (click)="guardarEdicion()">
+          {{ guardando() ? 'Guardandoâ€¦' : 'Guardar cambios' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ============ Dar de baja ============ -->
+@if (contratoEnBaja(); as ct) {
+  <div class="modal-backdrop" (click)="cerrarBaja()">
+    <div class="modal modal-form" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <div>
+          <h3>Dar de baja {{ ct.codigo }}</h3>
+          <p class="modal-sub">{{ ct.clienteNombre }}</p>
+        </div>
+        <button class="modal-x" type="button" (click)="cerrarBaja()" aria-label="Cerrar">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <p class="aviso">
+          El contrato no se elimina: queda <strong>RETIRADO</strong> y conserva su
+          historial, sus facturas y sus pagos.
+        </p>
+
+        <div class="form-row">
+          <label>Motivo de la baja <span class="req">*</span></label>
+          <textarea rows="2" placeholder="Ej.: el abonado se muda de ciudad"
+                    [ngModel]="motivoBaja()" (ngModelChange)="motivoBaja.set($event)"></textarea>
+        </div>
+
+        <div class="form-row">
+          <label>Fecha de baja</label>
+          <input type="date" [ngModel]="fechaBaja()" (ngModelChange)="fechaBaja.set($event)" />
+        </div>
+
+        @if (errorFormulario()) {
+          <div class="modal-error">{{ errorFormulario() }}</div>
+        }
+      </div>
+
+      <div class="modal-foot">
+        <button type="button" class="btn" (click)="cerrarBaja()">Cancelar</button>
+        <button type="button" class="btn btn-danger"
+                [disabled]="motivoBaja().trim().length < 3 || guardando()"
+                (click)="confirmarBaja()">
+          {{ guardando() ? 'Procesandoâ€¦' : 'Dar de baja' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+

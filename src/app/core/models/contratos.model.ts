@@ -362,6 +362,61 @@ export interface ContratoListado {
   pppoeUsuario: string | null;
 }
 
+/** Ficha de un contrato que devuelve `GET /api/contratos/{codigo}`. */
+export interface ContratoDetalle {
+  codigo: string;
+  clienteCodigo: string;
+  clienteNombre: string;
+  clienteIdentificacion: string;
+  tipoServicio: string;
+  ofertaServicio: string;
+  ofertaCodigo: string;
+  modalidadCobro: string;
+  precioAcordado: number;
+  usaRed: boolean;
+  sujetoMora: boolean;
+  plan: string | null;
+  planCodigo: string | null;
+  velocidad: string | null;
+  planPrecio: number | null;
+  estadoServicio: EstadoServicio;
+  diaCorte: number | null;
+  fechaAlta: string | null;
+  fechaInstalacion: string | null;
+  fechaBaja: string | null;
+  direccionTexto: string | null;
+  direccionId: number | null;
+  pppoeUsuario: string | null;
+  observaciones: string | null;
+  /** Instante en que se congelaron las condiciones; null si aún no se emitió. */
+  documentoRegistradoEn: string | null;
+}
+
+/**
+ * Cuerpo de `PUT /api/contratos/{codigo}`: solo condiciones comerciales.
+ *
+ * Un campo nulo significa «no tocar». No se cambia el cliente, la oferta ni el
+ * estado del servicio: eso lo gobiernan las órdenes de trabajo, la mora y los pagos.
+ */
+export interface EditarContratoRequest {
+  planCodigo: string | null;
+  precioAcordado: number | null;
+  diaCorte: number | null;
+  direccionId: number | null;
+  observaciones: string | null;
+}
+
+/**
+ * Cuerpo de `POST /api/contratos/{codigo}/baja`.
+ *
+ * El contrato no se borra: queda RETIRADO conservando su historial, porque está
+ * ligado a facturas emitidas y pagos.
+ */
+export interface BajaContratoRequest {
+  motivo: string;
+  fechaBaja: string | null;
+}
+
 export const ESTADO_SERVICIO_ETIQUETA: Record<EstadoServicio, string> = {
   PENDIENTE: 'Pendiente',
   ACTIVO: 'Activo',

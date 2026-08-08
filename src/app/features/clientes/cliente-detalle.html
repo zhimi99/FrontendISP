@@ -127,7 +127,18 @@
                 <div><dt>Puerto / ONU</dt><dd class="mono">{{ v.puertoOnu }}</dd></div>
                 <div><dt>Estado</dt><dd><span class="badge" [class]="estadosMap[v.base.estado].tono">{{ estadosMap[v.base.estado].texto }}</span></dd></div>
                 <div><dt>Fecha activación</dt><dd>{{ v.base.fechaRegistro }}</dd></div>
-                <div><dt>Contrato</dt><dd><a class="link" href="javascript:void(0)"><app-icon name="contract" [size]="14" /> Ver contrato</a></dd></div>
+                <div>
+                  <dt>Contrato</dt>
+                  <dd>
+                    @if (v.base.contratoCodigo; as contratoCodigo) {
+                      <a class="link" href="javascript:void(0)" (click)="contratoEnVisor.set(contratoCodigo)">
+                        <app-icon name="contract" [size]="14" /> Ver contrato
+                      </a>
+                    } @else {
+                      <span class="muted">Sin contrato registrado</span>
+                    }
+                  </dd>
+                </div>
               </dl>
             </div>
 
@@ -604,4 +615,13 @@
       </div>
     </div>
   </div>
+}
+
+<!-- ============ Visor del contrato ============ -->
+@if (contratoEnVisor(); as codigoContrato) {
+  <app-visor-contrato
+    [codigo]="codigoContrato"
+    [subtitulo]="d()?.base?.nombre ?? null"
+    (cerrar)="contratoEnVisor.set(null)"
+  />
 }

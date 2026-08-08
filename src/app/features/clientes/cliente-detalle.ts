@@ -6,6 +6,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { catchError, combineLatest, forkJoin, map, Observable, of, startWith, Subscription, switchMap } from 'rxjs';
 
 import { IconComponent } from '../../shared/icon';
+import { VisorContratoComponent } from '../../shared/visor-contrato';
 import { ClientesService } from '../../core/services/clientes.service';
 import { ContratosService } from '../../core/services/contratos.service';
 import { FacturacionService } from '../../core/services/facturacion.service';
@@ -36,7 +37,7 @@ type ModoDireccionServicio = 'EXISTENTE' | 'NUEVA';
 @Component({
   selector: 'app-cliente-detalle',
   standalone: true,
-  imports: [IconComponent, RouterLink, FormsModule],
+  imports: [IconComponent, RouterLink, FormsModule, VisorContratoComponent],
   templateUrl: './cliente-detalle.html',
   styleUrl: './cliente-detalle.scss',
 })
@@ -71,6 +72,9 @@ export class ClienteDetalleComponent implements OnDestroy {
   ];
   readonly tabActiva = signal(0);
   readonly modalIdentificacion = signal(false);
+
+  /** Contrato que se está visualizando en el visor PDF; null = cerrado. */
+  readonly contratoEnVisor = signal<string | null>(null);
   readonly cargandoIdentificacion = signal(false);
   readonly errorIdentificacion = signal<string | null>(null);
   readonly urlIdentificacion = signal<string | null>(null);
@@ -512,6 +516,8 @@ export class ClienteDetalleComponent implements OnDestroy {
         plan: principal?.plan ?? null,
         velocidad: principal?.velocidad ?? '',
         estado,
+        // Habilita «Ver contrato»; nulo si el cliente aún no tiene ninguno.
+        contratoCodigo: principal?.codigo ?? null,
       },
       email: det.email ?? '—',
       grupo: det.tipoCliente === 'EMPRESA' ? 'Corporativo' : 'Residencial',
