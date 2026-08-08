@@ -13,7 +13,9 @@ import { ClienteFila, EstadoCliente, ESTADOS } from './clientes.data';
   standalone: true,
   imports: [FormsModule, RouterLink, IconComponent],
   templateUrl: './clientes.html',
-  styleUrl: './clientes.scss',
+  // El segundo archivo son los anchos de columna de ESTA grilla. Están fuera de
+  // clientes.scss porque esa hoja la copian otros doce módulos y no les sirven.
+  styleUrls: ['./clientes.scss', './clientes-grid.scss'],
 })
 export class ClientesComponent {
   private readonly clientesService = inject(ClientesService);

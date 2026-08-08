@@ -11,6 +11,12 @@
  * gana y reasigna las ocho columnas reales. No se toca la tabla de clientes.
  */
 
+/* Los anchos de abajo solo mandan con reparto fijo. Antes venía heredado de la hoja
+   de clientes; ahora que allí está acotado a su propia grilla, esta lo declara. */
+table {
+  table-layout: fixed;
+}
+
 /* 1 · Contrato (código) */
 th:nth-child(1),
 td:nth-child(1) {
