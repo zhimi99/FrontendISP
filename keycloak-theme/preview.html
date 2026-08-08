@@ -1,0 +1,92 @@
+<!doctype html>
+<!--
+  Vista estática del tema de login FIBRA NET (reproduce lo que genera Keycloak).
+  Solo para revisar el diseño; no forma parte del tema. Enlaza el CSS y el logo reales.
+-->
+<html lang="es" class="fn-html">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FIBRA NET · Iniciar sesión</title>
+  <link href="fibranet/login/resources/css/login.css" rel="stylesheet">
+</head>
+<body class="fn-body">
+  <div class="fn-split">
+
+    <!-- Panel de marca -->
+    <aside class="fn-brand" aria-hidden="true">
+      <div class="fn-brand-glow"></div>
+      <div class="fn-brand-inner">
+        <img class="fn-logo" src="fibranet/login/resources/img/logo.png" alt="FIBRA NET">
+        <p class="fn-tagline">La fibra óptica de Chordeleg</p>
+        <ul class="fn-points">
+          <li><span class="fn-dot"></span> Gestión integral de clientes y contratos</li>
+          <li><span class="fn-dot"></span> Facturación electrónica SRI</li>
+          <li><span class="fn-dot"></span> Soporte técnico y monitoreo de red</li>
+        </ul>
+      </div>
+      <div class="fn-brand-foot">Sistema Integral de Gestión ISP · Contrato SM-2026-0102</div>
+    </aside>
+
+    <!-- Panel del formulario -->
+    <main class="fn-panel">
+      <div class="fn-card">
+        <div class="fn-card-brand">
+          <img class="fn-card-logo" src="fibranet/login/resources/img/logo.png" alt="FIBRA NET">
+        </div>
+
+        <header class="fn-head">
+          <h1>Iniciar sesión</h1>
+          <p class="fn-sub">Sistema Integral de Gestión ISP</p>
+        </header>
+
+        <div class="fn-body-content">
+          <form class="fn-form" onsubmit="return false;">
+            <div class="fn-field">
+              <label for="username" class="fn-label">Usuario o correo</label>
+              <div class="fn-input">
+                <span class="fn-input-ico" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </span>
+                <input id="username" name="username" type="text" value="christian" placeholder="Usuario o correo">
+              </div>
+            </div>
+
+            <div class="fn-field">
+              <label for="password" class="fn-label">Contraseña</label>
+              <div class="fn-input">
+                <span class="fn-input-ico" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                </span>
+                <input id="password" name="password" type="password" value="secreto123" placeholder="••••••••">
+                <button class="fn-eye" type="button" tabindex="-1" aria-label="Mostrar u ocultar contraseña"
+                        onclick="var p=document.getElementById('password');var s=p.type==='password';p.type=s?'text':'password';this.classList.toggle('is-on',s);">
+                  <svg class="fn-eye-show" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg class="fn-eye-hide" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="fn-row">
+              <label class="fn-check"><input type="checkbox" checked><span>Recordarme</span></label>
+              <a href="#" class="fn-link">¿Olvidaste tu contraseña?</a>
+            </div>
+
+            <button class="fn-btn" type="submit">Iniciar sesión</button>
+          </form>
+        </div>
+
+        <div class="fn-info">
+          <div class="fn-register">¿No tienes cuenta? <a href="#">Solicita acceso</a></div>
+        </div>
+      </div>
+
+      <footer class="fn-foot">
+        <span>© 2026 FIBRA NET · Chordeleg, Azuay</span>
+        <span class="fn-foot-sep">·</span>
+        <div class="fn-locale"><a class="active">ES</a><a>EN</a></div>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>
