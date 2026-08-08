@@ -202,6 +202,21 @@ td:nth-child(1) {
   background: #fff;
 }
 
+/*
+ * El buscador del abonado es el único campo con la lupa DENTRO del recuadro, y el
+ * único `.input-ico` que cae dentro de un `.form-row`. La regla genérica de arriba
+ * reescribe el `padding` completo y con él se lleva por delante el `padding-left:
+ * 32px` que clientes.scss reserva para el icono: misma especificidad (0,1,1) y esta
+ * hoja carga después. Sin ese hueco la lupa, que va en `left: 11px`, se pinta sobre
+ * el texto y el campo parece roto.
+ *
+ * Se restituye con `.form-row .input-ico input` (0,2,1), que gana por especificidad
+ * y no depende del orden de carga.
+ */
+.form-row .input-ico input {
+  padding-left: 32px;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
