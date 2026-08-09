@@ -46,3 +46,6 @@ Thumbs.db
 # Generado en cada build por scripts/generar-environment.mjs a partir del entorno.
 # Versionarlo significaria que una URL de un despliegue pisa la de otro.
 src/environments/environment.prod.ts
+
+.vercel
+.env*
