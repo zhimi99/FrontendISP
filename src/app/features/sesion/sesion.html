@@ -1,7 +1,7 @@
 <section class="sesion">
   <header class="sesion-head">
     <h2>Mi sesión</h2>
-    <p>Prueba de la cadena de autenticación real: token de Keycloak y llamada al backend por el gateway.</p>
+    <p>Prueba de la cadena de autenticación real: el token de la sesión y la llamada al backend.</p>
   </header>
 
   <div class="tarjetas">
@@ -10,7 +10,7 @@
       <div class="tarjeta-titulo">
         <app-icon name="users" [size]="18" />
         <span>Identidad del token</span>
-        <span class="fuente">Keycloak</span>
+        <span class="fuente">JWT local</span>
       </div>
 
       @if (auth.perfil(); as p) {

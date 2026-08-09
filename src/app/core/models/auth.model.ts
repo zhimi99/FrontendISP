@@ -1,9 +1,11 @@
 /**
  * Roles y usuario de sesión.
  *
- * La identidad ya es real: el proveedor es Keycloak (realm `smartuz`) y los roles
- * viajan en el claim `realm_access.roles` del JWT. El rol de Keycloak `ADMIN` se
- * expone aquí como `ADMINISTRADOR` (ver AuthService.mapearRoles); el resto es 1:1.
+ * El backend autentica localmente (MS-USUARIOS, usuarios.credencial) y los roles
+ * viajan en el claim `realm_access.roles` del JWT — la misma forma que usaba
+ * Keycloak, conservada a propósito al reemplazarlo para no tocar nada de lo que ya
+ * leía ese claim. El rol del backend `ADMIN` se expone aquí como `ADMINISTRADOR`
+ * (ver AuthService.mapearRoles); el resto es 1:1.
  */
 export type Rol = 'ADMINISTRADOR' | 'FINANZAS' | 'TECNICO' | 'SOPORTE' | 'COBRANZAS';
 
@@ -43,12 +45,13 @@ export interface EditarEmpleadoRequest {
 }
 
 /**
- * Alta de un empleado (`POST /api/usuarios`, solo ADMIN): crea a la vez su cuenta en
- * Keycloak y su ficha.
+ * Alta de un empleado (`POST /api/usuarios`, solo ADMIN): crea a la vez su cuenta de
+ * acceso y su ficha.
  *
- * `passwordTemporal` no se guarda en ninguna base ni vuelve en la respuesta: viaja
- * hasta Keycloak marcada como temporal, que obliga a cambiarla en el primer inicio de
- * sesión. Quien da el alta se la comunica a la persona por otro canal.
+ * `passwordTemporal` no se guarda en ninguna base ni vuelve en la respuesta: se
+ * guarda hasheada y queda marcada como temporal, lo que obliga a cambiarla en el
+ * primer inicio de sesión. Quien da el alta se la comunica a la persona por otro
+ * canal.
  */
 export interface CrearEmpleadoRequest {
   usuario: string;
@@ -58,18 +61,18 @@ export interface CrearEmpleadoRequest {
   email: string;
   telefono: string | null;
   cargo: string | null;
-  rol: RolKeycloak;
+  rol: RolBackend;
   passwordTemporal: string;
   fechaIngreso: string | null;
 }
 
 /**
- * El rol tal y como lo nombra el realm de Keycloak (ADMIN, no ADMINISTRADOR): es lo
- * que el backend valida contra su lista cerrada.
+ * El rol tal y como lo nombra el backend (ADMIN, no ADMINISTRADOR): es lo que
+ * valida contra su lista cerrada de roles.
  */
-export type RolKeycloak = 'ADMIN' | 'FINANZAS' | 'COBRANZAS' | 'TECNICO' | 'SOPORTE';
+export type RolBackend = 'ADMIN' | 'FINANZAS' | 'COBRANZAS' | 'TECNICO' | 'SOPORTE';
 
-export const ROL_KEYCLOAK_ETIQUETA: Record<RolKeycloak, string> = {
+export const ROL_BACKEND_ETIQUETA: Record<RolBackend, string> = {
   ADMIN: 'Administrador',
   FINANZAS: 'Finanzas',
   COBRANZAS: 'Cobranzas',
@@ -86,8 +89,8 @@ export const ROL_ETIQUETA: Record<Rol, string> = {
 };
 
 /**
- * Identidad derivada del token de Keycloak: lo que se sabe del usuario SIN llamar
- * al backend (quién es, qué roles trae y su `usuario_id`, que enlaza con MS-USUARIOS).
+ * Identidad derivada del token: lo que se sabe del usuario SIN llamar al backend
+ * (quién es, qué roles trae y su `usuario_id`, que enlaza con MS-USUARIOS).
  */
 export interface PerfilSesion {
   sub: string;

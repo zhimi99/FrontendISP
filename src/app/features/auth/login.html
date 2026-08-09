@@ -1,0 +1,101 @@
+<div class="fn-split">
+  <!-- ============ Panel de marca ============
+       Mismo diseño que usábamos con Keycloak (panel oscuro con trazos de
+       fibra, logo, lema y viñetas) — ahora vive aquí porque el login ya no
+       lo sirve Keycloak, lo sirve esta pantalla. -->
+  <aside class="fn-brand" aria-hidden="true">
+    <div class="fn-brand-glow"></div>
+    <div class="fn-brand-inner">
+      <img class="fn-logo" src="logo-marca.png" alt="FIBRA NET" />
+      <p class="fn-tagline">La fibra óptica de Chordeleg</p>
+      <ul class="fn-points">
+        <li><span class="fn-dot"></span> Gestión integral de clientes y contratos</li>
+        <li><span class="fn-dot"></span> Facturación electrónica SRI</li>
+        <li><span class="fn-dot"></span> Soporte técnico y monitoreo de red</li>
+      </ul>
+    </div>
+    <div class="fn-brand-foot">
+      Sistema Integral de Gestión ISP · Diseñado & Desarrollado by
+      <a
+        class="fn-credit-link"
+        href="https://wa.me/593987805829"
+        target="_blank"
+        rel="noopener noreferrer"
+        >Smartuz C.Z</a
+      >
+    </div>
+  </aside>
+
+  <!-- ============ Panel del formulario ============ -->
+  <main class="fn-panel">
+    <form class="fn-card" (ngSubmit)="entrar()">
+      <!-- Marca compacta: solo se ve cuando el panel oscuro se oculta (móvil) -->
+      <div class="fn-card-brand">
+        <img class="fn-card-logo" src="logo-marca.png" alt="FIBRA NET" />
+      </div>
+
+      <header class="fn-head">
+        <h1>Iniciar sesión</h1>
+        <p class="fn-sub">Sistema Integral de Gestión ISP</p>
+      </header>
+
+      @if (error()) {
+        <div class="fn-alert" role="alert">
+          <span class="fn-alert-ico" aria-hidden="true">!</span>
+          <span>{{ error() }}</span>
+        </div>
+      }
+
+      <div class="fn-field">
+        <label for="usuario" class="fn-label">Usuario</label>
+        <div class="fn-input">
+          <span class="fn-input-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+            </svg>
+          </span>
+          <input
+            id="usuario"
+            type="text"
+            autocomplete="username"
+            [ngModel]="usuario()"
+            (ngModelChange)="usuario.set($event)"
+            name="usuario"
+            [disabled]="enviando()"
+            autofocus
+            placeholder="Usuario o correo"
+          />
+        </div>
+      </div>
+
+      <div class="fn-field">
+        <label for="password" class="fn-label">Contraseña</label>
+        <div class="fn-input">
+          <span class="fn-input-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" />
+            </svg>
+          </span>
+          <input
+            id="password"
+            type="password"
+            autocomplete="current-password"
+            [ngModel]="password()"
+            (ngModelChange)="password.set($event)"
+            name="password"
+            [disabled]="enviando()"
+            placeholder="••••••••"
+          />
+        </div>
+      </div>
+
+      <button type="submit" class="fn-btn" [disabled]="enviando()">
+        {{ enviando() ? 'Entrando…' : 'Entrar' }}
+      </button>
+    </form>
+
+    <footer class="fn-foot">
+      <span>© 2026 FIBRA NET · Chordeleg, Azuay</span>
+    </footer>
+  </main>
+</div>

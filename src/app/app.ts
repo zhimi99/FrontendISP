@@ -1,48 +1,16 @@
-import { Component, inject, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Component } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
 
-import { IconComponent } from './shared/icon';
-import { AuthService } from './core/services/auth.service';
-
-interface NavItem {
-  label: string;
-  icon: string;
-  path: string;
-  badge?: string;
-}
-
+/**
+ * Raíz de verdad de la aplicación: solo el punto donde el enrutador dibuja lo que
+ * corresponda. El armazón con menú y topbar es de {@link Shell}, y solo envuelve
+ * las rutas protegidas — no `/login` ni `/cambiar-password`, que van a pantalla
+ * completa. Ver app.routes.ts.
+ */
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, IconComponent],
-  templateUrl: './app.html',
-  styleUrl: './app.scss',
+  imports: [RouterOutlet],
+  template: '<router-outlet />',
 })
-export class App {
-  protected readonly auth = inject(AuthService);
-  protected readonly collapsed = signal(false);
-
-  protected readonly navMain: NavItem[] = [
-    { label: 'Dashboard', icon: 'dashboard', path: '/dashboard' },
-    { label: 'Clientes', icon: 'users', path: '/clientes' },
-    { label: 'Contratos', icon: 'contract', path: '/contratos' },
-    { label: 'Facturación', icon: 'invoice', path: '/facturacion' },
-    { label: 'Cobranzas', icon: 'cash', path: '/cobranzas' },
-    { label: 'Soporte', icon: 'support', path: '/soporte' },
-    { label: 'Red', icon: 'network', path: '/red' },
-    { label: 'Inventario', icon: 'box', path: '/inventario' },
-    { label: 'Reportes', icon: 'chart', path: '/reportes/cierres-caja' },
-  ];
-
-  protected readonly navFoot: NavItem[] = [
-    { label: 'Configuración', icon: 'gear', path: '/configuracion' },
-  ];
-
-  protected toggle() {
-    this.collapsed.update((v) => !v);
-  }
-
-  protected cerrarSesion() {
-    this.auth.logout();
-  }
-}
+export class App {}

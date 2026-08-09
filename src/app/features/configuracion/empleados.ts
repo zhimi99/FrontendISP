@@ -7,21 +7,21 @@ import {
   CrearEmpleadoRequest,
   EditarEmpleadoRequest,
   EmpleadoFicha,
-  ROL_KEYCLOAK_ETIQUETA,
-  RolKeycloak,
+  ROL_BACKEND_ETIQUETA,
+  RolBackend,
 } from '../../core/models/auth.model';
 
 /**
  * Plantilla de empleados: alta, ficha y quién sigue trabajando.
  *
  * <p><b>El alta crea la cuenta de verdad.</b> Este formulario no solo escribe una fila:
- * MS-USUARIOS habla con la Admin API de Keycloak, crea la cuenta con su rol y una
- * contraseña temporal, y solo entonces guarda la ficha. Si algo falla por el camino, no
- * queda nada a medias — ni cuenta sin ficha ni ficha sin cuenta.
+ * MS-USUARIOS crea la credencial de acceso con su rol y una contraseña temporal, y
+ * solo entonces guarda la ficha. Si algo falla por el camino, no queda nada a medias
+ * — ni cuenta sin ficha ni ficha sin cuenta.
  *
  * <p><b>Lo que sigue sin poder hacerse desde aquí.</b> Cambiar el rol de alguien que ya
- * existe: eso se hace en la consola de Keycloak, que es donde viven los permisos. Se
- * asigna en el alta porque una cuenta sin rol entra al sistema y no puede hacer nada.
+ * existe no tiene pantalla propia todavía; se asigna en el alta porque una cuenta sin
+ * rol entra al sistema y no puede hacer nada.
  *
  * <p>Y nadie se borra: quien se va se da de baja. Sus pagos, cierres de caja y órdenes
  * lo referencian por id. Darlo de baja además <b>deshabilita su cuenta</b>, así que deja
@@ -37,8 +37,8 @@ import {
 export class EmpleadosComponent {
   private readonly usuarios = inject(UsuariosService);
 
-  readonly rolEtiqueta = ROL_KEYCLOAK_ETIQUETA;
-  readonly roles: RolKeycloak[] = ['ADMIN', 'FINANZAS', 'COBRANZAS', 'TECNICO', 'SOPORTE'];
+  readonly rolEtiqueta = ROL_BACKEND_ETIQUETA;
+  readonly roles: RolBackend[] = ['ADMIN', 'FINANZAS', 'COBRANZAS', 'TECNICO', 'SOPORTE'];
 
   private readonly empleados = signal<EmpleadoFicha[]>([]);
   readonly cargando = signal(true);
@@ -111,7 +111,7 @@ export class EmpleadosComponent {
   readonly nEmail = signal('');
   readonly nTelefono = signal('');
   readonly nCargo = signal('');
-  readonly nRol = signal<RolKeycloak>('SOPORTE');
+  readonly nRol = signal<RolBackend>('SOPORTE');
   readonly nPassword = signal('');
 
   abrirAlta() {
@@ -146,7 +146,7 @@ export class EmpleadosComponent {
         .trim()
         .toLowerCase()
         .normalize('NFD')
-        // Quita las tildes: 'Sofía' → 'sofia'. Keycloak no las admite en el usuario.
+        // Quita las tildes: 'Sofía' → 'sofia'. El backend no las admite en el usuario.
         .replace(/[̀-ͯ]/g, '')
         .replace(/[^a-z0-9]/g, '');
     const n = limpio(this.nNombres().split(' ')[0] ?? '');
@@ -187,7 +187,7 @@ export class EmpleadosComponent {
         this.creando.set(false);
         this.banner.set({
           texto: `${this.nombre(creado)} ya puede entrar con el usuario «${creado.usuario}». `
-            + 'Entrégale la contraseña temporal: Keycloak le pedirá cambiarla al iniciar sesión.',
+            + 'Entrégale la contraseña temporal: se le pedirá cambiarla al iniciar sesión.',
           error: false,
         });
         this.cargar();
@@ -295,14 +295,14 @@ export class EmpleadosComponent {
   }
 
   /**
-   * El 502 se explica aparte: significa que Keycloak no respondió, y lo importante que
-   * hay que decirle a quien está delante es que NO se creó nada a medias.
+   * El 502 se explica aparte: significa que el proveedor de identidad falló, y lo
+   * importante que hay que decirle a quien está delante es que NO se creó nada a medias.
    */
   private mensajeAlta(e: { status?: number }): string {
     if (e.status === 409) return 'Ese usuario o esa cédula ya están registrados.';
     if (e.status === 400) return 'Revisa los datos: usuario en minúsculas, cédula de 10 a 13 dígitos, correo válido y contraseña de 8 caracteres o más.';
     if (e.status === 403) return 'Solo un administrador puede dar de alta a un empleado.';
-    if (e.status === 502) return 'Keycloak no respondió, así que no se creó ni la cuenta ni la ficha. Inténtalo de nuevo en un momento.';
+    if (e.status === 502) return 'No se pudo crear la cuenta de acceso, así que no se creó ni la cuenta ni la ficha. Inténtalo de nuevo en un momento.';
     if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
     return 'No se pudo dar de alta al empleado.';
   }
@@ -312,7 +312,7 @@ export class EmpleadosComponent {
     if (e.status === 400) return 'Revisa los datos: hay algún campo inválido (¿el correo?).';
     if (e.status === 403) return 'Solo un administrador puede mantener la plantilla.';
     if (e.status === 404) return 'Ese empleado ya no existe; recarga la página.';
-    if (e.status === 502) return 'No se pudo aplicar el cambio en Keycloak, así que tampoco se guardó aquí.';
+    if (e.status === 502) return 'No se pudo aplicar el cambio en la cuenta de acceso, así que tampoco se guardó aquí.';
     if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
     return 'No se pudo completar la operación.';
   }
