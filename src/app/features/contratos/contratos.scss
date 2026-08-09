@@ -20,54 +20,58 @@ table {
 /* 1 · Contrato (código) */
 th:nth-child(1),
 td:nth-child(1) {
-  width: 118px;
+  width: 108px;
 }
 
 /* 2 · Cliente (nombre + identificación) */
 th:nth-child(2),
 td:nth-child(2) {
-  width: 208px;
+  width: 210px;
 }
 
 /* 3 · Plan / Velocidad */
 th:nth-child(3),
 td:nth-child(3) {
-  width: 152px;
+  width: 148px;
 }
 
 /* 4 · Estado */
 th:nth-child(4),
 td:nth-child(4) {
-  width: 112px;
+  width: 104px;
 }
 
 /* 5 · Día de corte */
 th:nth-child(5),
 td:nth-child(5) {
-  width: 84px;
+  width: 76px;
 }
 
-/* 6 · Usuario PPPoE */
+/* 6 · Usuario PPPoE — puede ser largo; se trunca con elipsis en vez de invadir "Alta". */
 th:nth-child(6),
 td:nth-child(6) {
-  width: 142px;
+  width: 168px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* 7 · Alta */
 th:nth-child(7),
 td:nth-child(7) {
   width: 96px;
+  white-space: nowrap;
 }
 
 /* 8 · Acciones */
 th:nth-child(8),
 td:nth-child(8) {
-  width: 132px;
+  width: 150px;
 }
 
-/* Cuatro acciones por fila necesitan más espacio que las tres de clientes. */
+/* Cuatro acciones por fila (ver, cliente, editar, baja) necesitan más espacio que
+   las tres de clientes: 4 × 27px + 3 × 1px de separación + el padding de la celda. */
 .w-acc {
-  width: 132px;
+  width: 150px;
 }
 
 /*

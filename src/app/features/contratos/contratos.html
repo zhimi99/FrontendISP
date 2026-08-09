@@ -114,12 +114,12 @@
               <td class="mono muted">{{ c.codigo }}</td>
               <td>
                 <div class="cell-main">
-                  <a class="name-link" [routerLink]="['/clientes', c.clienteCodigo]">{{ c.clienteNombre }}</a>
+                  <a class="name-link" [routerLink]="['/clientes', c.clienteCodigo]" [title]="c.clienteNombre">{{ c.clienteNombre }}</a>
                 </div>
                 <div class="cell-sub mono">{{ c.clienteIdentificacion }}</div>
               </td>
               <td>
-                <div class="cell-main">{{ c.plan }}</div>
+                <div class="cell-main" [title]="c.plan">{{ c.plan }}</div>
                 <div class="cell-sub">{{ c.velocidad }}</div>
               </td>
               <td>
@@ -128,7 +128,7 @@
                 </span>
               </td>
               <td class="muted">{{ c.diaCorte }}</td>
-              <td class="mono">{{ c.pppoeUsuario ?? '—' }}</td>
+              <td class="mono" [title]="c.pppoeUsuario ?? ''">{{ c.pppoeUsuario ?? '—' }}</td>
               <td class="muted">{{ fechaCorta(c.fechaAlta) }}</td>
               <td class="w-acc">
                 <div class="acc">
