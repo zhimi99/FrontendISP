@@ -4,25 +4,24 @@ import { RouterLink } from '@angular/router';
 import { catchError, forkJoin, of } from 'rxjs';
 
 import { IconComponent } from '../../shared/icon';
+import { VentaMostradorComponent } from './venta-mostrador';
+import { CatalogosService, OpcionCatalogo } from '../../core/services/catalogos.service';
 import { FinanzasService } from '../../core/services/finanzas.service';
 import { ClientesService } from '../../core/services/clientes.service';
 import { FacturacionService } from '../../core/services/facturacion.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ClienteListado } from '../../core/models/contratos.model';
 import { FacturaVista } from '../../core/models/facturacion.model';
+import { Venta } from '../../core/models/ventas.model';
 import {
   CajaEstado,
   EstadoPago,
   FormaPago,
-  FORMA_PAGO_ETIQUETA,
   ESTADO_PAGO_FIN_ETIQUETA,
   ESTADO_PAGO_FIN_TONO,
   PagoCobranzaVista,
   RegistrarPagoRequest,
 } from '../../core/models/finanzas.model';
-
-/** Formas de pago para el selector del alta. */
-const FORMAS_PAGO: FormaPago[] = ['EFECTIVO', 'TRANSFERENCIA', 'DEPOSITO', 'TARJETA', 'CHEQUE', 'PASARELA'];
 
 /**
  * Cobranzas / Caja sobre datos reales (GET /api/pagos + /api/cajas). El nombre del
@@ -32,7 +31,7 @@ const FORMAS_PAGO: FormaPago[] = ['EFECTIVO', 'TRANSFERENCIA', 'DEPOSITO', 'TARJ
 @Component({
   selector: 'app-cobranzas',
   standalone: true,
-  imports: [FormsModule, IconComponent, RouterLink],
+  imports: [FormsModule, IconComponent, RouterLink, VentaMostradorComponent],
   templateUrl: './cobranzas.html',
   styleUrls: ['../clientes/clientes.scss', './cobranzas.scss'],
 })
@@ -41,17 +40,32 @@ export class CobranzasComponent {
   private readonly clientesService = inject(ClientesService);
   private readonly facturacion = inject(FacturacionService);
   private readonly auth = inject(AuthService);
+  private readonly catalogos = inject(CatalogosService);
 
-  readonly formaEtq = FORMA_PAGO_ETIQUETA;
   readonly estadoEtq = ESTADO_PAGO_FIN_ETIQUETA;
   readonly estadoTono = ESTADO_PAGO_FIN_TONO;
-  readonly formasPago = FORMAS_PAGO;
+
+  /** Medios de recaudación del selector: los que admite el backend, no una copia. */
+  readonly formasPago = signal<OpcionCatalogo[]>([]);
+
+  /**
+   * Nombre de una forma de pago para pintarla en la lista.
+   *
+   * Se resuelve contra el catálogo del backend. Si el pago trae una forma que el
+   * catálogo aún no ha traído —o una recién añadida al dominio— se muestra su código
+   * en vez de dejar la celda vacía, que es lo que hacía el mapa fijo anterior.
+   */
+  etiquetaForma(codigo: FormaPago | string): string {
+    return this.formasPago().find((f) => f.codigo === codigo)?.nombre ?? codigo;
+  }
   /** Solo COBRANZAS/ADMIN pueden registrar pagos (POST /api/pagos). */
   readonly puedeRegistrarPago = computed(() => this.auth.tieneRol('COBRANZAS', 'ADMINISTRADOR'));
   /** Abrir/cerrar la jornada de caja: mismo perfil que recauda. */
   readonly puedeOperarCaja = computed(() => this.auth.tieneRol('COBRANZAS', 'ADMINISTRADOR'));
   /** Anular mueve dinero hacia atrás: el backend lo restringe a ADMIN. */
   readonly puedeAnular = computed(() => this.auth.tieneRol('ADMINISTRADOR'));
+  /** Vender en mostrador: mismo perfil que recauda (POST /api/ventas). */
+  readonly puedeVender = computed(() => this.auth.tieneRol('COBRANZAS', 'ADMINISTRADOR'));
   /** Aviso de resultado de operaciones de caja (apertura/cierre y su arqueo). */
   readonly avisoCaja = signal<{ texto: string; error: boolean } | null>(null);
 
@@ -70,6 +84,7 @@ export class CobranzasComponent {
 
   constructor() {
     this.cargar();
+    this.catalogos.formasPago().subscribe((opciones) => this.formasPago.set(opciones));
   }
 
   private cargar() {
@@ -345,6 +360,33 @@ export class CobranzasComponent {
     if (e.status === 403) return 'Tu rol no tiene permiso para registrar pagos.';
     if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
     return 'No se pudo registrar el pago.';
+  }
+
+  /* ---------- Venta en mostrador (modal) ---------- */
+  readonly modalVenta = signal(false);
+
+  abrirVenta() {
+    this.avisoCaja.set(null);
+    this.modalVenta.set(true);
+  }
+
+  cerrarVenta() {
+    this.modalVenta.set(false);
+  }
+
+  /**
+   * La venta ya está cobrada cuando llega aquí. Se recarga todo porque mueve dos
+   * cosas del panel a la vez: el efectivo de la caja y —si se emitió factura— la
+   * lista de comprobantes.
+   */
+  onVentaRegistrada(v: Venta) {
+    this.avisoCaja.set({
+      texto:
+        `Venta ${v.numero} registrada por ${this.moneda(v.total)}` +
+        (v.facturaNumero ? ` con factura ${v.facturaNumero}.` : ' (recibo interno).'),
+      error: false,
+    });
+    this.cargar();
   }
 
   /* ---------- Abrir / cerrar caja (modal) ---------- */

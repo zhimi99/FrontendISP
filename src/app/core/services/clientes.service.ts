@@ -14,8 +14,9 @@ import {
 /**
  * Acceso a clientes y contratos (MS-CONTRATOS), siempre por el gateway.
  *
- * Reemplaza al mock `clientes.data.ts` como origen de la lista. El token lo adjunta
- * el interceptor, así que aquí no se ve ninguna cabecera de autenticación.
+ * Es el único origen de la lista de clientes: en el frontend no queda ninguna copia
+ * en memoria. El token lo adjunta el interceptor, así que aquí no se ve ninguna
+ * cabecera de autenticación.
  */
 @Injectable({ providedIn: 'root' })
 export class ClientesService {

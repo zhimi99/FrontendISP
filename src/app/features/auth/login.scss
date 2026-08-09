@@ -1,0 +1,321 @@
+/*
+ * Mismo diseño que teníamos en el tema de login de Keycloak (panel de marca
+ * oscuro + tarjeta de formulario), portado a esta pantalla ahora que el login
+ * lo sirve la propia aplicación y no Keycloak. Usa los tokens reales de
+ * src/styles.scss (--brand, --side-bg…) en vez de los `--fn-*` que inventaba
+ * el tema aparte, para quedar en la misma familia visual que el resto de la
+ * app (el panel oscuro es el mismo tono que la barra lateral).
+ */
+:host {
+  display: block;
+}
+
+/* ============ Estructura de dos paneles ============ */
+.fn-split {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+}
+
+/* ============ Panel de marca (izquierda) ============ */
+.fn-brand {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(120% 80% at 15% 10%, var(--side-hover) 0%, var(--side-bg) 55%);
+  color: #eaf1ea;
+  padding: 56px 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* Trazos de fibra: líneas y nodos que evocan el circuito del logo — el
+     mismo fondo que usa el tema de login de Keycloak. */
+  background-image:
+    radial-gradient(120% 80% at 15% 10%, rgba(22, 36, 28, 0.9) 0%, rgba(11, 15, 13, 1) 55%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='560' height='560' viewBox='0 0 560 560'%3E%3Cg fill='none' stroke='%235cbb46' stroke-width='1.4' opacity='0.16'%3E%3Cpath d='M40 90 H180 a14 14 0 0 1 14 14 V210'/%3E%3Cpath d='M0 300 H120 a16 16 0 0 0 16-16 V150'/%3E%3Cpath d='M520 60 V180 a18 18 0 0 1-18 18 H360'/%3E%3Cpath d='M470 520 V400 a16 16 0 0 0-16-16 H300'/%3E%3Cpath d='M120 500 H240 a14 14 0 0 0 14-14 V360'/%3E%3C/g%3E%3Cg fill='%235cbb46' opacity='0.5'%3E%3Ccircle cx='40' cy='90' r='4'/%3E%3Ccircle cx='0' cy='300' r='4'/%3E%3Ccircle cx='520' cy='60' r='4'/%3E%3Ccircle cx='470' cy='520' r='4'/%3E%3Ccircle cx='120' cy='500' r='4'/%3E%3Ccircle cx='194' cy='210' r='3'/%3E%3Ccircle cx='136' cy='150' r='3'/%3E%3Ccircle cx='360' cy='198' r='3'/%3E%3Ccircle cx='300' cy='384' r='3'/%3E%3Ccircle cx='254' cy='360' r='3'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: no-repeat, repeat;
+  background-size: cover, 560px 560px;
+}
+
+.fn-brand-glow {
+  position: absolute;
+  width: 520px;
+  height: 520px;
+  right: -160px;
+  bottom: -180px;
+  background: radial-gradient(circle, rgba(92, 187, 70, 0.22) 0%, rgba(92, 187, 70, 0) 68%);
+  pointer-events: none;
+}
+
+.fn-brand-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 420px;
+}
+
+.fn-logo {
+  width: 240px;
+  max-width: 70%;
+  height: auto;
+  background: #fff;
+  padding: 18px 22px;
+  border-radius: 14px;
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.36);
+  display: block;
+}
+
+.fn-tagline {
+  margin: 26px 0 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  line-height: 1.2;
+  color: #fff;
+}
+
+.fn-points {
+  list-style: none;
+  margin: 30px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.fn-points li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14.5px;
+  color: #b9c5b8;
+}
+
+.fn-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brand);
+  box-shadow: 0 0 0 4px rgba(92, 187, 70, 0.16);
+  flex: none;
+}
+
+.fn-brand-foot {
+  position: relative;
+  z-index: 1;
+  margin-top: 40px;
+  font-size: 12px;
+  color: var(--side-faint);
+  letter-spacing: 0.2px;
+  line-height: 1.6;
+}
+
+.fn-credit-link {
+  color: var(--side-text);
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px dotted var(--side-faint);
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.fn-credit-link:hover {
+  color: var(--brand);
+  border-color: var(--brand);
+}
+
+/* ============ Panel del formulario (derecha) ============ */
+.fn-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 32px;
+  position: relative;
+  background: var(--bg);
+}
+
+.fn-card {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Marca compacta: solo se ve cuando el panel oscuro se oculta (móvil) */
+.fn-card-brand {
+  display: none;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.fn-card-logo {
+  width: 150px;
+  max-width: 74%;
+  height: auto;
+  background: #fff;
+  padding: 12px 16px;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+.fn-head h1 {
+  margin: 0;
+  font-size: 25px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+
+.fn-sub {
+  margin: 6px 0 0;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+/* ============ Alerta de error ============ */
+.fn-alert {
+  margin-top: 22px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13.5px;
+  line-height: 1.45;
+  background: var(--danger-soft);
+  color: #a3312a;
+  border: 1px solid #f2cfcb;
+}
+
+.fn-alert-ico {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 12px;
+  color: #fff;
+  background: var(--danger);
+}
+
+/* ============ Formulario ============ */
+.fn-field {
+  margin-top: 22px;
+  display: grid;
+  gap: 7px;
+}
+
+.fn-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.fn-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 48px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.fn-input:focus-within {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(92, 187, 70, 0.18);
+}
+
+.fn-input-ico {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  color: var(--faint);
+  flex: none;
+}
+
+.fn-input input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: 14.5px;
+  color: var(--text);
+  padding: 0 14px 0 0;
+}
+
+.fn-input input::placeholder {
+  color: var(--faint);
+}
+
+.fn-input input:disabled {
+  opacity: 0.6;
+}
+
+/* ============ Botón principal ============ */
+.fn-btn {
+  height: 48px;
+  margin-top: 26px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--brand);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(92, 187, 70, 0.32);
+  transition: background 0.15s, transform 0.05s, box-shadow 0.15s;
+}
+
+.fn-btn:hover:not(:disabled) {
+  background: var(--brand-600);
+}
+
+.fn-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.fn-btn:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+/* ============ Pie ============ */
+.fn-foot {
+  margin-top: 34px;
+  font-size: 12px;
+  color: var(--faint);
+}
+
+/* ============ Responsivo ============ */
+@media (max-width: 900px) {
+  .fn-split {
+    grid-template-columns: 1fr;
+  }
+  .fn-brand {
+    display: none;
+  }
+  .fn-card-brand {
+    display: flex;
+  }
+  .fn-panel {
+    padding: 40px 22px;
+    background:
+      radial-gradient(120% 60% at 50% -10%, var(--side-hover) 0%, rgba(11, 15, 13, 0) 40%),
+      var(--bg);
+  }
+}
+
+@media (max-width: 420px) {
+  .fn-head h1 {
+    font-size: 22px;
+  }
+  .fn-panel {
+    padding: 30px 16px;
+  }
+}

@@ -209,20 +209,20 @@
       <div class="modal-head">
         <div>
           <h3>Nuevo contrato</h3>
-          <p class="modal-sub">Primero el abonado, despuÃ©s el servicio que se le vende.</p>
+          <p class="modal-sub">Primero el abonado, después el servicio que se le vende.</p>
         </div>
         <button class="modal-x" type="button" (click)="cerrarNuevo()" aria-label="Cerrar">&times;</button>
       </div>
 
       <div class="modal-body">
-        <!-- Paso 1 Â· el abonado -->
+        <!-- Paso 1 · el abonado -->
         <div class="form-row">
           <label>Cliente <span class="req">*</span></label>
           <div class="input-ico">
             <app-icon name="search" [size]="15" />
             <input
               type="text"
-              placeholder="Busca por nombre, cÃ³digo o cÃ©dulaâ€¦"
+              placeholder="Busca por nombre, código o cédula…"
               [ngModel]="busquedaCliente()"
               (ngModelChange)="cambiarBusquedaCliente($event)"
             />
@@ -233,24 +233,24 @@
                 <li>
                   <button type="button" (click)="elegirCliente(cli)">
                     <span class="sug-nombre">{{ cli.nombre }}</span>
-                    <span class="sug-meta mono">{{ cli.codigo }} Â· {{ cli.identificacion }}</span>
+                    <span class="sug-meta mono">{{ cli.codigo }} · {{ cli.identificacion }}</span>
                   </button>
                 </li>
               } @empty {
-                <li class="sug-vacio">NingÃºn cliente coincide con la bÃºsqueda.</li>
+                <li class="sug-vacio">Ningún cliente coincide con la búsqueda.</li>
               }
             </ul>
           }
         </div>
 
         @if (clienteSeleccionado(); as cli) {
-          <!-- Paso 2 Â· el servicio -->
+          <!-- Paso 2 · el servicio -->
           <div class="form-row">
             <label>Servicio a contratar <span class="req">*</span></label>
             <select [ngModel]="ofertaCodigo()" (ngModelChange)="cambiarOferta($event)">
-              <option value="">Seleccionaâ€¦</option>
+              <option value="">Selecciona…</option>
               @for (o of ofertas(); track o.codigo) {
-                <option [value]="o.codigo">{{ o.tipoNombre }} Â· {{ o.nombre }}</option>
+                <option [value]="o.codigo">{{ o.tipoNombre }} · {{ o.nombre }}</option>
               }
             </select>
           </div>
@@ -260,9 +260,9 @@
               <div class="form-row">
                 <label>Plan de Internet <span class="req">*</span></label>
                 <select [ngModel]="planCodigo()" (ngModelChange)="cambiarPlan($event)">
-                  <option value="">Seleccionaâ€¦</option>
+                  <option value="">Selecciona…</option>
                   @for (p of planes(); track p.codigo) {
-                    <option [value]="p.codigo">{{ p.nombre }} â€” {{ p.velocidad }} (${{ p.precioMensual }})</option>
+                    <option [value]="p.codigo">{{ p.nombre }} — {{ p.velocidad }} (${{ p.precioMensual }})</option>
                   }
                 </select>
               </div>
@@ -270,16 +270,16 @@
 
             @if (oferta.requiereDireccion) {
               <div class="form-row">
-                <label>DirecciÃ³n de instalaciÃ³n <span class="req">*</span></label>
+                <label>Dirección de instalación <span class="req">*</span></label>
                 <select [ngModel]="direccionId()" (ngModelChange)="direccionId.set($event)">
-                  <option [ngValue]="null">Seleccionaâ€¦</option>
+                  <option [ngValue]="null">Selecciona…</option>
                   @for (dir of direccionesCliente(); track dir.id) {
                     <option [ngValue]="dir.id">{{ dir.direccionTexto }}</option>
                   }
                 </select>
                 @if (direccionesCliente().length === 0) {
                   <p class="ayuda">
-                    Este cliente no tiene direcciones registradas. AgrÃ©gale una desde su ficha.
+                    Este cliente no tiene direcciones registradas. Agrégale una desde su ficha.
                   </p>
                 }
               </div>
@@ -293,7 +293,7 @@
               </div>
               @if (oferta.sujetoMora) {
                 <div class="form-row">
-                  <label>DÃ­a de pago (1â€“28)</label>
+                  <label>Día de pago (1–28)</label>
                   <input type="number" min="1" max="28"
                          [ngModel]="diaCorte()" (ngModelChange)="diaCorte.set($event)" />
                 </div>
@@ -305,27 +305,27 @@
               <textarea rows="2" [ngModel]="observaciones()" (ngModelChange)="observaciones.set($event)"></textarea>
             </div>
 
-            <!-- Lo que quedarÃ¡ impreso en el contrato -->
+            <!-- Lo que quedará impreso en el contrato -->
             <div class="previa">
               <div class="previa-cab">
                 <app-icon name="contract" [size]="15" />
-                <span>AsÃ­ quedarÃ¡ el contrato</span>
+                <span>Así quedará el contrato</span>
               </div>
               <dl class="previa-kv">
                 <div><dt>Abonado</dt><dd>{{ cli.nombre }}</dd></div>
-                <div><dt>IdentificaciÃ³n</dt><dd class="mono">{{ cli.identificacion }}</dd></div>
+                <div><dt>Identificación</dt><dd class="mono">{{ cli.identificacion }}</dd></div>
                 <div><dt>Servicio</dt><dd>{{ oferta.nombre }}</dd></div>
                 <div><dt>Plan</dt><dd>{{ resumenPlan() }}</dd></div>
-                <div><dt>DirecciÃ³n</dt><dd>{{ resumenDireccion() }}</dd></div>
+                <div><dt>Dirección</dt><dd>{{ resumenDireccion() }}</dd></div>
                 <div>
                   <dt>Precio</dt>
                   <dd>
-                    USD {{ precioMostrado() }} Â·
-                    {{ oferta.modalidadCobro === 'RECURRENTE' ? 'recurrente' : 'pago Ãºnico' }}
+                    USD {{ precioMostrado() }} ·
+                    {{ oferta.modalidadCobro === 'RECURRENTE' ? 'recurrente' : 'pago único' }}
                   </dd>
                 </div>
                 @if (oferta.sujetoMora) {
-                  <div><dt>DÃ­a de pago</dt><dd>{{ diaCorte() }}</dd></div>
+                  <div><dt>Día de pago</dt><dd>{{ diaCorte() }}</dd></div>
                 }
               </dl>
               <p class="previa-pie">
@@ -345,7 +345,7 @@
         <button type="button" class="btn btn-primary"
                 [disabled]="!puedeCrear() || guardando()"
                 (click)="crearContrato()">
-          {{ guardando() ? 'Registrandoâ€¦' : 'Registrar contrato' }}
+          {{ guardando() ? 'Registrando…' : 'Registrar contrato' }}
         </button>
       </div>
     </div>
@@ -367,7 +367,7 @@
       <div class="modal-body">
         <p class="aviso">
           Cambiar estas condiciones no altera el contrato ya emitido: el PDF sigue
-          mostrando lo que se firmÃ³.
+          mostrando lo que se firmó.
         </p>
 
         <div class="form-grid">
@@ -377,7 +377,7 @@
                    [ngModel]="edicionPrecio()" (ngModelChange)="edicionPrecio.set($event)" />
           </div>
           <div class="form-row">
-            <label>DÃ­a de pago (1â€“28)</label>
+            <label>Día de pago (1–28)</label>
             <input type="number" min="1" max="28"
                    [ngModel]="edicionDiaCorte()" (ngModelChange)="edicionDiaCorte.set($event)" />
           </div>
@@ -388,7 +388,7 @@
           <select [ngModel]="edicionPlan()" (ngModelChange)="edicionPlan.set($event)">
             <option value="">Sin cambio</option>
             @for (p of planes(); track p.codigo) {
-              <option [value]="p.codigo">{{ p.nombre }} â€” {{ p.velocidad }}</option>
+              <option [value]="p.codigo">{{ p.nombre }} — {{ p.velocidad }}</option>
             }
           </select>
         </div>
@@ -406,7 +406,7 @@
       <div class="modal-foot">
         <button type="button" class="btn" (click)="cerrarEditar()">Cancelar</button>
         <button type="button" class="btn btn-primary" [disabled]="guardando()" (click)="guardarEdicion()">
-          {{ guardando() ? 'Guardandoâ€¦' : 'Guardar cambios' }}
+          {{ guardando() ? 'Guardando…' : 'Guardar cambios' }}
         </button>
       </div>
     </div>
@@ -452,7 +452,7 @@
         <button type="button" class="btn btn-danger"
                 [disabled]="motivoBaja().trim().length < 3 || guardando()"
                 (click)="confirmarBaja()">
-          {{ guardando() ? 'Procesandoâ€¦' : 'Dar de baja' }}
+          {{ guardando() ? 'Procesando…' : 'Dar de baja' }}
         </button>
       </div>
     </div>

@@ -8,10 +8,10 @@ import { PerfilService } from '../../core/services/perfil.service';
 /**
  * Prueba de extremo a extremo de la autenticación.
  *
- * Muestra, lado a lado, dos cosas: lo que dice el TOKEN (Keycloak, sin tocar el
- * backend) y lo que responde el BACKEND real a `GET /api/usuarios/yo` a través del
- * gateway. Si la ficha aparece, la cadena entera funciona: login → token → interceptor
- * → gateway (CORS + validación + sello) → MS-USUARIOS.
+ * Muestra, lado a lado, dos cosas: lo que dice el TOKEN (leído en el navegador, sin
+ * tocar el backend) y lo que responde el BACKEND real a `GET /api/usuarios/yo`. Si
+ * la ficha aparece, la cadena entera funciona: login → token → interceptor →
+ * MS-USUARIOS.
  */
 @Component({
   selector: 'app-sesion',

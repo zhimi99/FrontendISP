@@ -28,7 +28,7 @@ import {
   ESTADO_SRI_TONO,
   FacturaVista,
 } from '../../core/models/facturacion.model';
-import { EstadoCliente, ESTADOS } from './clientes.data';
+import { EstadoCliente, ESTADOS } from './clientes.model';
 
 /** Estado de la carga perezosa de facturas para la pestaña de Facturación. */
 type EstadoFacturas = { estado: 'cargando' | 'ok' | 'error'; lista: FacturaVista[] };

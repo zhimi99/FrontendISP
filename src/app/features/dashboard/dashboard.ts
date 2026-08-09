@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { catchError, forkJoin, Observable, of } from 'rxjs';
 
 import { IconComponent } from '../../shared/icon';
+import { CatalogosService, OpcionCatalogo } from '../../core/services/catalogos.service';
 import { ClientesService } from '../../core/services/clientes.service';
 import { FacturacionService } from '../../core/services/facturacion.service';
 import { FinanzasService } from '../../core/services/finanzas.service';
@@ -11,7 +12,6 @@ import { OperativoService } from '../../core/services/operativo.service';
 import {
   ClienteListado,
   EstadoServicio,
-  ESTADO_SERVICIO_ETIQUETA,
   ESTADO_SERVICIO_TONO,
 } from '../../core/models/contratos.model';
 import { FacturaVista, MoraContrato } from '../../core/models/facturacion.model';
@@ -24,9 +24,6 @@ import {
   PRIORIDAD_ETIQUETA,
   PRIORIDAD_TONO,
 } from '../../core/models/operativo.model';
-
-/** Estados de servicio que se desglosan en el panel de clientes. */
-const ESTADOS_SERVICIO: EstadoServicio[] = ['ACTIVO', 'SUSPENDIDO', 'CORTADO', 'PENDIENTE', 'RETIRADO'];
 
 /**
  * Portada: una vista ejecutiva que compone lo que exponen todos los microservicios
@@ -47,14 +44,25 @@ export class DashboardComponent {
   private readonly finanzas = inject(FinanzasService);
   private readonly inventario = inject(InventarioService);
   private readonly operativo = inject(OperativoService);
+  private readonly catalogos = inject(CatalogosService);
 
-  readonly estadoServEtq = ESTADO_SERVICIO_ETIQUETA;
-  readonly estadoServTono = ESTADO_SERVICIO_TONO;
   readonly tipoOrdenEtq = TIPO_ORDEN_ETIQUETA;
   readonly estadoOrdenEtq = ESTADO_ORDEN_ETIQUETA;
   readonly prioridadEtq = PRIORIDAD_ETIQUETA;
   readonly prioridadTono = PRIORIDAD_TONO;
-  readonly estados = ESTADOS_SERVICIO;
+
+  /** Estados que se desglosan en el panel: los del dominio, y en su mismo orden. */
+  readonly estados = signal<OpcionCatalogo[]>([]);
+
+  /**
+   * El color de cada estado sigue siendo del frontend —es decisión de interfaz, no del
+   * negocio—, así que uno recién añadido al dominio se pintaría con el tono neutro
+   * hasta que se le asigne el suyo. Preferible a que no aparezca en el desglose, que
+   * es lo que ocurría cuando la lista estaba escrita a mano aquí.
+   */
+  tonoDe(codigo: string): string {
+    return ESTADO_SERVICIO_TONO[codigo as EstadoServicio] ?? 'neutral';
+  }
 
   private readonly clientes = signal<ClienteListado[]>([]);
   private readonly facturas = signal<FacturaVista[]>([]);
@@ -69,6 +77,8 @@ export class DashboardComponent {
   readonly fallos = signal<string[]>([]);
 
   constructor() {
+    this.catalogos.estadosServicio().subscribe((opciones) => this.estados.set(opciones));
+
     const g = <T>(o: Observable<T>, def: T, nombre: string): Observable<T> =>
       o.pipe(
         catchError(() => {
@@ -106,9 +116,18 @@ export class DashboardComponent {
   get clientesActivos() {
     return this.clientes().filter((c) => c.estadoServicio === 'ACTIVO').length;
   }
-  readonly clientesPorEstado = computed<Record<EstadoServicio, number>>(() => {
-    const acc = { ACTIVO: 0, SUSPENDIDO: 0, CORTADO: 0, PENDIENTE: 0, RETIRADO: 0 } as Record<EstadoServicio, number>;
-    for (const c of this.clientes()) if (c.estadoServicio) acc[c.estadoServicio]++;
+  /**
+   * Se siembra con el catálogo para que un estado sin clientes salga en cero y no en
+   * blanco, y para que uno recién añadido al dominio cuente igual. La versión anterior
+   * partía de los cinco estados escritos a mano: con uno nuevo, el contador arrancaba
+   * en `undefined` y el desglose mostraba NaN.
+   */
+  readonly clientesPorEstado = computed<Record<string, number>>(() => {
+    const acc: Record<string, number> = {};
+    for (const e of this.estados()) acc[e.codigo] = 0;
+    for (const c of this.clientes()) {
+      if (c.estadoServicio) acc[c.estadoServicio] = (acc[c.estadoServicio] ?? 0) + 1;
+    }
     return acc;
   });
   pctClientes(n: number): number {

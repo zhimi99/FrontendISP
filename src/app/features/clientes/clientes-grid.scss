@@ -1,0 +1,91 @@
+/*
+ * Reparto fijo de columnas de la grilla de clientes.
+ *
+ * Vive aparte de `clientes.scss` a propósito. Esa hoja la cargan otros doce módulos
+ * para heredar el aspecto de la tabla, y Angular la copia entera dentro de cada uno:
+ * lo que se escriba allí viaja trece veces al navegador. Estos anchos solo sirven a
+ * una tabla, así que solo los carga ella.
+ *
+ * Antes estaban en la hoja compartida y sin acotar, de modo que `table-layout: fixed`
+ * y sus medidas se aplicaban también a grillas con otras columnas y otro número de
+ * ellas. La primera columna mide 36px porque aquí lleva un checkbox; en los demás
+ * módulos esa columna es un código o un nombre, que no cabía y se derramaba sobre la
+ * celda vecina. Ahora esos módulos usan `table-layout: auto` y el navegador dimensiona
+ * cada columna por su contenido; `.table-scroll` absorbe el desbordamiento horizontal.
+ *
+ * Las medidas de abajo estaban escritas para ONCE columnas y la tabla tiene DIEZ:
+ * sobraban de cuando existían las columnas de zona y vendedor, que se retiraron sin
+ * recalibrar el reparto. Al correrse, «Acciones» heredaba el ancho pensado para otra
+ * y se quedaba en 86px para tres botones. Aquí van las diez reales, en su orden.
+ */
+table.tabla-clientes {
+  table-layout: fixed;
+}
+
+/* 1 · Selección */
+.tabla-clientes th:nth-child(1),
+.tabla-clientes td:nth-child(1) {
+  width: 36px;
+}
+
+/* 2 · ID Cliente (código, no parte) */
+.tabla-clientes th:nth-child(2),
+.tabla-clientes td:nth-child(2) {
+  width: 104px;
+}
+
+/* 3 · Nombre: la columna que más texto lleva */
+.tabla-clientes th:nth-child(3),
+.tabla-clientes td:nth-child(3) {
+  width: 210px;
+}
+
+/* 4 · Cédula / RUC (13 dígitos) */
+.tabla-clientes th:nth-child(4),
+.tabla-clientes td:nth-child(4) {
+  width: 120px;
+}
+
+/* 5 · Teléfono */
+.tabla-clientes th:nth-child(5),
+.tabla-clientes td:nth-child(5) {
+  width: 116px;
+}
+
+/* 6 · Dirección */
+.tabla-clientes th:nth-child(6),
+.tabla-clientes td:nth-child(6) {
+  width: 190px;
+}
+
+/* 7 · Plan / Velocidad, en dos líneas */
+.tabla-clientes th:nth-child(7),
+.tabla-clientes td:nth-child(7) {
+  width: 152px;
+}
+
+/* 8 · Estado (insignia) */
+.tabla-clientes th:nth-child(8),
+.tabla-clientes td:nth-child(8) {
+  width: 104px;
+}
+
+/* 9 · Registro (dd/mm/aaaa) */
+.tabla-clientes th:nth-child(9),
+.tabla-clientes td:nth-child(9) {
+  width: 96px;
+}
+
+/* 10 · Acciones: tres botones de 27px con sus separaciones */
+.tabla-clientes th:nth-child(10),
+.tabla-clientes td:nth-child(10) {
+  width: 120px;
+}
+
+/* El nombre y la dirección se recortan en vez de empujar la columna vecina. */
+.tabla-clientes .cell-main,
+.tabla-clientes .cell-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

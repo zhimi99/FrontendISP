@@ -258,7 +258,6 @@ table {
   border-collapse: collapse;
   font-size: 13px;
   min-width: 980px;
-  table-layout: fixed;
 }
 
 thead th {
@@ -279,52 +278,6 @@ tbody td {
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
   color: var(--text);
-}
-
-/* Anchos de columna (table-layout: fixed) — 11 columnas caben en ~1135px */
-th:nth-child(1),
-td:nth-child(1) {
-  width: 36px;
-}
-th:nth-child(2),
-td:nth-child(2) {
-  width: 96px;
-}
-th:nth-child(3),
-td:nth-child(3) {
-  width: 160px;
-}
-th:nth-child(4),
-td:nth-child(4) {
-  width: 104px;
-}
-th:nth-child(5),
-td:nth-child(5) {
-  width: 116px;
-}
-th:nth-child(6),
-td:nth-child(6) {
-  width: 146px;
-}
-th:nth-child(7),
-td:nth-child(7) {
-  width: 112px;
-}
-th:nth-child(8),
-td:nth-child(8) {
-  width: 90px;
-}
-th:nth-child(9),
-td:nth-child(9) {
-  width: 88px;
-}
-th:nth-child(10),
-td:nth-child(10) {
-  width: 86px;
-}
-th:nth-child(11),
-td:nth-child(11) {
-  width: 104px;
 }
 
 tbody tr:last-child td {

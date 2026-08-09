@@ -195,7 +195,7 @@
             @for (eq of equiposFiltrados(); track eq.id) {
               <tr>
                 <td class="mono">{{ eq.numeroSerie }}</td>
-                <td>{{ tipoEquipoEtq[eq.tipo] }}</td>
+                <td>{{ etiquetaTipoEquipo(eq.tipo) }}</td>
                 <td class="strong">{{ eq.marca }} <span class="muted">{{ eq.modelo }}</span></td>
                 <td class="mono muted">{{ eq.macAddress ?? '—' }}</td>
                 <td><span class="badge" [class]="estadoEquipoTono[eq.estado]">{{ estadoEquipoEtq[eq.estado] }}</span></td>
@@ -296,7 +296,7 @@
             <div class="field">
               <label>Tipo *</label>
               <select formControlName="tipo">
-                @for (t of tiposEquipo; track t) { <option [value]="t">{{ tipoEquipoEtq[t] }}</option> }
+                @for (t of tiposEquipo(); track t.codigo) { <option [value]="t.codigo">{{ t.nombre }}</option> }
               </select>
             </div>
             <div class="field">

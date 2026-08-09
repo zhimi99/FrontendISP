@@ -9,6 +9,11 @@
       <a class="btn" routerLink="/reportes/cierres-caja">
         <app-icon name="chart" [size]="15" /> Reporte de cierres
       </a>
+      @if (puedeVender()) {
+        <button class="btn" (click)="abrirVenta()">
+          <app-icon name="box" [size]="15" /> Vender
+        </button>
+      }
       @if (puedeRegistrarPago()) {
         <button class="btn btn-primary" (click)="abrirPago()">
           <app-icon name="cash" [size]="15" /> Nuevo pago
@@ -43,8 +48,10 @@
           <dl class="caja-kv">
             <div><dt>Abierta desde</dt><dd>{{ fechaHora(s.fechaApertura) }}</dd></div>
             <div><dt>Recaudado</dt><dd class="mono">{{ moneda(s.totalRecaudado) }}</dd></div>
+            <div><dt>Vendido en mostrador</dt><dd class="mono">{{ moneda(s.totalVendido) }}</dd></div>
             <div><dt>Efectivo en caja</dt><dd class="mono strong">{{ moneda(s.efectivoEnCaja) }}</dd></div>
             <div><dt>N.º pagos</dt><dd>{{ s.cantidadPagos }}</dd></div>
+            <div><dt>N.º ventas</dt><dd>{{ s.cantidadVentas }}</dd></div>
           </dl>
         } @else {
           <p class="caja-cerrada">Sin jornada abierta.</p>
@@ -167,7 +174,7 @@
               <td class="muted">{{ fechaHora(p.fecha) }}</td>
               <td class="strong">{{ p.clienteNombre }}</td>
               <td>
-                {{ formaEtq[p.formaPago] }}
+                {{ etiquetaForma(p.formaPago) }}
                 @if (p.cajaCodigo) { <span class="mono muted">· {{ p.cajaCodigo }}</span> }
               </td>
               <td class="mono muted">{{ facturasDe(p) }}</td>
@@ -271,7 +278,7 @@
           <div class="field">
             <label>Forma de pago *</label>
             <select [ngModel]="formaSel()" (ngModelChange)="formaSel.set($event)">
-              @for (fp of formasPago; track fp) { <option [value]="fp">{{ formaEtq[fp] }}</option> }
+              @for (fp of formasPago(); track fp.codigo) { <option [value]="fp.codigo">{{ fp.nombre }}</option> }
             </select>
           </div>
 
@@ -332,7 +339,7 @@
       </div>
       <div class="modal-body">
         <div class="caja-sesion-info">
-          <span class="mono strong">{{ p.clienteNombre }} · {{ moneda(p.monto) }} · {{ formaEtq[p.formaPago] }}</span>
+          <span class="mono strong">{{ p.clienteNombre }} · {{ moneda(p.monto) }} · {{ etiquetaForma(p.formaPago) }}</span>
           <span class="hint">
             El recibo no se borra: queda ANULADO con su motivo. Las facturas que cubrió
             ({{ facturasDe(p) }}) recuperan su saldo.
@@ -428,4 +435,21 @@
       </div>
     </div>
   </div>
+}
+
+<!-- ============ Ventana: vender productos en mostrador ============
+     Va en @defer para que el punto de venta NO viaje en el paquete inicial: es una
+     pantalla completa (escaneo, carrito, impresión) que la mayoría de las visitas a
+     cobranzas no llega a abrir. Se descarga la primera vez que se pulsa «Vender». -->
+@defer (when modalVenta()) {
+  @if (modalVenta()) {
+    <app-venta-mostrador
+      [sesionCajaId]="sesionActual()?.id ?? null"
+      [cajaNombre]="caja()?.nombre ?? null"
+      [clientes]="clientesOrdenados()"
+      [formasPago]="formasPago()"
+      (cerrar)="cerrarVenta()"
+      (registrada)="onVentaRegistrada($event)"
+    />
+  }
 }

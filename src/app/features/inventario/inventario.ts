@@ -3,6 +3,7 @@ import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angu
 import { forkJoin } from 'rxjs';
 
 import { IconComponent } from '../../shared/icon';
+import { CatalogosService, OpcionCatalogo } from '../../core/services/catalogos.service';
 import { InventarioService } from '../../core/services/inventario.service';
 import { AuthService } from '../../core/services/auth.service';
 import {
@@ -18,15 +19,11 @@ import {
   Ubicacion,
   ESTADO_EQUIPO_ETIQUETA,
   ESTADO_EQUIPO_TONO,
-  TIPO_EQUIPO_ETIQUETA,
   TIPO_MOVIMIENTO_ETIQUETA,
   TIPO_MOVIMIENTO_TONO,
   TIPO_UBICACION_ETIQUETA,
   UNIDAD_ETIQUETA,
 } from '../../core/models/inventario.model';
-
-/** Tipos de equipo disponibles en el selector del alta. */
-const TIPOS_EQUIPO: TipoEquipo[] = ['ROUTER', 'ONT', 'ONU', 'SWITCH', 'ANTENA', 'SPLITTER', 'OTRO'];
 
 /** Las cuatro operaciones de stock, cada una con su propio POST en el backend. */
 type TipoMovimientoUi = 'ingreso' | 'consumo' | 'traslado' | 'ajuste';
@@ -47,8 +44,19 @@ export class InventarioComponent {
   private readonly inventario = inject(InventarioService);
   private readonly auth = inject(AuthService);
   private readonly fb = inject(FormBuilder);
+  private readonly catalogos = inject(CatalogosService);
 
-  readonly tiposEquipo = TIPOS_EQUIPO;
+  /** Tipos de equipo del selector: los que admite el backend, no una copia. */
+  readonly tiposEquipo = signal<OpcionCatalogo[]>([]);
+
+  /**
+   * Nombre de un tipo de equipo para pintarlo en la tabla. Si el catálogo aún no ha
+   * llegado, o el equipo trae un tipo recién añadido al dominio, se muestra el código
+   * en vez de dejar la celda vacía.
+   */
+  etiquetaTipoEquipo(codigo: TipoEquipo | string): string {
+    return this.tiposEquipo().find((t) => t.codigo === codigo)?.nombre ?? codigo;
+  }
   /** Solo TECNICO/ADMIN pueden dar de alta equipos (POST /api/equipos). */
   readonly puedeAltaEquipo = computed(() => this.auth.tieneRol('TECNICO', 'ADMINISTRADOR'));
   /** Mover stock (ingresos, consumos y traslados) es trabajo de campo: TECNICO/ADMIN. */
@@ -61,7 +69,6 @@ export class InventarioComponent {
   /** Aviso del resultado del último movimiento de stock. */
   readonly avisoStock = signal<{ texto: string; error: boolean } | null>(null);
 
-  readonly tipoEquipoEtq = TIPO_EQUIPO_ETIQUETA;
   readonly estadoEquipoEtq = ESTADO_EQUIPO_ETIQUETA;
   readonly estadoEquipoTono = ESTADO_EQUIPO_TONO;
   readonly tipoUbicEtq = TIPO_UBICACION_ETIQUETA;
@@ -93,6 +100,7 @@ export class InventarioComponent {
 
   constructor() {
     this.cargar();
+    this.catalogos.tiposEquipo().subscribe((opciones) => this.tiposEquipo.set(opciones));
   }
 
   /** Carga inicial y refresco tras un movimiento de stock. */

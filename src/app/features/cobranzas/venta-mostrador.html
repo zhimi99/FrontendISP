@@ -1,0 +1,357 @@
+<div class="modal-backdrop" (click)="cerrarVentana()">
+  <div class="modal modal-pos" (click)="$event.stopPropagation()">
+    <div class="modal-head">
+      <h3>
+        <app-icon name="box" [size]="16" />
+        {{ venta() ? 'Venta registrada' : 'Vender productos' }}
+      </h3>
+      <button class="modal-x" (click)="cerrarVentana()" [disabled]="guardando()" aria-label="Cerrar">
+        ✕
+      </button>
+    </div>
+
+    <!-- ==================== Venta cobrada: ¿imprimir? ==================== -->
+    @if (venta(); as v) {
+      <div class="modal-body">
+        <div class="venta-ok">
+          <span class="venta-ok-ico"><app-icon name="cash" [size]="24" /></span>
+          <div>
+            <p class="venta-ok-titulo">{{ v.numero }} · {{ moneda(v.total) }}</p>
+            <p class="venta-ok-sub">
+              @if (v.facturaNumero) {
+                Factura electrónica <strong>{{ v.facturaNumero }}</strong> emitida y saldada.
+              } @else {
+                Recibo de venta interno, sin valor tributario.
+              }
+            </p>
+            <p class="venta-ok-sub">
+              {{ v.compradorNombre }} · {{ v.lineas.length }} artículo(s) · el inventario ya se
+              descontó.
+            </p>
+          </div>
+        </div>
+
+        <p class="pregunta-imprimir">¿Deseas imprimir el recibo de venta?</p>
+      </div>
+
+      <div class="modal-foot">
+        <button type="button" class="btn" (click)="nuevaVenta()">
+          <app-icon name="plus" [size]="14" /> Nueva venta
+        </button>
+        <button type="button" class="btn" (click)="cerrarVentana()">No imprimir</button>
+        <button type="button" class="btn btn-primary" (click)="imprimir()">
+          <app-icon name="download" [size]="14" /> Imprimir recibo
+        </button>
+      </div>
+    } @else {
+      <!-- ==================== Punto de venta ==================== -->
+      <div class="modal-body pos-body">
+        <!-- ---------- Izquierda: escaneo y carrito ---------- -->
+        <section class="pos-col pos-articulos">
+          <div class="pos-col-head"><app-icon name="box" [size]="13" /> Productos</div>
+
+          <div class="field">
+            <label for="escaneo">Escanea o busca el producto</label>
+            <div class="input-ico">
+              <app-icon name="search" [size]="15" />
+              <input
+                #escaneo
+                id="escaneo"
+                type="text"
+                autocomplete="off"
+                placeholder="Pasa el lector, o escribe código, serie o nombre"
+                [ngModel]="termino()"
+                (ngModelChange)="onTermino($event)"
+                (keydown.enter)="onEnter()"
+              />
+            </div>
+            <span class="hint">
+              El lector escribe el código y pulsa Enter: el producto se agrega solo.
+            </span>
+          </div>
+
+          @if (aviso()) {
+            <div class="pos-aviso">{{ aviso() }}</div>
+          }
+
+          @if (buscando()) {
+            <p class="hint">Buscando…</p>
+          } @else if (resultados().length > 0) {
+            <ul class="pos-resultados">
+              @for (a of resultados(); track a.origen + '-' + a.articuloId) {
+                <li>
+                  <button type="button" class="pos-resultado" (click)="agregar(a)">
+                    <span class="pos-res-desc">
+                      <strong>{{ a.descripcion }}</strong>
+                      <span class="mono pos-res-cod">{{ a.codigo }}</span>
+                    </span>
+                    <span class="pos-res-meta">
+                      <span class="mono">{{ moneda(a.precioUnitario) }}</span>
+                      <span class="hint">{{ disponibleDe(a) }}</span>
+                    </span>
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+
+          <div class="pos-carrito">
+            @if (carrito().length === 0) {
+              <p class="pos-vacio">Todavía no hay productos en esta venta.</p>
+            } @else {
+              <div class="tabla-carrito-scroll">
+                <table class="tabla-carrito">
+                  <thead>
+                    <tr>
+                      <th>Producto</th>
+                      <th class="col-cant">Cant.</th>
+                      <th class="col-num">P. unit.</th>
+                      <th class="col-num">Total</th>
+                      <th class="col-x"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (l of carrito(); track l.articulo.origen + '-' + l.articulo.articuloId; let i = $index) {
+                      <tr>
+                        <td>
+                          <span class="carrito-desc">{{ l.articulo.descripcion }}</span>
+                          <span class="mono carrito-cod">{{ l.articulo.codigo }}</span>
+                        </td>
+                        <td class="col-cant">
+                          @if (l.articulo.origen === 'EQUIPO') {
+                            <span class="mono">1</span>
+                          } @else {
+                            <input
+                              type="number"
+                              min="1"
+                              step="1"
+                              [max]="l.articulo.disponible"
+                              [ngModel]="l.cantidad"
+                              (ngModelChange)="cambiarCantidad(i, $event)"
+                            />
+                          }
+                        </td>
+                        <td class="col-num mono">{{ moneda(l.articulo.precioUnitario) }}</td>
+                        <td class="col-num mono strong">{{ moneda(totalDe(l)) }}</td>
+                        <td class="col-x">
+                          <button type="button" class="quitar" (click)="quitar(i)" aria-label="Quitar">
+                            ✕
+                          </button>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </div>
+        </section>
+
+        <!-- ---------- Derecha: condiciones y cobro ---------- -->
+        <section class="pos-col pos-cobro">
+          <div class="pos-col-head"><app-icon name="cash" [size]="13" /> Cobro y comprobante</div>
+
+          <div class="field">
+            <label>Comprobante</label>
+            <div class="chip-group" role="radiogroup" aria-label="Comprobante">
+              <label class="chip" [class.is-active]="comprobante() === 'RECIBO'">
+                <input
+                  type="radio"
+                  name="comprobante"
+                  class="chip-input"
+                  [checked]="comprobante() === 'RECIBO'"
+                  (change)="comprobante.set('RECIBO')"
+                />
+                <span class="chip-mark" aria-hidden="true"></span>
+                <span class="chip-copy">
+                  <strong>Sin factura</strong>
+                  <small>Solo recibo interno</small>
+                </span>
+              </label>
+              <label class="chip" [class.is-active]="comprobante() === 'FACTURA'">
+                <input
+                  type="radio"
+                  name="comprobante"
+                  class="chip-input"
+                  [checked]="comprobante() === 'FACTURA'"
+                  (change)="comprobante.set('FACTURA')"
+                />
+                <span class="chip-mark" aria-hidden="true"></span>
+                <span class="chip-copy">
+                  <strong>Con factura</strong>
+                  <small>Electrónica del SRI</small>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Comprador</label>
+            <div class="chip-group" role="radiogroup" aria-label="Comprador">
+              <label class="chip" [class.is-active]="consumidorFinal()">
+                <input
+                  type="radio"
+                  name="comprador"
+                  class="chip-input"
+                  [checked]="consumidorFinal()"
+                  (change)="onConsumidorFinal(true)"
+                />
+                <span class="chip-mark" aria-hidden="true"></span>
+                <span class="chip-copy">
+                  <strong>Consumidor final</strong>
+                  <small>Sin identificar</small>
+                </span>
+              </label>
+              <label class="chip" [class.is-active]="!consumidorFinal()">
+                <input
+                  type="radio"
+                  name="comprador"
+                  class="chip-input"
+                  [checked]="!consumidorFinal()"
+                  (change)="onConsumidorFinal(false)"
+                />
+                <span class="chip-mark" aria-hidden="true"></span>
+                <span class="chip-copy">
+                  <strong>Con datos</strong>
+                  <small>Cliente o persona</small>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          @if (!consumidorFinal()) {
+            <div class="field">
+              <label>Cliente registrado (opcional)</label>
+              <select [ngModel]="clienteSel()" (ngModelChange)="onClienteSel($event)">
+                <option [ngValue]="null">No es cliente / escribir a mano</option>
+                @for (c of clientesOrdenados(); track c.id) {
+                  <option [ngValue]="c.id">{{ c.nombre }} · {{ c.identificacion }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="grid-2">
+              <div class="field">
+                <label>Identificación *</label>
+                <input
+                  type="text"
+                  [ngModel]="identificacion()"
+                  (ngModelChange)="identificacion.set($event)"
+                  placeholder="Cédula o RUC"
+                />
+              </div>
+              <div class="field">
+                <label>Nombre *</label>
+                <input
+                  type="text"
+                  [ngModel]="nombre()"
+                  (ngModelChange)="nombre.set($event)"
+                  placeholder="Nombre o razón social"
+                />
+              </div>
+              <div class="field">
+                <label>Dirección</label>
+                <input
+                  type="text"
+                  [ngModel]="direccion()"
+                  (ngModelChange)="direccion.set($event)"
+                  placeholder="Opcional"
+                />
+              </div>
+              <div class="field">
+                <label>Correo</label>
+                <input
+                  type="email"
+                  [ngModel]="email()"
+                  (ngModelChange)="email.set($event)"
+                  placeholder="Opcional"
+                />
+              </div>
+            </div>
+          }
+
+          <div class="grid-2">
+            <div class="field">
+              <label>Forma de pago</label>
+              <select [ngModel]="formaPago()" (ngModelChange)="formaPago.set($event)">
+                @for (fp of formasPago(); track fp.codigo) {
+                  <option [value]="fp.codigo">{{ fp.nombre }}</option>
+                }
+              </select>
+              @if (faltaCaja()) {
+                <span class="hint hint-warn">Caja cerrada: el efectivo necesita jornada abierta.</span>
+              } @else if (esEfectivo() && cajaNombre()) {
+                <span class="hint">Entra en {{ cajaNombre() }}.</span>
+              }
+            </div>
+
+            <div class="field">
+              <label>Observación</label>
+              <input
+                type="text"
+                [ngModel]="observacion()"
+                (ngModelChange)="observacion.set($event)"
+                placeholder="Opcional"
+              />
+            </div>
+          </div>
+
+          <!-- ---------- Totales ---------- -->
+          <div class="pos-totales">
+            <div class="tot-fila">
+              <span>Subtotal</span><span class="mono">{{ moneda(subtotal()) }}</span>
+            </div>
+            <div class="tot-fila">
+              <span>IVA</span><span class="mono">{{ moneda(iva()) }}</span>
+            </div>
+            @if (hayDescuento()) {
+              <div class="tot-fila descuento">
+                <span>Descuento</span><span class="mono">−{{ moneda(descuento()) }}</span>
+              </div>
+            }
+            <div class="tot-cobrar">
+              <label for="total">Total a cobrar</label>
+              <div class="tot-input">
+                <span class="tot-currency">$</span>
+                <input
+                  id="total"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  [ngModel]="totalACobrar()"
+                  (ngModelChange)="onTotalEditado($event)"
+                />
+              </div>
+            </div>
+            <div class="tot-nota">
+              @if (hayDescuento()) {
+                <span>Precio de lista {{ moneda(totalLista()) }}.</span>
+                <button type="button" class="enlace" (click)="restaurarTotal()">Quitar descuento</button>
+              } @else {
+                <span>Baja esta cifra para aplicar un descuento; se reparte entre los productos.</span>
+              }
+            </div>
+          </div>
+
+          @if (error()) {
+            <div class="modal-error">{{ error() }}</div>
+          }
+        </section>
+      </div>
+
+      <div class="modal-foot">
+        <button type="button" class="btn" (click)="cerrarVentana()" [disabled]="guardando()">
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          (click)="cobrar()"
+          [disabled]="guardando() || carrito().length === 0"
+        >
+          {{ guardando() ? 'Cobrando…' : 'Cobrar ' + moneda(totalACobrar()) }}
+        </button>
+      </div>
+    }
+  </div>
+</div>
