@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { catchError, forkJoin, of } from 'rxjs';
 
 import { IconComponent } from '../../shared/icon';
@@ -11,8 +11,11 @@ import { ClientesService } from '../../core/services/clientes.service';
 import { FacturacionService } from '../../core/services/facturacion.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ClienteListado } from '../../core/models/contratos.model';
-import { FacturaVista } from '../../core/models/facturacion.model';
+import { esPreFactura, estadoDocumento, FacturaVista } from '../../core/models/facturacion.model';
 import { Venta } from '../../core/models/ventas.model';
+
+/** Las dos salidas posibles al cobrar un comprobante de cuenta por cobrar pendiente. */
+type OpcionCobro = 'FACTURA' | 'RECIBO';
 import {
   CajaEstado,
   EstadoPago,
@@ -41,6 +44,11 @@ export class CobranzasComponent {
   private readonly facturacion = inject(FacturacionService);
   private readonly auth = inject(AuthService);
   private readonly catalogos = inject(CatalogosService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+
+  readonly esPreFactura = esPreFactura;
+  readonly estadoDoc = estadoDocumento;
 
   readonly estadoEtq = ESTADO_PAGO_FIN_ETIQUETA;
   readonly estadoTono = ESTADO_PAGO_FIN_TONO;
@@ -85,6 +93,23 @@ export class CobranzasComponent {
   constructor() {
     this.cargar();
     this.catalogos.formasPago().subscribe((opciones) => this.formasPago.set(opciones));
+    this.iniciarDesdeQueryParams();
+  }
+
+  /**
+   * Entrada directa desde Facturación: el botón "Cobrar" de un comprobante trae
+   * clienteId (y facturaId, si se pulsó desde una fila concreta) por query params
+   * en vez de duplicar aquí el flujo de cobro. Se consumen una sola vez y se
+   * limpian de la URL para que un refresco no reabra el modal solo.
+   */
+  private iniciarDesdeQueryParams() {
+    const params = this.route.snapshot.queryParamMap;
+    const clienteId = Number(params.get('clienteId'));
+    if (!clienteId) return;
+    const facturaId = Number(params.get('facturaId')) || null;
+    this.abrirPago();
+    this.onClienteSel(clienteId, facturaId);
+    this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true });
   }
 
   private cargar() {
@@ -243,8 +268,8 @@ export class CobranzasComponent {
   readonly facturasCliente = signal<FacturaVista[]>([]);
   readonly facturasCargando = signal(false);
   readonly facturaSel = signal<number | null>(null);
+  readonly opcionCobro = signal<OpcionCobro>('FACTURA');
   readonly formaSel = signal<FormaPago>('EFECTIVO');
-  readonly sesionSel = signal<number | null>(null);
   readonly montoPago = signal<number | null>(null);
   readonly referencia = signal('');
   readonly banco = signal('');
@@ -254,14 +279,22 @@ export class CobranzasComponent {
   readonly facturaActual = computed(
     () => this.facturasCliente().find((f) => f.id === this.facturaSel()) ?? null,
   );
+  /**
+   * Computado, no capturado una sola vez al abrir el modal: si el modal se abre
+   * antes de que responda GET /api/cajas (por ejemplo, al llegar por el redirect
+   * de Facturación, que abre el modal en el propio constructor), capturar el
+   * valor una sola vez lo dejaba en null para siempre aunque la caja sí
+   * estuviera abierta. Así siempre refleja el estado actual de la caja.
+   */
+  readonly sesionSel = computed(() => this.sesionActual()?.id ?? null);
 
   abrirPago() {
     this.errorPago.set(null);
     this.clienteSel.set(null);
     this.facturasCliente.set([]);
     this.facturaSel.set(null);
+    this.opcionCobro.set('FACTURA');
     this.formaSel.set('EFECTIVO');
-    this.sesionSel.set(this.sesionActual()?.id ?? null);
     this.montoPago.set(null);
     this.referencia.set('');
     this.banco.set('');
@@ -274,7 +307,7 @@ export class CobranzasComponent {
     this.modalAbierto.set(false);
   }
 
-  onClienteSel(id: number | null) {
+  onClienteSel(id: number | null, facturaIdAPreseleccionar: number | null = null) {
     this.clienteSel.set(id);
     this.facturaSel.set(null);
     this.montoPago.set(null);
@@ -283,14 +316,16 @@ export class CobranzasComponent {
     this.facturasCargando.set(true);
     this.facturacion.listar({ clienteId: id }).subscribe({
       next: (lista) => {
-        this.facturasCliente.set(
-          lista.filter(
-            (f) =>
-              (f.estadoPago === 'PENDIENTE' || f.estadoPago === 'PARCIAL') &&
-              (f.saldoPendiente ?? 0) > 0,
-          ),
+        const pendientes = lista.filter(
+          (f) =>
+            (f.estadoPago === 'PENDIENTE' || f.estadoPago === 'PARCIAL') &&
+            (f.saldoPendiente ?? 0) > 0,
         );
+        this.facturasCliente.set(pendientes);
         this.facturasCargando.set(false);
+        if (facturaIdAPreseleccionar != null && pendientes.some((f) => f.id === facturaIdAPreseleccionar)) {
+          this.onFacturaSel(facturaIdAPreseleccionar);
+        }
       },
       error: () => {
         this.facturasCliente.set([]);
@@ -322,7 +357,17 @@ export class CobranzasComponent {
       banco: this.banco().trim() || null,
       sesionCajaId: this.esEfectivo() ? this.sesionSel() : null,
       observacion: this.observacion().trim() || null,
-      aplicaciones: [{ facturaId: f.id, facturaNumero: f.numeroDocumento, montoAplicado: monto }],
+      // Solo importa cuando la factura todavía es un comprobante sin decidir
+      // (esPreFactura): sobre una ya AUTORIZADA o ya resuelta como recibo, el
+      // backend ignora este valor porque ahí no hay decisión que tomar.
+      aplicaciones: [
+        {
+          facturaId: f.id,
+          facturaNumero: f.numeroDocumento,
+          montoAplicado: monto,
+          generarFacturaLegal: this.opcionCobro() === 'FACTURA',
+        },
+      ],
     };
     this.guardando.set(true);
     this.errorPago.set(null);

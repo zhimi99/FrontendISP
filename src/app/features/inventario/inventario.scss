@@ -5,6 +5,20 @@
   color: var(--slate);
 }
 
+/* clientes.scss no las define: las cuatro tablas de esta página las usan para
+   alinear cantidades/precios y resaltar el dato principal de una celda. */
+.right {
+  text-align: right;
+}
+.strong {
+  font-weight: 650;
+}
+
+/* ============ Pestaña Productos ============ */
+.tab-note {
+  margin: -8px 0 14px;
+}
+
 /* Acciones del encabezado (ingreso / consumo / nuevo equipo). */
 .head-actions {
   display: flex;

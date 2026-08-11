@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
-import { EstadoOrden, Orden } from '../models/operativo.model';
+import { CrearOrdenRequest, EstadoOrden, Orden } from '../models/operativo.model';
 
 /** Consulta de órdenes de trabajo (MS-OPERATIVO), a través del gateway. */
 @Injectable({ providedIn: 'root' })
@@ -26,6 +26,14 @@ export class OperativoService {
       params = params.set('tecnicoUsuarioId', filtro.tecnicoUsuarioId);
     }
     return this.http.get<Orden[]>(`${environment.apiBase}/api/ordenes`, { params });
+  }
+
+  /**
+   * POST /api/ordenes — genera un ticket nuevo (queda PENDIENTE, listo para asignar).
+   * Contrato propuesto: ver CrearOrdenRequest; el backend aún no expone esta ruta.
+   */
+  crear(req: CrearOrdenRequest): Observable<Orden> {
+    return this.http.post<Orden>(`${environment.apiBase}/api/ordenes`, req);
   }
 
   /** POST /api/ordenes/{id}/asignar — asigna la orden a un técnico (PENDIENTE → ASIGNADA). */

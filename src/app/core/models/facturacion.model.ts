@@ -15,7 +15,9 @@ export type EstadoSri =
   | 'AUTORIZADA'
   | 'NO_AUTORIZADA'
   | 'DEVUELTA'
-  | 'ANULADA';
+  | 'ANULADA'
+  /** Pre-factura cobrada como comprobante interno: nunca se envía al SRI. */
+  | 'SIN_FACTURA';
 
 /** Estado de cobro; lo actualiza MS-FINANZAS con el evento pago.aplicado */
 export type EstadoPagoFactura = 'PENDIENTE' | 'PARCIAL' | 'PAGADA' | 'ANULADA';
@@ -56,7 +58,6 @@ export interface EditarEmisorRequest {
 
 export interface FacturaDetalle {
   id: number;
-  facturaId: number;
   linea: number;
   codigoPrincipal: string;
   descripcion: string;
@@ -91,6 +92,9 @@ export interface Factura {
   clienteEmail?: string;
 
   periodo?: string;
+  /** Rango exacto del ciclo mensual (contratos recurrentes); alternativa a `periodo`. */
+  periodoInicio?: string;
+  periodoFin?: string;
   fechaEmision: string;
   fechaVencimiento: string;
 
@@ -111,7 +115,8 @@ export interface Factura {
   ridePdfUrl?: string;
   motivoAnulacion?: string;
 
-  detalle?: FacturaDetalle[];
+  /** Solo viene poblado en `GET /api/facturas/{id}`; la grilla no lo trae. */
+  detalle: FacturaDetalle[] | null;
 }
 
 /**
@@ -132,6 +137,8 @@ export interface FacturaVista {
   clienteRazonSocial: string;
   fechaEmision: string;
   fechaVencimiento: string;
+  periodoInicio: string | null;
+  periodoFin: string | null;
   subtotalSinImpuestos: number;
   valorIva: number;
   total: number;
@@ -158,6 +165,7 @@ export const ESTADO_SRI_ETIQUETA: Record<EstadoSri, string> = {
   NO_AUTORIZADA: 'No autorizada',
   DEVUELTA: 'Devuelta',
   ANULADA: 'Anulada',
+  SIN_FACTURA: 'Sin factura (comprobante)',
 };
 
 export const ESTADO_SRI_TONO: Record<EstadoSri, string> = {
@@ -169,6 +177,7 @@ export const ESTADO_SRI_TONO: Record<EstadoSri, string> = {
   NO_AUTORIZADA: 'danger',
   DEVUELTA: 'danger',
   ANULADA: 'neutral',
+  SIN_FACTURA: 'neutral',
 };
 
 export const ESTADO_PAGO_ETIQUETA: Record<EstadoPagoFactura, string> = {
@@ -184,3 +193,38 @@ export const ESTADO_PAGO_TONO: Record<EstadoPagoFactura, string> = {
   PAGADA: 'ok',
   ANULADA: 'neutral',
 };
+
+/**
+ * Un Comprobante de Cuenta por Cobrar es una factura que todavía no pasó por el SRI:
+ * existe, tiene cliente/conceptos/totales, pero nadie decidió aún si se cobra hacia
+ * factura legal o solo como comprobante interno. (Internamente sigue siendo el mismo
+ * registro `Factura` en estadoSri=GENERADA; el nombre "pre-factura" se evita de cara
+ * al usuario, no en los identificadores internos.)
+ */
+export function esPreFactura(f: { estadoSri: EstadoSri }): boolean {
+  return f.estadoSri === 'GENERADA';
+}
+
+/** Si todavía admite la acción de cobro (no se ha decidido ni saldado del todo). */
+export function esPreFacturaCobrable(f: { estadoSri: EstadoSri; estadoPago: EstadoPagoFactura }): boolean {
+  return esPreFactura(f) && (f.estadoPago === 'PENDIENTE' || f.estadoPago === 'PARCIAL');
+}
+
+/**
+ * Estado del documento en términos de negocio, más claro que el estado SRI técnico
+ * para no confundir un comprobante de cuenta por cobrar con una factura legal
+ * (GENERADA sirve para las dos cosas según si ya se cobró o no).
+ */
+export function estadoDocumento(
+  f: { estadoSri: EstadoSri; estadoPago: EstadoPagoFactura },
+): { texto: string; tono: string } {
+  if (f.estadoSri === 'GENERADA') {
+    if (f.estadoPago === 'PENDIENTE') {
+      return { texto: 'Comprobante pendiente', tono: 'warn' };
+    }
+    if (f.estadoPago === 'PARCIAL' || f.estadoPago === 'PAGADA') {
+      return { texto: 'Cobrada · pendiente de autorización SRI', tono: 'info' };
+    }
+  }
+  return { texto: ESTADO_SRI_ETIQUETA[f.estadoSri], tono: ESTADO_SRI_TONO[f.estadoSri] };
+}

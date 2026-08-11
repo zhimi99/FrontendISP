@@ -10,6 +10,7 @@ import {
   CrearContratoServicioRequest,
   CrearContratoServicioResponse,
   EditarContratoRequest,
+  HistorialEstado,
   OfertaServicioCatalogo,
 } from '../models/contratos.model';
 
@@ -42,6 +43,11 @@ export class ContratosService {
   /** GET /api/contratos/{codigo} — ficha del contrato. 404 si no existe. */
   detalle(codigo: string): Observable<ContratoDetalle> {
     return this.http.get<ContratoDetalle>(`${environment.apiBase}/api/contratos/${codigo}`);
+  }
+
+  /** GET /api/contratos/{codigo}/historial — transiciones de estado, más reciente primero. */
+  historial(codigo: string): Observable<HistorialEstado[]> {
+    return this.http.get<HistorialEstado[]>(`${environment.apiBase}/api/contratos/${codigo}/historial`);
   }
 
   /**

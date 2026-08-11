@@ -13,6 +13,13 @@ export type TipoUbicacion = 'BODEGA' | 'TECNICO';
 export type TipoEquipo = 'ROUTER' | 'ONT' | 'ONU' | 'SWITCH' | 'ANTENA' | 'SPLITTER' | 'OTRO';
 export type EstadoEquipo = 'DISPONIBLE' | 'ASIGNADO' | 'AVERIADO' | 'BAJA';
 export type TipoMovimiento = 'INGRESO' | 'EGRESO' | 'TRASLADO' | 'AJUSTE';
+/**
+ * INSTALACION: se consume en instalaciones/soportes (cable, conectores).
+ * VENTA: producto de mostrador para vender a cualquiera (tinta, cámaras, accesorios).
+ * Separa las pestañas de Inventario; no decide qué se puede vender, eso lo hace el
+ * precio — un material de INSTALACION con precio puesto se vende igual que uno de VENTA.
+ */
+export type CategoriaMaterial = 'INSTALACION' | 'VENTA';
 
 /** `GET /api/materiales` */
 export interface Material {
@@ -21,8 +28,16 @@ export interface Material {
   nombre: string;
   unidad: UnidadMedida;
   stockMinimo: number;
+  /** Precio de lista para el mostrador. Cero = todavía sin precio, no se vende. */
+  precioVenta: number;
+  categoria: CategoriaMaterial;
   activo: boolean;
 }
+
+export const CATEGORIA_MATERIAL_ETIQUETA: Record<CategoriaMaterial, string> = {
+  INSTALACION: 'Material de instalación',
+  VENTA: 'Producto de venta',
+};
 
 /** `GET /api/ubicaciones` */
 export interface Ubicacion {
@@ -46,12 +61,17 @@ export interface CrearMaterialRequest {
   nombre: string;
   unidad: UnidadMedida;
   stockMinimo: number;
+  /** Opcional: en cero queda sin precio y el mostrador se niega a venderlo. */
+  precioVenta: number;
+  categoria: CategoriaMaterial;
 }
 
 export interface EditarMaterialRequest {
   nombre: string;
   unidad: UnidadMedida;
   stockMinimo: number;
+  precioVenta: number;
+  categoria: CategoriaMaterial;
 }
 
 export interface CrearUbicacionRequest {
@@ -100,6 +120,8 @@ export interface Equipo {
   ubicacionId: number | null;
   ubicacion: string | null;
   contratoId: number | null;
+  /** Precio de lista de esta unidad. Cero = todavía sin precio, no se vende. */
+  precioVenta: number;
   observacion: string | null;
 }
 
@@ -167,6 +189,20 @@ export interface AltaEquipoRequest {
   numeroSerie: string;
   macAddress: string | null;
   ubicacionId: number;
+  /** Opcional: en cero queda sin precio y el mostrador se niega a venderlo. */
+  precioVenta: number;
+}
+
+/**
+ * Cuerpo para instalar un equipo DISPONIBLE en un contrato (`POST /api/equipos/{id}/asignar`).
+ *
+ * Es la misma ruta que usa una instalación normal; un técnico que deja un router en
+ * un soporte la llama igual, con el `contratoId` de la orden. Marca, modelo, serie y
+ * MAC no viajan en el cuerpo porque no cambian: ya están en el equipo desde su alta,
+ * esto solo cambia a qué contrato pertenece.
+ */
+export interface AsignarEquipoRequest {
+  contratoId: number;
 }
 
 export const UNIDAD_ETIQUETA: Record<UnidadMedida, string> = {

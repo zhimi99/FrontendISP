@@ -28,6 +28,26 @@ export interface Orden {
   fechaCierre: string | null;
 }
 
+/**
+ * Cuerpo para generar un ticket (`POST /api/ordenes`), confirmado contra
+ * OrdenController/CrearOrdenRequest de MS-OPERATIVO.
+ *
+ * `contratoId` es obligatorio: la orden es sobre un servicio concreto del cliente
+ * (uno puede tener varios contratos), no sobre el cliente en general. `clienteId` es
+ * redundante con el contrato pero el backend lo acepta aparte, así que se manda
+ * igual. `tecnicoUsuarioId` existe para cuando despacho asigna al crear (no se usa
+ * desde "Generar Soporte": ahí la orden nace PENDIENTE y se asigna después).
+ */
+export interface CrearOrdenRequest {
+  tipo: TipoOrden;
+  prioridad: PrioridadOrden;
+  contratoId: number;
+  clienteId: number | null;
+  descripcion: string;
+  fechaProgramada: string | null;
+  tecnicoUsuarioId: number | null;
+}
+
 export const ESTADO_ORDEN_ETIQUETA: Record<EstadoOrden, string> = {
   PENDIENTE: 'Pendiente',
   ASIGNADA: 'Asignada',

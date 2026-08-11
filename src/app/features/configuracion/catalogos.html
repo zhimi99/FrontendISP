@@ -41,8 +41,10 @@
           <tr>
             <th>Código</th>
             <th>Material</th>
+            <th>Categoría</th>
             <th>Unidad</th>
             <th class="right">Stock mínimo</th>
+            <th class="right">Precio venta</th>
             <th>Estado</th>
             <th class="w-acc">Acciones</th>
           </tr>
@@ -52,8 +54,16 @@
             <tr [class.inactivo]="!m.activo">
               <td class="mono strong">{{ m.codigo }}</td>
               <td>{{ m.nombre }}</td>
+              <td>
+                <span class="badge" [class]="m.categoria === 'VENTA' ? 'info' : 'neutral'">
+                  {{ categoriaEtiqueta[m.categoria] }}
+                </span>
+              </td>
               <td class="muted">{{ m.unidad }}</td>
               <td class="right mono">{{ m.stockMinimo }}</td>
+              <td class="right mono" [class.muted]="m.precioVenta <= 0">
+                {{ m.precioVenta > 0 ? ('$' + m.precioVenta.toFixed(2)) : 'Sin precio' }}
+              </td>
               <td>
                 <span class="badge" [class]="m.activo ? 'ok' : 'neutral'">
                   {{ m.activo ? 'En catálogo' : 'Retirado' }}
@@ -70,7 +80,7 @@
               </td>
             </tr>
           } @empty {
-            <tr><td colspan="6" class="empty">{{ mensajeTabla() }}</td></tr>
+            <tr><td colspan="8" class="empty">{{ mensajeTabla() }}</td></tr>
           }
         </tbody>
       </table>
@@ -158,9 +168,21 @@
                    placeholder="Cable drop fibra óptica 1 hilo" />
           </div>
           <div class="field span2">
+            <label>Categoría *</label>
+            <select [ngModel]="mCategoria()" (ngModelChange)="mCategoria.set($event)">
+              @for (c of categorias; track c) { <option [ngValue]="c">{{ categoriaEtiqueta[c] }}</option> }
+            </select>
+            <span class="hint">Instalación: cable, conectores. Venta: tinta, cámaras, accesorios — lo que vende Cobranzas.</span>
+          </div>
+          <div class="field">
             <label>Stock mínimo</label>
             <input type="number" min="0" step="0.01" [ngModel]="mMinimo()" (ngModelChange)="mMinimo.set($event)" />
             <span class="hint">Por debajo de aquí sale en «qué reponer». Cero = no se vigila.</span>
+          </div>
+          <div class="field">
+            <label>Precio de venta</label>
+            <input type="number" min="0" step="0.01" [ngModel]="mPrecio()" (ngModelChange)="mPrecio.set($event)" />
+            <span class="hint">Cero = sin precio, no se vende en el mostrador de Cobranzas.</span>
           </div>
         </div>
 

@@ -85,7 +85,7 @@ export class InventarioComponent {
   readonly error = signal<string | null>(null);
   readonly equiposCargando = signal(false);
 
-  readonly tabActiva = signal<0 | 1 | 2>(0);
+  readonly tabActiva = signal<0 | 1 | 2 | 3>(0);
 
   // Filtros de la pestaña de stock
   readonly qStock = signal('');
@@ -94,6 +94,9 @@ export class InventarioComponent {
   // Filtros de la pestaña de equipos
   readonly qEquipo = signal('');
   readonly estadoFiltro = signal<EstadoEquipo>('DISPONIBLE');
+
+  // Filtro de la pestaña de productos (el catálogo de materiales, con su precio)
+  readonly qProducto = signal('');
 
   /** materialId de los materiales bajo mínimo, para marcarlos en la tabla de stock. */
   private readonly bajoStockIds = computed(() => new Set(this.bajoStock().map((b) => b.materialId)));
@@ -130,17 +133,24 @@ export class InventarioComponent {
     });
   }
 
-  setTab(i: 0 | 1 | 2) {
+  setTab(i: 0 | 1 | 2 | 3) {
     this.tabActiva.set(i);
     // El libro solo se pide cuando se mira: es la consulta más pesada de la pantalla.
     if (i === 2 && this.movimientos().length === 0) this.cargarMovimientos();
   }
 
-  /* ---------- Stock de material ---------- */
+  /** categoría de cada material, para separar Stock (instalación) de Productos (venta). */
+  private readonly categoriaPorMaterial = computed(
+    () => new Map(this.materiales().map((m) => [m.id, m.categoria])),
+  );
+
+  /* ---------- Stock de material (solo lo que se usa en instalaciones) ---------- */
   readonly existenciasFiltradas = computed(() => {
     const term = this.qStock().trim().toLowerCase();
     const ub = this.ubicacionFiltro();
+    const categorias = this.categoriaPorMaterial();
     return this.existencias().filter((e) => {
+      if (categorias.get(e.materialId) === 'VENTA') return false;
       if (ub !== '' && e.ubicacionId !== ub) return false;
       if (term) {
         const heno = `${e.codigo} ${e.material}`.toLowerCase();
@@ -191,6 +201,99 @@ export class InventarioComponent {
     return 'No se encontraron materiales con los filtros aplicados.';
   });
 
+  /**
+   * ---------- Productos de venta ----------
+   *
+   * Materiales de categoría VENTA: aparte del material de instalación (cable,
+   * conectores), pensados para vender a cualquiera —cliente o no— desde el
+   * mostrador de Cobranzas. Es el mismo catálogo de materiales, solo separado
+   * por la categoría en vez de mezclarse con lo que se usa en instalaciones.
+   */
+  readonly productosFiltrados = computed(() => {
+    const term = this.qProducto().trim().toLowerCase();
+    const base = this.materiales()
+      .filter((m) => m.categoria === 'VENTA')
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+    if (!term) return base;
+    return base.filter((m) => `${m.codigo} ${m.nombre}`.toLowerCase().includes(term));
+  });
+
+  readonly mensajeProductos = 'No se encontraron productos con ese filtro.';
+
+  /** Cuánto queda de un material sumando todas las ubicaciones. */
+  stockTotalDe(materialId: number): number {
+    return this.existencias()
+      .filter((e) => e.materialId === materialId)
+      .reduce((s, e) => s + e.cantidad, 0);
+  }
+
+  moneda(n: number): string {
+    return new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD' }).format(n ?? 0);
+  }
+
+  /* ---------- Alta rápida de producto (categoría VENTA fija) ---------- */
+  readonly puedeGestionarMateriales = computed(() => this.auth.tieneRol('ADMINISTRADOR'));
+  readonly modalProducto = signal(false);
+  readonly guardandoProducto = signal(false);
+  readonly errorProducto = signal<string | null>(null);
+
+  readonly formProducto = this.fb.nonNullable.group({
+    codigo: ['', [Validators.required, Validators.maxLength(30)]],
+    nombre: ['', [Validators.required, Validators.maxLength(120)]],
+    precioVenta: [0, [Validators.required, Validators.min(0.01)]],
+  });
+
+  abrirNuevoProducto() {
+    this.errorProducto.set(null);
+    this.formProducto.reset({ codigo: '', nombre: '', precioVenta: 0 });
+    this.modalProducto.set(true);
+  }
+
+  cerrarProducto() {
+    if (this.guardandoProducto()) return;
+    this.modalProducto.set(false);
+  }
+
+  guardarProducto() {
+    if (this.formProducto.invalid) {
+      this.formProducto.markAllAsTouched();
+      return;
+    }
+    const v = this.formProducto.getRawValue();
+    this.guardandoProducto.set(true);
+    this.errorProducto.set(null);
+    // Unidad y stock mínimo no aplican a un producto de mostrador: unidad fija y
+    // sin alerta de reposición (0 = no se vigila). Lo distintivo aquí es el precio.
+    this.inventario
+      .crearMaterial({
+        codigo: v.codigo.trim().toUpperCase(),
+        nombre: v.nombre.trim(),
+        unidad: 'UNIDAD',
+        stockMinimo: 0,
+        precioVenta: v.precioVenta,
+        categoria: 'VENTA',
+      })
+      .subscribe({
+        next: () => {
+          this.guardandoProducto.set(false);
+          this.modalProducto.set(false);
+          this.cargar();
+        },
+        error: (e) => {
+          this.guardandoProducto.set(false);
+          this.errorProducto.set(this.mensajeProducto(e));
+        },
+      });
+  }
+
+  private mensajeProducto(e: { status?: number }): string {
+    if (e.status === 409 || e.status === 422) return 'Ya existe un producto con ese código.';
+    if (e.status === 400) return 'Revisa los datos: algún campo es inválido.';
+    if (e.status === 403) return 'Tu rol no tiene permiso para agregar productos.';
+    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
+    return 'No se pudo guardar el producto.';
+  }
+
   readonly mensajeEquipos = computed(() => {
     if (this.cargando() || this.equiposCargando()) return 'Cargando equipos…';
     if (this.error()) return this.error()!;
@@ -213,6 +316,7 @@ export class InventarioComponent {
     numeroSerie: ['', [Validators.required, Validators.maxLength(80)]],
     macAddress: ['', Validators.pattern(/^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/)],
     ubicacionId: [null as number | null, Validators.required],
+    precioVenta: [0, [Validators.required, Validators.min(0)]],
   });
 
   abrirAlta() {
@@ -242,6 +346,7 @@ export class InventarioComponent {
       numeroSerie: v.numeroSerie.trim(),
       macAddress: v.macAddress.trim() ? v.macAddress.trim() : null,
       ubicacionId: v.ubicacionId!,
+      precioVenta: v.precioVenta,
     };
     this.guardando.set(true);
     this.errorAlta.set(null);
@@ -275,6 +380,7 @@ export class InventarioComponent {
     if (e.status) return `El gateway respondió ${e.status} al cargar el inventario.`;
     return 'Error inesperado cargando el inventario.';
   }
+
 
   /* ---------- Historial: el libro de inventario ---------- */
   readonly movimientos = signal<Movimiento[]>([]);

@@ -103,7 +103,6 @@
             <th>Plan / Velocidad</th>
             <th>Estado</th>
             <th>Día corte</th>
-            <th>Usuario PPPoE</th>
             <th>Alta</th>
             <th class="w-acc">Acciones</th>
           </tr>
@@ -128,7 +127,6 @@
                 </span>
               </td>
               <td class="muted">{{ c.diaCorte }}</td>
-              <td class="mono" [title]="c.pppoeUsuario ?? ''">{{ c.pppoeUsuario ?? '—' }}</td>
               <td class="muted">{{ fechaCorta(c.fechaAlta) }}</td>
               <td class="w-acc">
                 <div class="acc">
@@ -156,7 +154,7 @@
             </tr>
           } @empty {
             <tr>
-              <td colspan="8" class="empty">{{ mensajeTabla() }}</td>
+              <td colspan="7" class="empty">{{ mensajeTabla() }}</td>
             </tr>
           }
         </tbody>

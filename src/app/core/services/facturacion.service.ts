@@ -6,6 +6,7 @@ import { environment } from '../../../environments/environment';
 import {
   EditarEmisorRequest,
   Emisor,
+  Factura,
   FacturaVista,
   MoraContrato,
 } from '../models/facturacion.model';
@@ -26,6 +27,22 @@ export class FacturacionService {
   /** GET /api/mora — contratos con facturas vencidas (regla de cortes). */
   mora(): Observable<MoraContrato[]> {
     return this.http.get<MoraContrato[]>(`${environment.apiBase}/api/mora`);
+  }
+
+  /** GET /api/facturas/{id} — el detalle de una factura o comprobante, con sus líneas. */
+  ver(id: number): Observable<Factura> {
+    return this.http.get<Factura>(`${environment.apiBase}/api/facturas/${id}`);
+  }
+
+  /**
+   * GET /api/facturas/{id}/comprobante — el PDF del Comprobante de Cuenta por
+   * Cobrar. Documento interno sin validez fiscal, distinto del RIDE: funciona para
+   * cualquier factura o comprobante, autorizado por el SRI o no.
+   */
+  descargarComprobante(id: number): Observable<Blob> {
+    return this.http.get(`${environment.apiBase}/api/facturas/${id}/comprobante`, {
+      responseType: 'blob',
+    });
   }
 
   /**

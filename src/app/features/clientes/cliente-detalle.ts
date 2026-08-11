@@ -12,11 +12,15 @@ import { ContratosService } from '../../core/services/contratos.service';
 import { FacturacionService } from '../../core/services/facturacion.service';
 import { PlanesService } from '../../core/services/planes.service';
 import { AuthService } from '../../core/services/auth.service';
+import { OperativoService } from '../../core/services/operativo.service';
+import { InventarioService } from '../../core/services/inventario.service';
 import {
   ClienteDetalle,
   CrearContratoServicioRequest,
   DireccionDetalle,
   EditarClienteRequest,
+  HistorialEstado,
+  MOTIVO_ETIQUETA,
   NuevaDireccionContratoRequest,
   OfertaServicioCatalogo,
   PlanCatalogo,
@@ -28,10 +32,27 @@ import {
   ESTADO_SRI_TONO,
   FacturaVista,
 } from '../../core/models/facturacion.model';
+import {
+  ESTADO_ORDEN_ETIQUETA,
+  ESTADO_ORDEN_TONO,
+  Orden,
+  PRIORIDAD_ETIQUETA,
+  PRIORIDAD_TONO,
+} from '../../core/models/operativo.model';
+import {
+  Equipo,
+  ESTADO_EQUIPO_ETIQUETA,
+  ESTADO_EQUIPO_TONO,
+  TIPO_EQUIPO_ETIQUETA,
+} from '../../core/models/inventario.model';
 import { EstadoCliente, ESTADOS } from './clientes.model';
 
 /** Estado de la carga perezosa de facturas para la pestaña de Facturación. */
 type EstadoFacturas = { estado: 'cargando' | 'ok' | 'error'; lista: FacturaVista[] };
+/** Órdenes de trabajo del cliente (todos los tipos); la pestaña Soporte filtra las SOPORTE. */
+type EstadoOrdenes = { estado: 'cargando' | 'ok' | 'error'; lista: Orden[] };
+type EstadoHistorial = { estado: 'cargando' | 'ok' | 'error'; lista: HistorialEstado[] };
+type EstadoEquipos = { estado: 'cargando' | 'ok' | 'error'; lista: Equipo[] };
 type ModoDireccionServicio = 'EXISTENTE' | 'NUEVA';
 
 @Component({
@@ -49,6 +70,8 @@ export class ClienteDetalleComponent implements OnDestroy {
   private readonly planesService = inject(PlanesService);
   private readonly auth = inject(AuthService);
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly operativo = inject(OperativoService);
+  private readonly inventario = inject(InventarioService);
   readonly estadosMap = ESTADOS;
 
   /** Solo soporte/ventas y administración editan al cliente (PUT /api/clientes). */
@@ -60,16 +83,17 @@ export class ClienteDetalleComponent implements OnDestroy {
   readonly sriEtq = ESTADO_SRI_ETIQUETA;
   readonly sriTono = ESTADO_SRI_TONO;
 
-  readonly tabs = [
-    'Resumen',
-    'Servicios',
-    'Facturación',
-    'Soporte',
-    'Documentos',
-    'Historial',
-    'Red / Equipos',
-    'Ubicación',
-  ];
+  // Mapas de etiqueta/tono para las pestañas de Soporte, Historial y Red/Equipos.
+  readonly ordenEtq = ESTADO_ORDEN_ETIQUETA;
+  readonly ordenTono = ESTADO_ORDEN_TONO;
+  readonly prioridadEtq = PRIORIDAD_ETIQUETA;
+  readonly prioridadTono = PRIORIDAD_TONO;
+  readonly motivoEtq = MOTIVO_ETIQUETA;
+  readonly equipoEtq = ESTADO_EQUIPO_ETIQUETA;
+  readonly equipoTono = ESTADO_EQUIPO_TONO;
+  readonly tipoEquipoEtq = TIPO_EQUIPO_ETIQUETA;
+
+  readonly tabs = ['Resumen', 'Servicios', 'Facturación', 'Soporte', 'Historial', 'Red / Equipos'];
   readonly tabActiva = signal(0);
   readonly modalIdentificacion = signal(false);
 
@@ -145,6 +169,81 @@ export class ClienteDetalleComponent implements OnDestroy {
   readonly facturasTotal = computed(() =>
     this.facturas().reduce((s, f) => s + (f.total ?? 0), 0),
   );
+
+  /**
+   * Órdenes de trabajo, historial de estado y equipos son por contrato: un cliente
+   * puede tener varios servicios (Internet, TV Cable, ...), así que se consulta cada
+   * contrato y se combinan las listas. Mismo patrón que `facturasResp` arriba.
+   */
+  private readonly ordenesResp = toSignal(
+    toObservable(this.detalle).pipe(
+      switchMap((det): Observable<EstadoOrdenes> => {
+        const contratos = det?.contratos ?? [];
+        if (!det || contratos.length === 0) return of({ estado: 'ok' as const, lista: [] });
+        return forkJoin(contratos.map((c) => this.operativo.listarOrdenes({ contratoId: c.id }))).pipe(
+          map((listas) => ({ estado: 'ok' as const, lista: listas.flat() })),
+          startWith({ estado: 'cargando' as const, lista: [] as Orden[] }),
+          catchError(() => of({ estado: 'error' as const, lista: [] as Orden[] })),
+        );
+      }),
+    ),
+    { initialValue: { estado: 'cargando', lista: [] } as EstadoOrdenes },
+  );
+
+  readonly ordenesCargando = computed(() => this.ordenesResp().estado === 'cargando');
+  readonly ordenesError = computed(() => this.ordenesResp().estado === 'error');
+  /** Solo los tickets de soporte, más recientes primero. */
+  readonly ticketsSoporte = computed(() =>
+    this.ordenesResp()
+      .lista.filter((o) => o.tipo === 'SOPORTE')
+      .sort((a, b) => (b.fechaProgramada ?? '').localeCompare(a.fechaProgramada ?? '')),
+  );
+
+  private readonly historialResp = toSignal(
+    toObservable(this.detalle).pipe(
+      switchMap((det): Observable<EstadoHistorial> => {
+        const contratos = det?.contratos ?? [];
+        if (!det || contratos.length === 0) return of({ estado: 'ok' as const, lista: [] });
+        return forkJoin(contratos.map((c) => this.contratosService.historial(c.codigo))).pipe(
+          map((listas) => ({ estado: 'ok' as const, lista: listas.flat() })),
+          startWith({ estado: 'cargando' as const, lista: [] as HistorialEstado[] }),
+          catchError(() => of({ estado: 'error' as const, lista: [] as HistorialEstado[] })),
+        );
+      }),
+    ),
+    { initialValue: { estado: 'cargando', lista: [] } as EstadoHistorial },
+  );
+
+  readonly historialCargando = computed(() => this.historialResp().estado === 'cargando');
+  readonly historialError = computed(() => this.historialResp().estado === 'error');
+  readonly historial = computed(() =>
+    [...this.historialResp().lista].sort((a, b) => (b.fecha ?? '').localeCompare(a.fecha ?? '')),
+  );
+
+  private readonly equiposResp = toSignal(
+    toObservable(this.detalle).pipe(
+      switchMap((det): Observable<EstadoEquipos> => {
+        const contratos = det?.contratos ?? [];
+        if (!det || contratos.length === 0) return of({ estado: 'ok' as const, lista: [] });
+        return forkJoin(contratos.map((c) => this.inventario.listarEquipos({ contratoId: c.id }))).pipe(
+          map((listas) => ({ estado: 'ok' as const, lista: listas.flat() })),
+          startWith({ estado: 'cargando' as const, lista: [] as Equipo[] }),
+          catchError(() => of({ estado: 'error' as const, lista: [] as Equipo[] })),
+        );
+      }),
+    ),
+    { initialValue: { estado: 'cargando', lista: [] } as EstadoEquipos },
+  );
+
+  readonly equipos = computed(() => this.equiposResp().lista);
+  readonly equiposCargando = computed(() => this.equiposResp().estado === 'cargando');
+  readonly equiposError = computed(() => this.equiposResp().estado === 'error');
+
+  /** Código legible del contrato/servicio al que pertenece una fila de estas 3 pestañas. */
+  contratoCodigoDe(contratoId: number | null): string {
+    if (contratoId == null) return '—';
+    return this.detalle()?.contratos.find((c) => c.id === contratoId)?.codigo ?? `#${contratoId}`;
+  }
 
   setTab(i: number) {
     this.tabActiva.set(i);

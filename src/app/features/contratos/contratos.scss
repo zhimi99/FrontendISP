@@ -8,7 +8,7 @@
  * wrap, el código se desbordaba sobre la celda del cliente y ambos se veían montados.
  *
  * Este archivo se carga DESPUÉS de clientes.scss, por lo que a igual especificidad
- * gana y reasigna las ocho columnas reales. No se toca la tabla de clientes.
+ * gana y reasigna las siete columnas reales. No se toca la tabla de clientes.
  */
 
 /* Los anchos de abajo solo mandan con reparto fijo. Antes venía heredado de la hoja
@@ -47,24 +47,16 @@ td:nth-child(5) {
   width: 76px;
 }
 
-/* 6 · Usuario PPPoE — puede ser largo; se trunca con elipsis en vez de invadir "Alta". */
+/* 6 · Alta */
 th:nth-child(6),
 td:nth-child(6) {
-  width: 168px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* 7 · Alta */
-th:nth-child(7),
-td:nth-child(7) {
   width: 96px;
   white-space: nowrap;
 }
 
-/* 8 · Acciones */
-th:nth-child(8),
-td:nth-child(8) {
+/* 7 · Acciones */
+th:nth-child(7),
+td:nth-child(7) {
   width: 150px;
 }
 
@@ -89,7 +81,7 @@ tbody td.muted {
 
 /* Estado y acciones sí se centran respecto al alto de la fila. */
 tbody td:nth-child(4),
-tbody td:nth-child(8) {
+tbody td:nth-child(7) {
   vertical-align: middle;
   padding-top: 12px;
 }

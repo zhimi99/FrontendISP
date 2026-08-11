@@ -287,6 +287,153 @@
               </div>
             }
           </div>
+        } @else if (tabActiva() === 3) {
+          <!-- ============ Soporte (operativo.orden_trabajo, tipo SOPORTE) ============ -->
+          <div class="card fact-tab">
+            <div class="fact-head">
+              <div>
+                <h3 class="card-title mb0">Soporte</h3>
+                <p class="sub">Tickets de soporte registrados para los servicios de este cliente.</p>
+              </div>
+            </div>
+
+            @if (ordenesCargando()) {
+              <div class="fact-estado"><app-icon name="refresh" [size]="20" /> Cargando tickets…</div>
+            } @else if (ordenesError()) {
+              <div class="fact-estado error">No se pudieron cargar los tickets de soporte.</div>
+            } @else {
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>N.º</th>
+                      <th>Servicio</th>
+                      <th>Descripción</th>
+                      <th>Prioridad</th>
+                      <th>Estado</th>
+                      <th>Programada</th>
+                      <th>Cierre</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (o of ticketsSoporte(); track o.id) {
+                      <tr>
+                        <td class="mono muted">{{ o.numero }}</td>
+                        <td>{{ contratoCodigoDe(o.contratoId) }}</td>
+                        <td>{{ o.descripcion || '—' }}</td>
+                        <td><span class="badge" [class]="prioridadTono[o.prioridad]">{{ prioridadEtq[o.prioridad] }}</span></td>
+                        <td><span class="badge" [class]="ordenTono[o.estado]">{{ ordenEtq[o.estado] }}</span></td>
+                        <td class="muted">{{ fecha(o.fechaProgramada) }}</td>
+                        <td class="muted">{{ fecha(o.fechaCierre) }}</td>
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td colspan="7" class="empty">Este cliente no tiene tickets de soporte registrados.</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </div>
+        } @else if (tabActiva() === 4) {
+          <!-- ============ Historial (contratos.historial_estado) ============ -->
+          <div class="card fact-tab">
+            <div class="fact-head">
+              <div>
+                <h3 class="card-title mb0">Historial de estado</h3>
+                <p class="sub">Transiciones de estado de cada servicio contratado.</p>
+              </div>
+            </div>
+
+            @if (historialCargando()) {
+              <div class="fact-estado"><app-icon name="refresh" [size]="20" /> Cargando historial…</div>
+            } @else if (historialError()) {
+              <div class="fact-estado error">No se pudo cargar el historial de estado.</div>
+            } @else {
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Servicio</th>
+                      <th>Cambio</th>
+                      <th>Motivo</th>
+                      <th>Origen</th>
+                      <th>Fecha</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (h of historial(); track h.id) {
+                      <tr>
+                        <td>{{ contratoCodigoDe(h.contratoId) }}</td>
+                        <td>
+                          @if (h.estadoAnterior) {
+                            <span class="badge" [class]="estadosMap[h.estadoAnterior].tono">{{ estadosMap[h.estadoAnterior].texto }}</span>
+                            →
+                          }
+                          <span class="badge" [class]="estadosMap[h.estadoNuevo].tono">{{ estadosMap[h.estadoNuevo].texto }}</span>
+                        </td>
+                        <td>{{ motivoEtq[h.motivo] }}</td>
+                        <td class="muted">{{ h.origen === 'SISTEMA' ? 'Sistema' : 'Usuario' }}</td>
+                        <td class="muted">{{ fecha(h.fecha) }}</td>
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td colspan="5" class="empty">Este cliente aún no tiene historial de estado.</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </div>
+        } @else if (tabActiva() === 5) {
+          <!-- ============ Red / Equipos (inventario.equipo) ============ -->
+          <div class="card fact-tab">
+            <div class="fact-head">
+              <div>
+                <h3 class="card-title mb0">Red / Equipos</h3>
+                <p class="sub">Equipos instalados en los servicios de este cliente.</p>
+              </div>
+            </div>
+
+            @if (equiposCargando()) {
+              <div class="fact-estado"><app-icon name="refresh" [size]="20" /> Cargando equipos…</div>
+            } @else if (equiposError()) {
+              <div class="fact-estado error">No se pudieron cargar los equipos.</div>
+            } @else {
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Servicio</th>
+                      <th>Tipo</th>
+                      <th>Marca / Modelo</th>
+                      <th>N.º Serie</th>
+                      <th>MAC</th>
+                      <th>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (e of equipos(); track e.id) {
+                      <tr>
+                        <td>{{ contratoCodigoDe(e.contratoId) }}</td>
+                        <td>{{ tipoEquipoEtq[e.tipo] }}</td>
+                        <td>{{ e.marca }} {{ e.modelo }}</td>
+                        <td class="mono">{{ e.numeroSerie }}</td>
+                        <td class="mono muted">{{ e.macAddress || '—' }}</td>
+                        <td><span class="badge" [class]="equipoTono[e.estado]">{{ equipoEtq[e.estado] }}</span></td>
+                      </tr>
+                    } @empty {
+                      <tr>
+                        <td colspan="6" class="empty">Este cliente no tiene equipos asignados.</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </div>
         } @else {
           <div class="card tab-empty">
             <div class="tab-empty-ico"><app-icon name="box" [size]="26" /></div>

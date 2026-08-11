@@ -3,7 +3,7 @@
   <div class="page-head">
     <div>
       <h2>Facturación</h2>
-      <p class="sub">Comprobantes electrónicos emitidos y su estado de cobro.</p>
+      <p class="sub">Cuentas por cobrar pendientes, comprobantes electrónicos y su estado de cobro.</p>
     </div>
   </div>
 
@@ -44,7 +44,8 @@
       <label>Estado SRI</label>
       <select [ngModel]="estadoSri()" (ngModelChange)="estadoSri.set($event); onFiltroCambio()">
         <option value="">Todos</option>
-        <option value="GENERADA">Generada</option>
+        <option value="GENERADA">Generada (cuenta por cobrar)</option>
+        <option value="SIN_FACTURA">Sin factura (comprobante)</option>
         <option value="AUTORIZADA">Autorizada</option>
         <option value="NO_AUTORIZADA">No autorizada</option>
         <option value="ANULADA">Anulada</option>
@@ -52,6 +53,9 @@
     </div>
 
     <div class="filter-btns">
+      <button class="btn" [class.btn-primary]="soloPendientes()" (click)="alternarSoloPendientes()">
+        <app-icon name="invoice" [size]="15" /> Solo cuentas por cobrar pendientes
+      </button>
       <button class="btn" (click)="limpiar()"><app-icon name="refresh" [size]="15" /> Limpiar</button>
     </div>
   </div>
@@ -66,6 +70,20 @@
         <span class="stat-foot">100% del total</span>
       </div>
     </div>
+    <button
+      type="button"
+      class="stat clicable"
+      [class.activo]="soloPendientes()"
+      (click)="alternarSoloPendientes()"
+      title="Cuentas por cobrar generadas, sin decidir o cobradas pero pendientes de autorización SRI"
+    >
+      <span class="stat-ico warn"><app-icon name="invoice" [size]="20" /></span>
+      <div class="stat-body">
+        <span class="stat-label">Cuentas por cobrar pendientes</span>
+        <span class="stat-value">{{ preFacturasPendientes }}</span>
+        <span class="stat-foot">{{ pct(preFacturasPendientes) }}</span>
+      </div>
+    </button>
     <div class="stat">
       <span class="stat-ico ok"><app-icon name="invoice" [size]="20" /></span>
       <div class="stat-body">
@@ -75,7 +93,7 @@
       </div>
     </div>
     <div class="stat">
-      <span class="stat-ico warn"><app-icon name="invoice" [size]="20" /></span>
+      <span class="stat-ico info"><app-icon name="invoice" [size]="20" /></span>
       <div class="stat-body">
         <span class="stat-label">Por cobrar</span>
         <span class="stat-value">{{ porCobrar }}</span>
@@ -105,32 +123,44 @@
             <th class="right">Total</th>
             <th class="right">Saldo</th>
             <th>Pago</th>
-            <th>SRI</th>
-            @if (puedeAnular()) { <th class="w-acc"></th> }
+            <th>Documento</th>
+            <th class="w-acc"></th>
           </tr>
         </thead>
         <tbody>
           @for (f of pagados(); track f.id) {
             <tr>
               <td class="mono muted">{{ f.numeroDocumento }}</td>
-              <td class="strong">{{ f.clienteRazonSocial }}</td>
+              <td class="strong">
+                {{ f.clienteRazonSocial }}
+                @if (esPreFacturaFila(f)) { <span class="badge neutral mini-badge">Cuenta por cobrar</span> }
+              </td>
               <td class="muted">{{ fechaCorta(f.fechaEmision) }}</td>
               <td class="muted">{{ fechaCorta(f.fechaVencimiento) }}</td>
               <td class="right mono">{{ moneda(f.total) }}</td>
               <td class="right mono">{{ moneda(f.saldoPendiente) }}</td>
               <td><span class="badge" [class]="pagoTono[f.estadoPago]">{{ pagoEtq[f.estadoPago] }}</span></td>
-              <td><span class="badge" [class]="sriTono[f.estadoSri]">{{ sriEtq[f.estadoSri] }}</span></td>
-              @if (puedeAnular()) {
-                <td class="w-acc">
-                  @if (sePuedeAnular(f)) {
-                    <button class="btn mini danger" (click)="abrirAnular(f)">Anular</button>
-                  }
-                </td>
-              }
+              <td><span class="badge" [class]="estadoDoc(f).tono">{{ estadoDoc(f).texto }}</span></td>
+              <td class="w-acc">
+                <button class="btn mini" (click)="abrirVer(f)" title="Ver detalle">
+                  <app-icon name="eye" [size]="14" />
+                </button>
+                <button
+                  class="btn mini"
+                  (click)="descargarComprobante(f)"
+                  [disabled]="descargandoComprobante() === f.id"
+                  title="Descargar comprobante"
+                >
+                  <app-icon name="download" [size]="14" />
+                </button>
+                @if (puedeCobrar() && sePuedeCobrar(f)) {
+                  <button class="btn mini ok" (click)="cobrar(f)" title="Ir a Cobranzas a registrar el cobro">Cobrar</button>
+                }
+              </td>
             </tr>
           } @empty {
             <tr>
-              <td [attr.colspan]="puedeAnular() ? 9 : 8" class="empty">{{ mensajeTabla() }}</td>
+              <td colspan="9" class="empty">{{ mensajeTabla() }}</td>
             </tr>
           }
         </tbody>
@@ -167,35 +197,79 @@
   </div>
 </div>
 
-<!-- ============ Modal: anular factura ============ -->
-@if (facturaAnular(); as f) {
-  <div class="modal-backdrop" (click)="cerrarAnular()">
-    <div class="modal" (click)="$event.stopPropagation()">
+<!-- ============ Modal: ver detalle (conceptos, valores, totales) ============ -->
+@if (facturaVer(); as f) {
+  <div class="modal-backdrop" (click)="cerrarVer()">
+    <div class="modal detalle-modal" (click)="$event.stopPropagation()">
       <div class="modal-head">
-        <h3>Anular factura · {{ f.numeroDocumento }}</h3>
-        <button class="modal-x" (click)="cerrarAnular()" [disabled]="anulando()" aria-label="Cerrar">✕</button>
+        <h3>{{ esPreFacturaFila(f) ? 'Comprobante de Cuenta por Cobrar' : 'Factura' }} · {{ f.numeroDocumento }}</h3>
+        <button class="modal-x" (click)="cerrarVer()" aria-label="Cerrar">✕</button>
       </div>
       <div class="modal-body">
-        <div class="nota">
-          <span class="mono strong">{{ f.clienteRazonSocial }} · {{ moneda(f.total) }}</span>
-          <span class="hint">
-            El comprobante queda ANULADO con su motivo. Solo procede porque todavía no
-            está autorizado por el SRI; una factura autorizada se compensa con una nota
-            de crédito.
-          </span>
-        </div>
-        <div class="field">
-          <label>Motivo de la anulación *</label>
-          <input type="text" [ngModel]="motivoAnular()" (ngModelChange)="motivoAnular.set($event)"
-                 placeholder="Error en los datos, emitida por duplicado…" />
-        </div>
-        @if (errorAnular()) { <div class="modal-error">{{ errorAnular() }}</div> }
+        @if (cargandoDetalle()) {
+          <span class="hint">Cargando detalle…</span>
+        } @else if (errorDetalle()) {
+          <div class="modal-error">{{ errorDetalle() }}</div>
+        } @else if (detalleVer(); as d) {
+          <dl class="detalle-kv">
+            <div><dt>Cliente</dt><dd>{{ d.clienteRazonSocial }}</dd></div>
+            <div><dt>Identificación</dt><dd class="mono">{{ d.clienteIdentificacion }}</dd></div>
+            <div><dt>Emisión</dt><dd>{{ fechaCorta(d.fechaEmision) }}</dd></div>
+            <div><dt>Vencimiento</dt><dd>{{ fechaCorta(d.fechaVencimiento) }}</dd></div>
+            @if (d.periodoInicio && d.periodoFin) {
+              <div><dt>Período cobrado</dt><dd>{{ fechaCorta(d.periodoInicio) }} – {{ fechaCorta(d.periodoFin) }}</dd></div>
+            } @else if (d.periodo) {
+              <div><dt>Periodo</dt><dd>{{ d.periodo }}</dd></div>
+            }
+            <div><dt>Estado</dt><dd><span class="badge" [class]="estadoDoc(d).tono">{{ estadoDoc(d).texto }}</span></dd></div>
+          </dl>
+
+          <div class="table-scroll">
+            <table class="detalle-tabla">
+              <thead>
+                <tr>
+                  <th>Concepto</th>
+                  <th class="right">Cant.</th>
+                  <th class="right">P. unit.</th>
+                  <th class="right">IVA</th>
+                  <th class="right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (l of d.detalle ?? []; track l.id) {
+                  <tr>
+                    <td>{{ l.descripcion }}</td>
+                    <td class="right mono">{{ l.cantidad }}</td>
+                    <td class="right mono">{{ moneda(l.precioUnitario) }}</td>
+                    <td class="right mono">{{ moneda(l.valorIva) }}</td>
+                    <td class="right mono">{{ moneda(l.total) }}</td>
+                  </tr>
+                } @empty {
+                  <tr><td colspan="5" class="empty">Sin conceptos.</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <div class="detalle-totales">
+            <span>Subtotal: {{ moneda(d.subtotalSinImpuestos) }}</span>
+            <span>IVA: {{ moneda(d.valorIva) }}</span>
+            <span class="total">Total: {{ moneda(d.total) }}</span>
+            <span>Saldo pendiente: {{ moneda(d.saldoPendiente) }}</span>
+          </div>
+        }
       </div>
       <div class="modal-foot">
-        <button type="button" class="btn" (click)="cerrarAnular()" [disabled]="anulando()">Volver</button>
-        <button type="button" class="btn btn-danger" (click)="confirmarAnular()" [disabled]="anulando()">
-          {{ anulando() ? 'Anulando…' : 'Anular factura' }}
+        <button
+          type="button"
+          class="btn"
+          [disabled]="descargandoComprobante() === f.id"
+          (click)="descargarComprobante(f)"
+        >
+          <app-icon name="download" [size]="14" />
+          {{ descargandoComprobante() === f.id ? 'Descargando…' : 'Descargar comprobante' }}
         </button>
+        <button type="button" class="btn" (click)="cerrarVer()">Cerrar</button>
       </div>
     </div>
   </div>

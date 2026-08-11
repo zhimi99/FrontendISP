@@ -161,3 +161,197 @@
 .btn-danger:hover:not(:disabled) {
   filter: brightness(0.95);
 }
+
+/* Tonos que la hoja compartida no define */
+.stat-ico.info {
+  background: var(--info-soft);
+  color: var(--info);
+}
+.badge.neutral {
+  background: var(--slate-soft);
+  color: var(--slate);
+}
+.badge.info {
+  background: var(--info-soft);
+  color: var(--info);
+}
+.mini-badge {
+  margin-left: 6px;
+  font-size: 10px;
+  padding: 1px 6px;
+  vertical-align: middle;
+}
+
+/* Cinco tarjetas de resumen en vez de cuatro: pre-facturas pendientes suma una más. */
+.stats {
+  grid-template-columns: repeat(5, 1fr);
+}
+@media (max-width: 1100px) {
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 620px) {
+  .stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* La tarjeta de pre-facturas pendientes también es un filtro rápido. */
+.stat.clicable {
+  cursor: pointer;
+  text-align: left;
+  border: 1px solid var(--border);
+  font: inherit;
+}
+.stat.clicable:hover {
+  border-color: var(--brand);
+}
+.stat.clicable.activo {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 1px var(--brand) inset;
+}
+
+/* Varias acciones por fila (ver / cobrar / anular) */
+.w-acc {
+  display: flex;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+.btn.mini.ok {
+  border-color: var(--ok);
+  color: var(--ok);
+  background: transparent;
+}
+.btn.mini.ok:hover:not(:disabled) {
+  background: var(--ok-soft);
+}
+
+/* ============ Formulario en grilla (modal de cobro) ============ */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.form-grid .field.span2 {
+  grid-column: 1 / -1;
+}
+.modal .field select {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+.modal .field select:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+.hint-warn {
+  color: var(--warn);
+  font-weight: 600;
+}
+.caja-sesion-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 11px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+@media (max-width: 520px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============ Selector de las dos opciones de cobro ============ */
+.opciones-cobro {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.opcion-cobro {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  background: var(--bg);
+}
+.opcion-cobro:hover {
+  border-color: var(--brand);
+}
+.opcion-cobro.activa {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 1px var(--brand) inset;
+  background: var(--card);
+}
+.opcion-cobro-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 650;
+  font-size: 13.5px;
+}
+.opcion-cobro-desc {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+@media (max-width: 520px) {
+  .opciones-cobro {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============ Modal de detalle (conceptos, valores, totales) ============ */
+.detalle-modal {
+  max-width: 640px;
+}
+.detalle-kv {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+.detalle-kv dt {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.detalle-kv dd {
+  margin: 0;
+}
+.detalle-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.detalle-tabla th,
+.detalle-tabla td {
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+.detalle-tabla .right {
+  text-align: right;
+}
+.detalle-totales {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  font-size: 13px;
+}
+.detalle-totales .total {
+  font-weight: 700;
+  font-size: 15px;
+}

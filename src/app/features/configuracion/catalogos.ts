@@ -7,6 +7,8 @@ import { InventarioService } from '../../core/services/inventario.service';
 import { UsuariosService } from '../../core/services/usuarios.service';
 import { UsuarioResumen } from '../../core/models/auth.model';
 import {
+  CATEGORIA_MATERIAL_ETIQUETA,
+  CategoriaMaterial,
   Material,
   TIPO_UBICACION_ETIQUETA,
   TipoUbicacion,
@@ -45,6 +47,8 @@ export class CatalogosComponent {
   readonly tipoEtiqueta = TIPO_UBICACION_ETIQUETA;
   readonly unidades: UnidadMedida[] = ['UNIDAD', 'METRO', 'ROLLO', 'CAJA'];
   readonly tipos: TipoUbicacion[] = ['BODEGA', 'TECNICO'];
+  readonly categorias: CategoriaMaterial[] = ['INSTALACION', 'VENTA'];
+  readonly categoriaEtiqueta = CATEGORIA_MATERIAL_ETIQUETA;
 
   readonly seccion = signal<Seccion>('materiales');
   readonly materiales = signal<Material[]>([]);
@@ -101,6 +105,8 @@ export class CatalogosComponent {
   readonly mNombre = signal('');
   readonly mUnidad = signal<UnidadMedida>('UNIDAD');
   readonly mMinimo = signal(0);
+  readonly mPrecio = signal(0);
+  readonly mCategoria = signal<CategoriaMaterial>('INSTALACION');
 
   abrirMaterial(m: Material | null) {
     this.banner.set(null);
@@ -109,6 +115,8 @@ export class CatalogosComponent {
     this.mNombre.set(m?.nombre ?? '');
     this.mUnidad.set(m?.unidad ?? 'UNIDAD');
     this.mMinimo.set(m?.stockMinimo ?? 0);
+    this.mPrecio.set(m?.precioVenta ?? 0);
+    this.mCategoria.set(m?.categoria ?? 'INSTALACION');
     this.editandoMaterial.set(m);
     this.creandoMaterial.set(m === null);
   }
@@ -128,6 +136,10 @@ export class CatalogosComponent {
       this.errorMaterial.set('El stock mínimo no puede ser negativo.');
       return;
     }
+    if (this.mPrecio() < 0) {
+      this.errorMaterial.set('El precio de venta no puede ser negativo.');
+      return;
+    }
 
     this.guardandoMaterial.set(true);
     this.errorMaterial.set(null);
@@ -137,12 +149,16 @@ export class CatalogosComponent {
           nombre: this.mNombre().trim(),
           unidad: this.mUnidad(),
           stockMinimo: Number(this.mMinimo()),
+          precioVenta: Number(this.mPrecio()),
+          categoria: this.mCategoria(),
         })
       : this.inventario.crearMaterial({
           codigo: this.mCodigo().trim(),
           nombre: this.mNombre().trim(),
           unidad: this.mUnidad(),
           stockMinimo: Number(this.mMinimo()),
+          precioVenta: Number(this.mPrecio()),
+          categoria: this.mCategoria(),
         });
 
     peticion.subscribe({

@@ -99,6 +99,7 @@
     <button class="tab" [class.active]="tabActiva() === 0" (click)="setTab(0)">Stock de materiales</button>
     <button class="tab" [class.active]="tabActiva() === 1" (click)="setTab(1)">Equipos</button>
     <button class="tab" [class.active]="tabActiva() === 2" (click)="setTab(2)">Movimientos</button>
+    <button class="tab" [class.active]="tabActiva() === 3" (click)="setTab(3)">Productos</button>
   </div>
 
   <!-- ============ Pestaña: Stock de materiales ============ -->
@@ -279,6 +280,61 @@
       }
     </div>
   }
+
+  <!-- ============ Pestaña: Productos ============ -->
+  @if (tabActiva() === 3) {
+    <div class="filters card">
+      <div class="field grow">
+        <label>Buscar</label>
+        <div class="input-ico">
+          <app-icon name="search" [size]="15" />
+          <input type="text" placeholder="Código o producto…"
+                 [ngModel]="qProducto()" (ngModelChange)="qProducto.set($event)" />
+        </div>
+      </div>
+      @if (puedeGestionarMateriales()) {
+        <div class="filter-btns">
+          <button class="btn btn-primary" (click)="abrirNuevoProducto()">
+            <app-icon name="box" [size]="15" /> Nuevo producto
+          </button>
+        </div>
+      }
+    </div>
+    <p class="sub tab-note">
+      Aparte del material de instalación: productos para vender a cualquiera —cliente o no— desde el
+      mostrador de Cobranzas (cámaras, tintas, cargadores, accesorios). Para el detalle completo
+      (unidad, stock mínimo) entra a <strong>Configuración → Catálogos</strong>.
+    </p>
+
+    <div class="card table-card">
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Producto</th>
+              <th class="right">Precio</th>
+              <th class="right">Stock</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (m of productosFiltrados(); track m.id) {
+              <tr>
+                <td class="mono muted">{{ m.codigo }}</td>
+                <td class="strong">{{ m.nombre }}</td>
+                <td class="right mono strong" [class.muted]="m.precioVenta <= 0">
+                  {{ m.precioVenta > 0 ? moneda(m.precioVenta) : 'Sin precio' }}
+                </td>
+                <td class="right mono">{{ cantidad(stockTotalDe(m.id)) }}</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="4" class="empty">{{ mensajeProductos }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
 </div>
 
 <!-- ============ Modal: alta de equipo ============ -->
@@ -325,6 +381,11 @@
                 <span class="field-error">Formato esperado: 00:1a:2b:3c:4d:5e</span>
               }
             </div>
+            <div class="field span2">
+              <label>Precio de venta (opcional)</label>
+              <input type="number" min="0" step="0.01" formControlName="precioVenta" placeholder="0" />
+              <span class="hint">Solo si se va a vender en el mostrador de Cobranzas. En 0 queda sin precio.</span>
+            </div>
           </div>
 
           @if (errorAlta()) {
@@ -336,6 +397,49 @@
           <button type="button" class="btn" (click)="cerrarAlta()" [disabled]="guardando()">Cancelar</button>
           <button type="submit" class="btn btn-primary" [disabled]="guardando()">
             {{ guardando() ? 'Guardando…' : 'Dar de alta' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- ============ Modal: nuevo producto (categoría VENTA) ============ -->
+@if (modalProducto()) {
+  <div class="modal-backdrop" (click)="cerrarProducto()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <h3>Nuevo producto</h3>
+        <button class="modal-x" (click)="cerrarProducto()" [disabled]="guardandoProducto()" aria-label="Cerrar">✕</button>
+      </div>
+
+      <form [formGroup]="formProducto" (ngSubmit)="guardarProducto()">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="field span2">
+              <label>Código *</label>
+              <input type="text" formControlName="codigo" placeholder="CAM-4K001" />
+            </div>
+            <div class="field span2">
+              <label>Nombre *</label>
+              <input type="text" formControlName="nombre" placeholder="Cámara IP 4K" />
+            </div>
+            <div class="field span2">
+              <label>Precio de venta *</label>
+              <input type="number" min="0.01" step="0.01" formControlName="precioVenta" placeholder="0.00" />
+              <span class="hint">Es lo que lo distingue de un material: sin precio no aparece en Cobranzas.</span>
+            </div>
+          </div>
+
+          @if (errorProducto()) {
+            <div class="modal-error">{{ errorProducto() }}</div>
+          }
+        </div>
+
+        <div class="modal-foot">
+          <button type="button" class="btn" (click)="cerrarProducto()" [disabled]="guardandoProducto()">Cancelar</button>
+          <button type="submit" class="btn btn-primary" [disabled]="guardandoProducto()">
+            {{ guardandoProducto() ? 'Guardando…' : 'Agregar producto' }}
           </button>
         </div>
       </form>

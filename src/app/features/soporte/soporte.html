@@ -5,6 +5,13 @@
       <h2>Soporte / Operativo</h2>
       <p class="sub">Órdenes de trabajo: instalaciones, soporte y retiros.</p>
     </div>
+    @if (puedeCrear()) {
+      <div class="head-actions">
+        <button class="btn btn-primary" (click)="abrirNuevo()">
+          <app-icon name="support" [size]="15" /> Generar Soporte
+        </button>
+      </div>
+    }
   </div>
 
   @if (banner(); as b) {
@@ -104,12 +111,12 @@
                   @if (o.estado === 'PENDIENTE' && puedeAsignar()) {
                     <button class="btn mini" (click)="abrirAsignar(o)">Asignar</button>
                   }
-                  @if (o.estado === 'ASIGNADA' && puedeOperar()) {
+                  @if (o.estado === 'ASIGNADA' && puedeOperarOrden(o)) {
                     <button class="btn mini" [disabled]="procesandoId() === o.id" (click)="iniciarOrden(o)">
                       {{ procesandoId() === o.id ? '…' : 'Iniciar' }}
                     </button>
                   }
-                  @if (o.estado === 'EN_PROCESO' && puedeOperar()) {
+                  @if (o.estado === 'EN_PROCESO' && puedeOperarOrden(o)) {
                     <button class="btn mini btn-primary" (click)="abrirCerrar(o)">Cerrar</button>
                   }
                   @if (o.estado !== 'CERRADA' && o.estado !== 'CANCELADA' && puedeCancelar()) {
@@ -191,7 +198,7 @@
 <!-- ============ Modal: cerrar orden ============ -->
 @if (accion() === 'cerrar') {
   <div class="modal-backdrop" (click)="cerrarModal()">
-    <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal modal-lg" (click)="$event.stopPropagation()">
       <div class="modal-head">
         <h3>Cerrar orden · {{ ordenAccion()?.numero }}</h3>
         <button class="modal-x" (click)="cerrarModal()" [disabled]="guardando()" aria-label="Cerrar">✕</button>
@@ -200,15 +207,140 @@
         <div class="field">
           <label>Resultado del trabajo *</label>
           <textarea rows="4" [ngModel]="resultado()" (ngModelChange)="resultado.set($event)"
-                    placeholder="Qué se hizo, materiales usados, observaciones…"></textarea>
+                    placeholder="Qué se hizo, observaciones para el cliente o para quien lo revise después…"></textarea>
           <span class="hint">Obligatorio: queda en la auditoría de la orden.</span>
         </div>
+
+        @if (recursosInvCargando()) {
+          <span class="hint">Cargando tu inventario…</span>
+        } @else {
+          <div class="field">
+            <label>Material utilizado (opcional)</label>
+            @if (materialesUsados().length) {
+              <div class="lineas-material">
+                @for (l of materialesUsados(); track $index) {
+                  <div class="linea-material">
+                    <select [ngModel]="l.materialId" (ngModelChange)="actualizarLineaMaterial($index, 'materialId', $event)">
+                      <option [ngValue]="null" disabled>Selecciona…</option>
+                      @for (m of materialesOrdenados(); track m.id) {
+                        <option [ngValue]="m.id">{{ m.codigo }} · {{ m.nombre }}</option>
+                      }
+                    </select>
+                    <input type="number" min="0" step="0.01" placeholder="Cant."
+                           [ngModel]="l.cantidad" (ngModelChange)="actualizarLineaMaterial($index, 'cantidad', $event)" />
+                    <button type="button" class="linea-quitar" (click)="quitarLineaMaterial($index)" aria-label="Quitar línea">✕</button>
+                  </div>
+                }
+              </div>
+            }
+            <button type="button" class="btn mini" (click)="agregarLineaMaterial()">+ Agregar material</button>
+            <span class="hint">Se descuenta de tu furgoneta y queda registrado contra esta orden.</span>
+          </div>
+
+          <div class="field">
+            <label>Equipo entregado (opcional)</label>
+            @if (equiposEntregables().length) {
+              <select [ngModel]="equipoEntregadoId()" (ngModelChange)="equipoEntregadoId.set($event)">
+                <option [ngValue]="null">No se entregó equipo</option>
+                @for (e of equiposEntregables(); track e.id) {
+                  <option [ngValue]="e.id">{{ equipoLabel(e) }}</option>
+                }
+              </select>
+              <span class="hint">Marca, modelo y MAC ya quedaron registrados al dar de alta el equipo; esto solo lo pasa a nombre del cliente.</span>
+            } @else {
+              <span class="hint">No tienes equipos disponibles en tu furgoneta. Si dejaste uno, primero pide el traslado desde Inventario.</span>
+            }
+          </div>
+        }
+
         @if (errorAccion()) { <div class="modal-error">{{ errorAccion() }}</div> }
       </div>
       <div class="modal-foot">
         <button type="button" class="btn" (click)="cerrarModal()" [disabled]="guardando()">Cancelar</button>
         <button type="button" class="btn btn-primary" (click)="confirmarCerrar()" [disabled]="guardando()">
           {{ guardando() ? 'Cerrando…' : 'Cerrar orden' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ============ Modal: generar soporte ============ -->
+@if (modalNuevo()) {
+  <div class="modal-backdrop" (click)="cerrarNuevo()">
+    <div class="modal modal-lg" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <h3>Generar soporte</h3>
+        <button class="modal-x" (click)="cerrarNuevo()" [disabled]="guardandoNuevo()" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Cliente *</label>
+          @if (clienteNuevoSel(); as cli) {
+            <div class="cliente-elegido">
+              <span>{{ cli.nombre }} <span class="muted mono">· {{ cli.identificacion }}</span></span>
+              <button type="button" class="btn mini" (click)="clienteNuevoSel.set(null)">Cambiar</button>
+            </div>
+          } @else {
+            <input type="text" placeholder="Busca por nombre, código o cédula…"
+                   [ngModel]="busquedaClienteNuevo()" (ngModelChange)="busquedaClienteNuevo.set($event)" />
+            @if (busquedaClienteNuevo().trim().length > 1) {
+              <ul class="sugerencias">
+                @for (c of clientesSugeridosNuevo(); track c.id) {
+                  <li>
+                    <button type="button" (click)="elegirClienteNuevo(c)">
+                      <span class="sug-nombre">{{ c.nombre }}</span>
+                      <span class="sug-meta mono">{{ c.codigo }} · {{ c.identificacion }}</span>
+                    </button>
+                  </li>
+                } @empty {
+                  <li class="sug-vacio">Sin coincidencias.</li>
+                }
+              </ul>
+            }
+          }
+        </div>
+
+        @if (clienteNuevoSel()) {
+          <div class="field">
+            <label>Contrato / servicio *</label>
+            @if (cargandoContratosNuevo()) {
+              <span class="hint">Cargando los contratos del cliente…</span>
+            } @else if (contratosClienteNuevo().length === 0) {
+              <span class="hint">Este cliente no tiene ningún contrato registrado; no se puede generar soporte.</span>
+            } @else {
+              <select [ngModel]="contratoNuevoSel()" (ngModelChange)="contratoNuevoSel.set($event)">
+                <option [ngValue]="null" disabled>Selecciona…</option>
+                @for (c of contratosClienteNuevo(); track c.id) {
+                  <option [ngValue]="c.id">{{ contratoLabel(c) }}</option>
+                }
+              </select>
+            }
+          </div>
+        }
+
+        <div class="field">
+          <label>Motivo del soporte *</label>
+          <textarea rows="3" [ngModel]="descripcionNueva()" (ngModelChange)="descripcionNueva.set($event)"
+                    placeholder="Qué reporta el cliente…"></textarea>
+        </div>
+
+        <div class="field">
+          <label>Prioridad</label>
+          <select [ngModel]="prioridadNueva()" (ngModelChange)="prioridadNueva.set($event)">
+            <option value="BAJA">Baja</option>
+            <option value="NORMAL">Normal</option>
+            <option value="ALTA">Alta</option>
+            <option value="URGENTE">Urgente</option>
+          </select>
+        </div>
+
+        @if (errorNuevo()) { <div class="modal-error">{{ errorNuevo() }}</div> }
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" (click)="cerrarNuevo()" [disabled]="guardandoNuevo()">Cancelar</button>
+        <button type="button" class="btn btn-primary" (click)="guardarNuevo()" [disabled]="guardandoNuevo()">
+          {{ guardandoNuevo() ? 'Generando…' : 'Generar soporte' }}
         </button>
       </div>
     </div>

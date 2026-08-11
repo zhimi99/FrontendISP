@@ -1,13 +1,16 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { catchError, forkJoin, of } from 'rxjs';
+import { catchError, forkJoin, of, switchMap } from 'rxjs';
 
 import { IconComponent } from '../../shared/icon';
 import { OperativoService } from '../../core/services/operativo.service';
 import { ClientesService } from '../../core/services/clientes.service';
 import { UsuariosService } from '../../core/services/usuarios.service';
+import { InventarioService } from '../../core/services/inventario.service';
 import { AuthService } from '../../core/services/auth.service';
 import { UsuarioResumen } from '../../core/models/auth.model';
+import { ClienteListado, ContratoResumen } from '../../core/models/contratos.model';
+import { Equipo, Material, Ubicacion } from '../../core/models/inventario.model';
 import {
   EstadoOrden,
   Orden,
@@ -21,6 +24,12 @@ import {
 
 /** Rango de prioridad para ordenar el tablero (lo urgente arriba). */
 const RANGO_PRIORIDAD: Record<PrioridadOrden, number> = { URGENTE: 0, ALTA: 1, NORMAL: 2, BAJA: 3 };
+
+/** Una línea del material que el técnico gastó, antes de confirmarla. */
+interface LineaMaterialUsado {
+  materialId: number | null;
+  cantidad: number | null;
+}
 
 /**
  * Soporte / Operativo: tablero de órdenes de trabajo. Por defecto muestra las
@@ -42,6 +51,7 @@ export class SoporteComponent {
   private readonly operativo = inject(OperativoService);
   private readonly clientesService = inject(ClientesService);
   private readonly usuarios = inject(UsuariosService);
+  private readonly inventario = inject(InventarioService);
   private readonly auth = inject(AuthService);
 
   readonly tipoEtq = TIPO_ORDEN_ETIQUETA;
@@ -50,13 +60,22 @@ export class SoporteComponent {
   readonly prioridadEtq = PRIORIDAD_ETIQUETA;
   readonly prioridadTono = PRIORIDAD_TONO;
 
-  /** Despacho (asigna/cancela); técnico (inicia/cierra). ADMIN puede todo. */
+  /** Despacho (genera/asigna/cancela); técnico (inicia/cierra). ADMIN puede todo. */
+  readonly puedeCrear = computed(() => this.auth.tieneRol('SOPORTE', 'ADMINISTRADOR'));
   readonly puedeAsignar = computed(() => this.auth.tieneRol('SOPORTE', 'ADMINISTRADOR'));
   readonly puedeCancelar = computed(() => this.auth.tieneRol('SOPORTE', 'ADMINISTRADOR'));
-  readonly puedeOperar = computed(() => this.auth.tieneRol('TECNICO', 'ADMINISTRADOR'));
+  /**
+   * Un técnico sin rol de despacho solo ve —y solo puede operar— lo que le asignaron
+   * a él. SOPORTE/ADMIN despachan pero no ejecutan trabajo de campo.
+   */
+  readonly esSoloTecnico = computed(
+    () => this.auth.tieneRol('TECNICO') && !this.auth.tieneRol('ADMINISTRADOR', 'SOPORTE'),
+  );
 
   private readonly abiertas = signal<Orden[]>([]);
   private readonly bajoDemanda = signal<Orden[]>([]);
+  /** Lista completa de clientes: además de resolver nombres, alimenta el buscador de "Generar Soporte". */
+  private readonly clientes = signal<ClienteListado[]>([]);
   private readonly clienteNombres = signal<Map<number, string>>(new Map());
   private readonly tecnicoNombres = signal<Map<number, string>>(new Map());
 
@@ -73,13 +92,24 @@ export class SoporteComponent {
 
   private cargar() {
     this.cargando.set(true);
+    // Un técnico sin rol de despacho no ve lo PENDIENTE (aún no es suyo) y solo
+    // recibe lo ASIGNADA/EN_PROCESO que el backend le filtra a él.
+    const miId = this.auth.perfil()?.usuarioId ?? undefined;
+    const soloTecnico = this.esSoloTecnico();
     forkJoin({
       clientes: this.clientesService.listar().pipe(catchError(() => of([]))),
-      pendientes: this.operativo.listarOrdenes({ estado: 'PENDIENTE' }),
-      asignadas: this.operativo.listarOrdenes({ estado: 'ASIGNADA' }),
-      enProceso: this.operativo.listarOrdenes({ estado: 'EN_PROCESO' }),
+      pendientes: soloTecnico ? of([]) : this.operativo.listarOrdenes({ estado: 'PENDIENTE' }),
+      asignadas: this.operativo.listarOrdenes({
+        estado: 'ASIGNADA',
+        tecnicoUsuarioId: soloTecnico ? miId : undefined,
+      }),
+      enProceso: this.operativo.listarOrdenes({
+        estado: 'EN_PROCESO',
+        tecnicoUsuarioId: soloTecnico ? miId : undefined,
+      }),
     }).subscribe({
       next: (r) => {
+        this.clientes.set(r.clientes);
         this.clienteNombres.set(new Map(r.clientes.map((c) => [c.id, c.nombre])));
         const todas = [...r.pendientes, ...r.asignadas, ...r.enProceso].sort(
           (a, b) => RANGO_PRIORIDAD[a.prioridad] - RANGO_PRIORIDAD[b.prioridad],
@@ -139,7 +169,8 @@ export class SoporteComponent {
 
   private cargarBajoDemanda(v: EstadoOrden) {
     this.otrasCargando.set(true);
-    this.operativo.listarOrdenes({ estado: v }).subscribe({
+    const miId = this.auth.perfil()?.usuarioId ?? undefined;
+    this.operativo.listarOrdenes({ estado: v, tecnicoUsuarioId: this.esSoloTecnico() ? miId : undefined }).subscribe({
       next: (lista) => {
         this.bajoDemanda.set(lista);
         this.otrasCargando.set(false);
@@ -178,6 +209,13 @@ export class SoporteComponent {
     if (o.clienteId == null) return '—';
     return this.clienteNombres().get(o.clienteId) ?? `Cliente #${o.clienteId}`;
   }
+  /** Iniciar/cerrar: ADMIN opera cualquier orden; un técnico solo la suya. */
+  puedeOperarOrden(o: Orden): boolean {
+    if (this.auth.tieneRol('ADMINISTRADOR')) return true;
+    if (!this.auth.tieneRol('TECNICO')) return false;
+    return o.tecnicoUsuarioId != null && o.tecnicoUsuarioId === this.auth.perfil()?.usuarioId;
+  }
+
   tecnicoNombre(o: Orden): string {
     if (o.tecnicoUsuarioId == null) return 'Sin asignar';
     return this.tecnicoNombres().get(o.tecnicoUsuarioId) ?? `Téc. #${o.tecnicoUsuarioId}`;
@@ -220,6 +258,62 @@ export class SoporteComponent {
   // Cancelar
   readonly motivo = signal('');
 
+  /* ---------- Cerrar: material usado y equipo entregado ---------- */
+  readonly recursosInvCargando = signal(false);
+  private readonly materialesInv = signal<Material[]>([]);
+  private readonly ubicacionesInv = signal<Ubicacion[]>([]);
+  private readonly equiposDisponibles = signal<Equipo[]>([]);
+  readonly materialesUsados = signal<LineaMaterialUsado[]>([]);
+  readonly equipoEntregadoId = signal<number | null>(null);
+  readonly materialesOrdenados = computed(() =>
+    [...this.materialesInv()].sort((a, b) => a.nombre.localeCompare(b.nombre)),
+  );
+
+  /** La furgoneta del técnico que tiene la sesión abierta (Ubicacion.usuarioId la liga a él). */
+  private ubicacionTecnico(): Ubicacion | null {
+    const miId = this.auth.perfil()?.usuarioId;
+    return this.ubicacionesInv().find((u) => u.tipo === 'TECNICO' && u.usuarioId === miId) ?? null;
+  }
+
+  /** Solo lo que ya está en su furgoneta: si no lo tiene encima, primero toca un traslado. */
+  readonly equiposEntregables = computed(() => {
+    const ub = this.ubicacionTecnico();
+    if (!ub) return [];
+    return this.equiposDisponibles().filter((e) => e.ubicacionId === ub.id);
+  });
+
+  private cargarRecursosInventario() {
+    if (this.materialesInv().length || this.recursosInvCargando()) return;
+    this.recursosInvCargando.set(true);
+    forkJoin({
+      materiales: this.inventario.listarMateriales(),
+      ubicaciones: this.inventario.listarUbicaciones(),
+      equipos: this.inventario.listarEquipos({ estado: 'DISPONIBLE' }),
+    }).subscribe({
+      next: (r) => {
+        this.materialesInv.set(r.materiales);
+        this.ubicacionesInv.set(r.ubicaciones);
+        this.equiposDisponibles.set(r.equipos);
+        this.recursosInvCargando.set(false);
+      },
+      error: () => this.recursosInvCargando.set(false),
+    });
+  }
+
+  agregarLineaMaterial() {
+    this.materialesUsados.update((arr) => [...arr, { materialId: null, cantidad: null }]);
+  }
+  quitarLineaMaterial(i: number) {
+    this.materialesUsados.update((arr) => arr.filter((_, idx) => idx !== i));
+  }
+  actualizarLineaMaterial(i: number, campo: keyof LineaMaterialUsado, valor: number | null) {
+    this.materialesUsados.update((arr) => arr.map((l, idx) => (idx === i ? { ...l, [campo]: valor } : l)));
+  }
+
+  equipoLabel(e: Equipo): string {
+    return `${e.marca} ${e.modelo} · S/N ${e.numeroSerie}${e.macAddress ? ' · MAC ' + e.macAddress : ''}`;
+  }
+
   abrirAsignar(o: Orden) {
     this.banner.set(null);
     this.ordenAccion.set(o);
@@ -233,8 +327,11 @@ export class SoporteComponent {
     this.banner.set(null);
     this.ordenAccion.set(o);
     this.resultado.set('');
+    this.materialesUsados.set([]);
+    this.equipoEntregadoId.set(null);
     this.errorAccion.set(null);
     this.accion.set('cerrar');
+    this.cargarRecursosInventario();
   }
 
   abrirCancelar(o: Orden) {
@@ -297,20 +394,59 @@ export class SoporteComponent {
       this.errorAccion.set('Describe el resultado del trabajo.');
       return;
     }
+
+    // Líneas tocadas de verdad (se ignora una fila que se agregó y se dejó vacía).
+    const lineas = this.materialesUsados().filter((l) => l.materialId != null || l.cantidad != null);
+    for (const l of lineas) {
+      if (l.materialId == null || l.cantidad == null || l.cantidad <= 0) {
+        this.errorAccion.set('Revisa el material usado: falta elegir el material o la cantidad.');
+        return;
+      }
+    }
+    const equipoId = this.equipoEntregadoId();
+    if (equipoId != null && o.contratoId == null) {
+      this.errorAccion.set('Esta orden no tiene un contrato asociado; no se puede entregar el equipo.');
+      return;
+    }
+    const ubicacion = this.ubicacionTecnico();
+    if ((lineas.length || equipoId != null) && !ubicacion) {
+      this.errorAccion.set('No se encontró tu furgoneta en el catálogo de ubicaciones: no se puede descontar del inventario.');
+      return;
+    }
+
     this.guardando.set(true);
     this.errorAccion.set(null);
-    this.operativo.cerrar(o.id, res).subscribe({
-      next: () => {
-        this.guardando.set(false);
-        this.accion.set(null);
-        this.banner.set({ texto: `Orden ${o.numero} cerrada.`, error: false });
-        this.cargar();
-      },
-      error: (e) => {
-        this.guardando.set(false);
-        this.errorAccion.set(this.mensajeAccion(e));
-      },
-    });
+
+    const consumos = lineas.map((l) =>
+      this.inventario.consumirMaterial({
+        materialId: l.materialId!,
+        cantidad: l.cantidad!,
+        ubicacionOrigenId: ubicacion!.id,
+        ordenTrabajoId: o.id,
+        contratoId: o.contratoId,
+      }),
+    );
+
+    of(null)
+      .pipe(
+        switchMap(() => (consumos.length ? forkJoin(consumos) : of(null))),
+        switchMap(() =>
+          equipoId != null ? this.inventario.asignarEquipo(equipoId, { contratoId: o.contratoId! }) : of(null),
+        ),
+        switchMap(() => this.operativo.cerrar(o.id, res)),
+      )
+      .subscribe({
+        next: () => {
+          this.guardando.set(false);
+          this.accion.set(null);
+          this.banner.set({ texto: `Orden ${o.numero} cerrada.`, error: false });
+          this.cargar();
+        },
+        error: (e) => {
+          this.guardando.set(false);
+          this.errorAccion.set(this.mensajeAccion(e));
+        },
+      });
   }
 
   confirmarCancelar() {
@@ -354,13 +490,138 @@ export class SoporteComponent {
     });
   }
 
-  private mensajeAccion(e: { status?: number }): string {
+  private mensajeAccion(e: { status?: number; error?: unknown }): string {
     if (e.status === 409 || e.status === 422) {
       return 'La orden ya cambió de estado; recarga e inténtalo de nuevo.';
     }
-    if (e.status === 400) return 'Datos inválidos para la operación.';
+    if (e.status === 400) {
+      // eslint-disable-next-line no-console
+      console.error('Cuerpo del error 400 de /api/ordenes (o similar):', e.error);
+      const detalle = this.detalleError(e.error);
+      return detalle ? `Datos inválidos: ${detalle}` : 'Datos inválidos para la operación.';
+    }
     if (e.status === 403) return 'Tu rol no tiene permiso para esta acción.';
     if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
     return 'No se pudo completar la operación.';
+  }
+
+  /** Extrae el mensaje que manda el backend en el cuerpo del error (formato Spring típico). */
+  private detalleError(body: unknown): string | null {
+    if (!body) return null;
+    if (typeof body === 'string') return body;
+    if (typeof body !== 'object') return null;
+    const b = body as Record<string, unknown>;
+    if (typeof b['message'] === 'string') return b['message'];
+    if (typeof b['mensaje'] === 'string') return b['mensaje'];
+    if (Array.isArray(b['errors'])) {
+      return b['errors']
+        .map((x) => (typeof x === 'string' ? x : (x as Record<string, unknown>)?.['defaultMessage'] ?? JSON.stringify(x)))
+        .join('; ');
+    }
+    return null;
+  }
+
+  /* ---------- Generar soporte (solo SOPORTE/ADMIN) ---------- */
+  readonly modalNuevo = signal(false);
+  readonly guardandoNuevo = signal(false);
+  readonly errorNuevo = signal<string | null>(null);
+  readonly busquedaClienteNuevo = signal('');
+  readonly clienteNuevoSel = signal<ClienteListado | null>(null);
+  readonly descripcionNueva = signal('');
+  readonly prioridadNueva = signal<PrioridadOrden>('NORMAL');
+  /** El ticket es sobre un contrato/servicio concreto del cliente, no sobre el cliente en general. */
+  readonly contratosClienteNuevo = signal<ContratoResumen[]>([]);
+  readonly contratoNuevoSel = signal<number | null>(null);
+  readonly cargandoContratosNuevo = signal(false);
+
+  readonly clientesSugeridosNuevo = computed(() => {
+    const term = this.busquedaClienteNuevo().trim().toLowerCase();
+    if (term.length < 2) return [];
+    return this.clientes()
+      .filter((c) => `${c.nombre} ${c.identificacion} ${c.codigo}`.toLowerCase().includes(term))
+      .slice(0, 8);
+  });
+
+  abrirNuevo() {
+    this.errorNuevo.set(null);
+    this.busquedaClienteNuevo.set('');
+    this.clienteNuevoSel.set(null);
+    this.contratosClienteNuevo.set([]);
+    this.contratoNuevoSel.set(null);
+    this.descripcionNueva.set('');
+    this.prioridadNueva.set('NORMAL');
+    this.modalNuevo.set(true);
+  }
+
+  cerrarNuevo() {
+    if (this.guardandoNuevo()) return;
+    this.modalNuevo.set(false);
+  }
+
+  /** Al elegir el cliente, se trae su ficha para saber a qué contrato(s) puede ir el ticket. */
+  elegirClienteNuevo(c: ClienteListado) {
+    this.clienteNuevoSel.set(c);
+    this.busquedaClienteNuevo.set('');
+    this.contratosClienteNuevo.set([]);
+    this.contratoNuevoSel.set(null);
+    this.cargandoContratosNuevo.set(true);
+    this.clientesService.detalle(c.codigo).subscribe({
+      next: (d) => {
+        this.contratosClienteNuevo.set(d.contratos);
+        // Un solo servicio: no hace falta que elija, es obvio a cuál se refiere.
+        if (d.contratos.length === 1) this.contratoNuevoSel.set(d.contratos[0].id);
+        this.cargandoContratosNuevo.set(false);
+      },
+      error: () => {
+        this.contratosClienteNuevo.set([]);
+        this.cargandoContratosNuevo.set(false);
+      },
+    });
+  }
+
+  contratoLabel(c: ContratoResumen): string {
+    return `${c.codigo} · ${c.tipoServicioNombre}${c.plan ? ' · ' + c.plan : ''}`;
+  }
+
+  guardarNuevo() {
+    const cliente = this.clienteNuevoSel();
+    const contratoId = this.contratoNuevoSel();
+    const descripcion = this.descripcionNueva().trim();
+    if (!cliente) {
+      this.errorNuevo.set('Elige el cliente que reporta el problema.');
+      return;
+    }
+    if (contratoId == null) {
+      this.errorNuevo.set('Elige a qué contrato del cliente corresponde el soporte.');
+      return;
+    }
+    if (!descripcion) {
+      this.errorNuevo.set('Describe el motivo del soporte.');
+      return;
+    }
+    this.guardandoNuevo.set(true);
+    this.errorNuevo.set(null);
+    this.operativo
+      .crear({
+        tipo: 'SOPORTE',
+        prioridad: this.prioridadNueva(),
+        contratoId,
+        clienteId: cliente.id,
+        descripcion,
+        fechaProgramada: null,
+        tecnicoUsuarioId: null,
+      })
+      .subscribe({
+        next: (o) => {
+          this.guardandoNuevo.set(false);
+          this.modalNuevo.set(false);
+          this.banner.set({ texto: `Ticket ${o.numero} generado: ya aparece pendiente de asignar.`, error: false });
+          this.cargar();
+        },
+        error: (e) => {
+          this.guardandoNuevo.set(false);
+          this.errorNuevo.set(this.mensajeAccion(e));
+        },
+      });
   }
 }

@@ -151,6 +151,12 @@ export interface AplicacionPagoReq {
   facturaId: number;
   facturaNumero: string | null;
   montoAplicado: number;
+  /**
+   * true = sigue camino a factura legal (el caso normal). false = cobro "solo
+   * comprobante": si esto salda la pre-factura del todo, MS-FACTURACIÓN la cierra
+   * como comprobante interno en vez de dejarla pendiente de autorización SRI.
+   */
+  generarFacturaLegal: boolean;
 }
 
 /** Cuerpo del alta de recaudación (`POST /api/pagos`). */

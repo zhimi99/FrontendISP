@@ -8,6 +8,7 @@ import {
   AltaEquipoRequest,
   ConsumoStockRequest,
   CrearMaterialRequest,
+  AsignarEquipoRequest,
   CrearUbicacionRequest,
   EditarMaterialRequest,
   EditarUbicacionRequest,
@@ -96,6 +97,15 @@ export class InventarioService {
   /** POST /api/equipos — alta de una unidad serializada (queda DISPONIBLE). */
   crearEquipo(req: AltaEquipoRequest): Observable<Equipo> {
     return this.http.post<Equipo>(`${this.base}/api/equipos`, req);
+  }
+
+  /**
+   * POST /api/equipos/{id}/asignar — instala un equipo DISPONIBLE en un contrato
+   * (pasa a ASIGNADO). Lo usa tanto una instalación como un técnico que deja un
+   * equipo en un soporte.
+   */
+  asignarEquipo(id: number, req: AsignarEquipoRequest): Observable<Equipo> {
+    return this.http.post<Equipo>(`${this.base}/api/equipos/${id}/asignar`, req);
   }
 
   /** POST /api/ingresos — entra material comprado a una ubicación. */

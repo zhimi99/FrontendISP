@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 
 import { IconComponent } from '../../shared/icon';
 import { FacturacionService } from '../../core/services/facturacion.service';
@@ -11,6 +12,10 @@ import {
   ESTADO_PAGO_TONO,
   ESTADO_SRI_ETIQUETA,
   ESTADO_SRI_TONO,
+  esPreFactura,
+  esPreFacturaCobrable,
+  estadoDocumento,
+  Factura,
   FacturaVista,
 } from '../../core/models/facturacion.model';
 
@@ -28,11 +33,14 @@ import {
 export class FacturacionComponent {
   private readonly facturacionService = inject(FacturacionService);
   private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
 
   readonly sriEtq = ESTADO_SRI_ETIQUETA;
   readonly sriTono = ESTADO_SRI_TONO;
   readonly pagoEtq = ESTADO_PAGO_ETIQUETA;
   readonly pagoTono = ESTADO_PAGO_TONO;
+  readonly estadoDoc = estadoDocumento;
+  readonly esPreFacturaFila = esPreFactura;
 
   private readonly datos = signal<FacturaVista[]>([]);
   readonly cargando = signal(true);
@@ -41,6 +49,8 @@ export class FacturacionComponent {
   readonly q = signal('');
   readonly estadoPago = signal<'' | EstadoPagoFactura>('');
   readonly estadoSri = signal<'' | EstadoSri>('');
+  /** Chip rápido: solo pre-facturas pendientes de decisión. */
+  readonly soloPendientes = signal(false);
 
   readonly filasPorPagina = signal(10);
   readonly pagina = signal(1);
@@ -49,7 +59,6 @@ export class FacturacionComponent {
     this.cargar();
   }
 
-  /** Carga inicial y refresco tras anular un comprobante. */
   private cargar() {
     this.cargando.set(true);
     this.facturacionService.listar().subscribe({
@@ -64,77 +73,7 @@ export class FacturacionComponent {
     });
   }
 
-  /* ---------- Anular factura ---------- */
-  /** Emitir y anular son el mismo acto contable: FINANZAS/ADMIN. */
-  readonly puedeAnular = computed(() => this.auth.tieneRol('FINANZAS', 'ADMINISTRADOR'));
-  readonly facturaAnular = signal<FacturaVista | null>(null);
-  readonly anulando = signal(false);
-  readonly errorAnular = signal<string | null>(null);
-  readonly motivoAnular = signal('');
   readonly aviso = signal<{ texto: string; error: boolean } | null>(null);
-
-  /**
-   * Una AUTORIZADA no se anula: se compensa con nota de crédito. El botón no aparece
-   * para no ofrecer algo que el backend va a rechazar (y con razón).
-   */
-  sePuedeAnular(f: FacturaVista): boolean {
-    return f.estadoSri !== 'AUTORIZADA' && f.estadoPago !== 'ANULADA';
-  }
-
-  abrirAnular(f: FacturaVista) {
-    this.aviso.set(null);
-    this.errorAnular.set(null);
-    this.motivoAnular.set('');
-    this.facturaAnular.set(f);
-  }
-
-  cerrarAnular() {
-    if (this.anulando()) return;
-    this.facturaAnular.set(null);
-  }
-
-  confirmarAnular() {
-    const f = this.facturaAnular();
-    const motivo = this.motivoAnular().trim();
-    if (!f) return;
-    if (!motivo) {
-      this.errorAnular.set('Indica el motivo de la anulación.');
-      return;
-    }
-    this.anulando.set(true);
-    this.errorAnular.set(null);
-    this.facturacionService.anular(f.id, motivo).subscribe({
-      next: () => {
-        this.anulando.set(false);
-        this.facturaAnular.set(null);
-        this.aviso.set({ texto: `Factura ${f.numeroDocumento} anulada.`, error: false });
-        this.cargar();
-      },
-      error: (e) => {
-        this.anulando.set(false);
-        this.errorAnular.set(this.mensajeAnular(e));
-      },
-    });
-  }
-
-  private mensajeAnular(e: { status?: number; error?: { message?: string } }): string {
-    // El backend explica el porqué en el 422, pero Spring no incluye el mensaje en el
-    // cuerpo por defecto (server.error.include-message=never), así que el texto de
-    // reserva enumera las tres causas posibles en vez de quedarse en un "no se pudo".
-    if (e.status === 422) {
-      return (
-        e.error?.message ||
-        'No se puede anular: la factura ya está anulada, tiene cobros aplicados ' +
-          '(anula primero esos pagos) o está autorizada por el SRI, en cuyo caso ' +
-          'se compensa con una nota de crédito.'
-      );
-    }
-    if (e.status === 400) return 'El motivo de la anulación es obligatorio.';
-    if (e.status === 403) return 'Tu rol no tiene permiso para anular comprobantes.';
-    if (e.status === 404) return 'La factura ya no existe; recarga la página.';
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    return 'No se pudo anular la factura.';
-  }
 
   get total() {
     return this.datos().length;
@@ -148,17 +87,28 @@ export class FacturacionComponent {
   get saldoTotal() {
     return this.datos().reduce((s, f) => s + (f.saldoPendiente ?? 0), 0);
   }
+  /** Pre-facturas generadas (por decidir o ya en camino a factura) que aún no se cierran. */
+  get preFacturasPendientes() {
+    return this.datos().filter((f) => esPreFacturaCobrable(f)).length;
+  }
 
   pct(n: number): string {
     return this.total ? ((n / this.total) * 100).toFixed(1) + '% del total' : '—';
+  }
+
+  alternarSoloPendientes() {
+    this.soloPendientes.update((v) => !v);
+    this.pagina.set(1);
   }
 
   readonly filtrados = computed(() => {
     const term = this.q().trim().toLowerCase();
     const ep = this.estadoPago();
     const es = this.estadoSri();
+    const soloPend = this.soloPendientes();
 
     return this.datos().filter((f) => {
+      if (soloPend && !esPreFacturaCobrable(f)) return false;
       if (ep && f.estadoPago !== ep) return false;
       if (es && f.estadoSri !== es) return false;
       if (term) {
@@ -213,6 +163,7 @@ export class FacturacionComponent {
     this.q.set('');
     this.estadoPago.set('');
     this.estadoSri.set('');
+    this.soloPendientes.set(false);
     this.pagina.set(1);
   }
 
@@ -232,5 +183,86 @@ export class FacturacionComponent {
     if (e.status === 403) return 'Tu rol no tiene permiso para ver la facturación.';
     if (e.status) return `El gateway respondió ${e.status} al listar facturas.`;
     return 'Error inesperado cargando las facturas.';
+  }
+
+  /* ---------- Ver detalle (conceptos, valores, totales) ---------- */
+  readonly facturaVer = signal<FacturaVista | null>(null);
+  readonly detalleVer = signal<Factura | null>(null);
+  readonly cargandoDetalle = signal(false);
+  readonly errorDetalle = signal<string | null>(null);
+
+  abrirVer(f: FacturaVista) {
+    this.facturaVer.set(f);
+    this.detalleVer.set(null);
+    this.errorDetalle.set(null);
+    this.cargandoDetalle.set(true);
+    this.facturacionService.ver(f.id).subscribe({
+      next: (d) => {
+        this.detalleVer.set(d);
+        this.cargandoDetalle.set(false);
+      },
+      error: () => {
+        this.errorDetalle.set('No se pudo cargar el detalle de este comprobante.');
+        this.cargandoDetalle.set(false);
+      },
+    });
+  }
+
+  cerrarVer() {
+    this.facturaVer.set(null);
+  }
+
+  /* ---------- Descargar comprobante (PDF interno, sin validez fiscal) ---------- */
+  readonly descargandoComprobante = signal<number | null>(null);
+
+  descargarComprobante(f: FacturaVista) {
+    if (this.descargandoComprobante() != null) return;
+    this.descargandoComprobante.set(f.id);
+    this.facturacionService.descargarComprobante(f.id).subscribe({
+      next: (archivo) => {
+        this.descargandoComprobante.set(null);
+        const url = URL.createObjectURL(archivo);
+        const enlace = document.createElement('a');
+        enlace.href = url;
+        enlace.download = `comprobante-${f.numeroDocumento}.pdf`;
+        enlace.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => {
+        this.descargandoComprobante.set(null);
+        this.aviso.set({ texto: 'No se pudo descargar el comprobante.', error: true });
+      },
+    });
+  }
+
+  /* ---------- Cobrar una pre-factura pendiente ---------- */
+  /** Cobrar es registrar un pago: mismo perfil que en Cobranzas. */
+  readonly puedeCobrar = computed(() => this.auth.tieneRol('COBRANZAS', 'ADMINISTRADOR'));
+
+  /**
+   * Cualquier documento con saldo pendiente se puede cobrar desde aquí, no solo
+   * los comprobantes sin decidir (GENERADA): una factura ya AUTORIZADA por el
+   * SRI que sigue debiéndose (p. ej. pago parcial) también necesita cobrarse.
+   * Coincide a propósito con el filtro que ya usa Cobranzas para listar las
+   * facturas por cobrar de un cliente, así una fila que ofrece "Cobrar" aquí
+   * siempre aparece también en el selector de Cobranzas.
+   * Se cobra desde aquí solo si hay a quién asociar el recibo (referencia lógica al cliente).
+   */
+  sePuedeCobrar(f: FacturaVista): boolean {
+    return (
+      (f.estadoPago === 'PENDIENTE' || f.estadoPago === 'PARCIAL') &&
+      (f.saldoPendiente ?? 0) > 0 &&
+      f.clienteId != null
+    );
+  }
+
+  /**
+   * El cobro en sí se registra en Cobranzas, no aquí: es el módulo que ya muestra
+   * TODOS los comprobantes pendientes de un cliente juntos, para poder elegir cuál
+   * (o cuáles) de varios meses pagar. Este botón es solo un atajo con el cliente y
+   * el comprobante ya elegidos.
+   */
+  cobrar(f: FacturaVista) {
+    this.router.navigate(['/cobranzas'], { queryParams: { clienteId: f.clienteId, facturaId: f.id } });
   }
 }
