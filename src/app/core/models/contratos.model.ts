@@ -93,6 +93,33 @@ export interface IdentidadRed {
   ultimaSyncRed?: string;
 }
 
+/** `GET /api/contratos/{codigo}/registro-gpon` — ficha técnica de la instalación GPON. */
+export interface RegistroGpon {
+  id: number;
+  contratoId: number;
+  ip: string | null;
+  router: string | null;
+  metrajeCable: number | null;
+  puerto: number | null;
+  tarjeta: string | null;
+  ont: number | null;
+  puertoServicio: number | null;
+  /** Comandos para la terminal del router (p. ej. interfaz gpon...); se completa a mano. */
+  ams: string | null;
+}
+
+/** Cuerpo de `PUT /api/contratos/{codigo}/registro-gpon`: todos los campos son opcionales. */
+export interface GuardarRegistroGponRequest {
+  ip: string | null;
+  router: string | null;
+  metrajeCable: number | null;
+  puerto: number | null;
+  tarjeta: string | null;
+  ont: number | null;
+  puertoServicio: number | null;
+  ams: string | null;
+}
+
 export interface HistorialEstado {
   id: number;
   contratoId: number;

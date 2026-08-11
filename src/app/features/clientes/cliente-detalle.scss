@@ -781,6 +781,49 @@ tbody tr:hover {
   color: var(--slate);
 }
 
+/* ============ Pestaña Registro GPON ============ */
+/* Mismo estilo que .modal .field, pero el formulario vive fuera de un modal. */
+.gpon-form .field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.gpon-form .field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.gpon-form .field input,
+.gpon-form .field textarea {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+.gpon-form .field textarea {
+  resize: vertical;
+  min-height: 78px;
+}
+.gpon-form .field input:focus,
+.gpon-form .field textarea:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+.gpon-form .field input:disabled,
+.gpon-form .field textarea:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+.gpon-acciones {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
 /* ============ Modal: editar cliente ============ */
 .modal-backdrop {
   position: fixed;

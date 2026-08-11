@@ -10,8 +10,10 @@ import {
   CrearContratoServicioRequest,
   CrearContratoServicioResponse,
   EditarContratoRequest,
+  GuardarRegistroGponRequest,
   HistorialEstado,
   OfertaServicioCatalogo,
+  RegistroGpon,
 } from '../models/contratos.model';
 
 /** Consulta de contratos (MS-CONTRATOS), a través del gateway. */
@@ -48,6 +50,21 @@ export class ContratosService {
   /** GET /api/contratos/{codigo}/historial — transiciones de estado, más reciente primero. */
   historial(codigo: string): Observable<HistorialEstado[]> {
     return this.http.get<HistorialEstado[]>(`${environment.apiBase}/api/contratos/${codigo}/historial`);
+  }
+
+  /** GET /api/contratos/{codigo}/registro-gpon — ficha técnica GPON. null si aún no existe (204). */
+  registroGpon(codigo: string): Observable<RegistroGpon | null> {
+    return this.http.get<RegistroGpon | null>(
+      `${environment.apiBase}/api/contratos/${codigo}/registro-gpon`,
+    );
+  }
+
+  /** PUT /api/contratos/{codigo}/registro-gpon — crea o actualiza la ficha técnica GPON. */
+  guardarRegistroGpon(codigo: string, request: GuardarRegistroGponRequest): Observable<RegistroGpon> {
+    return this.http.put<RegistroGpon>(
+      `${environment.apiBase}/api/contratos/${codigo}/registro-gpon`,
+      request,
+    );
   }
 
   /**

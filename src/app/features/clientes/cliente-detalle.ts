@@ -19,11 +19,13 @@ import {
   CrearContratoServicioRequest,
   DireccionDetalle,
   EditarClienteRequest,
+  GuardarRegistroGponRequest,
   HistorialEstado,
   MOTIVO_ETIQUETA,
   NuevaDireccionContratoRequest,
   OfertaServicioCatalogo,
   PlanCatalogo,
+  RegistroGpon,
 } from '../../core/models/contratos.model';
 import {
   ESTADO_PAGO_ETIQUETA,
@@ -53,6 +55,7 @@ type EstadoFacturas = { estado: 'cargando' | 'ok' | 'error'; lista: FacturaVista
 type EstadoOrdenes = { estado: 'cargando' | 'ok' | 'error'; lista: Orden[] };
 type EstadoHistorial = { estado: 'cargando' | 'ok' | 'error'; lista: HistorialEstado[] };
 type EstadoEquipos = { estado: 'cargando' | 'ok' | 'error'; lista: Equipo[] };
+type EstadoRegistroGpon = { estado: 'cargando' | 'ok' | 'error'; dato: RegistroGpon | null };
 type ModoDireccionServicio = 'EXISTENTE' | 'NUEVA';
 
 @Component({
@@ -93,7 +96,15 @@ export class ClienteDetalleComponent implements OnDestroy {
   readonly equipoTono = ESTADO_EQUIPO_TONO;
   readonly tipoEquipoEtq = TIPO_EQUIPO_ETIQUETA;
 
-  readonly tabs = ['Resumen', 'Servicios', 'Facturación', 'Soporte', 'Historial', 'Red / Equipos'];
+  readonly tabs = [
+    'Resumen',
+    'Servicios',
+    'Facturación',
+    'Soporte',
+    'Historial',
+    'Red / Equipos',
+    'Registro GPON',
+  ];
   readonly tabActiva = signal(0);
   readonly modalIdentificacion = signal(false);
 
@@ -243,6 +254,109 @@ export class ClienteDetalleComponent implements OnDestroy {
   contratoCodigoDe(contratoId: number | null): string {
     if (contratoId == null) return '—';
     return this.detalle()?.contratos.find((c) => c.id === contratoId)?.codigo ?? `#${contratoId}`;
+  }
+
+  /**
+   * El registro GPON es del contrato de Internet (el que usa red), no del cliente en
+   * general: un cliente con TV Cable pero sin Internet no tiene nada que registrar.
+   */
+  readonly contratoGponCodigo = computed(() => {
+    const contratos = this.detalle()?.contratos ?? [];
+    const conRed =
+      contratos.find((c) => c.usaRed && c.estadoServicio !== 'RETIRADO') ??
+      contratos.find((c) => c.usaRed);
+    return conRed?.codigo ?? null;
+  });
+
+  private readonly registroGponResp = toSignal(
+    toObservable(this.contratoGponCodigo).pipe(
+      switchMap((codigo): Observable<EstadoRegistroGpon> => {
+        if (!codigo) return of({ estado: 'ok' as const, dato: null });
+        return this.contratosService.registroGpon(codigo).pipe(
+          map((dato) => ({ estado: 'ok' as const, dato })),
+          startWith({ estado: 'cargando' as const, dato: null as RegistroGpon | null }),
+          catchError(() => of({ estado: 'error' as const, dato: null as RegistroGpon | null })),
+        );
+      }),
+    ),
+    { initialValue: { estado: 'cargando', dato: null } as EstadoRegistroGpon },
+  );
+
+  readonly gponCargando = computed(() => this.registroGponResp().estado === 'cargando');
+  readonly gponError = computed(() => this.registroGponResp().estado === 'error');
+
+  /* ---------- Formulario del registro GPON ---------- */
+  readonly gponIp = signal('');
+  readonly gponRouter = signal('');
+  readonly gponMetraje = signal('');
+  readonly gponPuerto = signal('');
+  readonly gponTarjeta = signal('');
+  readonly gponOnt = signal('');
+  readonly gponPuertoServicio = signal('');
+  readonly gponAms = signal('');
+  readonly guardandoGpon = signal(false);
+  readonly errorGpon = signal<string | null>(null);
+  readonly avisoGpon = signal<{ texto: string; error: boolean } | null>(null);
+
+  private cargarFormularioGpon(dato: RegistroGpon | null) {
+    this.gponIp.set(dato?.ip ?? '');
+    this.gponRouter.set(dato?.router ?? '');
+    this.gponMetraje.set(dato?.metrajeCable != null ? String(dato.metrajeCable) : '');
+    this.gponPuerto.set(dato?.puerto != null ? String(dato.puerto) : '');
+    this.gponTarjeta.set(dato?.tarjeta ?? '');
+    this.gponOnt.set(dato?.ont != null ? String(dato.ont) : '');
+    this.gponPuertoServicio.set(dato?.puertoServicio != null ? String(dato.puertoServicio) : '');
+    this.gponAms.set(dato?.ams ?? '');
+    this.errorGpon.set(null);
+  }
+
+  guardarGpon() {
+    const codigo = this.contratoGponCodigo();
+    if (!codigo || this.guardandoGpon()) return;
+
+    const req: GuardarRegistroGponRequest = {
+      ip: this.gponIp().trim() || null,
+      router: this.gponRouter().trim() || null,
+      metrajeCable: this.numeroOpcionalGpon(this.gponMetraje()),
+      puerto: this.enteroOpcionalGpon(this.gponPuerto()),
+      tarjeta: this.gponTarjeta().trim() || null,
+      ont: this.enteroOpcionalGpon(this.gponOnt()),
+      puertoServicio: this.enteroOpcionalGpon(this.gponPuertoServicio()),
+      ams: this.gponAms().trim() || null,
+    };
+
+    this.guardandoGpon.set(true);
+    this.errorGpon.set(null);
+    this.contratosService.guardarRegistroGpon(codigo, req).subscribe({
+      next: () => {
+        this.guardandoGpon.set(false);
+        this.avisoGpon.set({ texto: 'Registro GPON guardado.', error: false });
+        this.recargar.update((n) => n + 1);
+      },
+      error: (e) => {
+        this.guardandoGpon.set(false);
+        this.errorGpon.set(this.mensajeErrorGpon(e));
+      },
+    });
+  }
+
+  private numeroOpcionalGpon(valor: string): number | null {
+    const texto = valor.trim().replace(',', '.');
+    if (!texto) return null;
+    const n = Number(texto);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  private enteroOpcionalGpon(valor: string): number | null {
+    const n = this.numeroOpcionalGpon(valor);
+    return n != null ? Math.trunc(n) : null;
+  }
+
+  private mensajeErrorGpon(e: { status?: number }): string {
+    if (e.status === 403) return 'Tu rol no tiene permiso para editar el registro GPON.';
+    if (e.status === 404) return 'El contrato ya no existe; recarga la ficha.';
+    if (e.status === 0) return 'No se pudo contactar el gateway para guardar el registro GPON.';
+    return 'No se pudo guardar el registro GPON. Inténtalo de nuevo.';
   }
 
   setTab(i: number) {
@@ -690,6 +804,13 @@ export class ClienteDetalleComponent implements OnDestroy {
       if (!this.edicionPedidaEnLaUrl() || !this.detalle() || !this.puedeEditar()) return;
       this.edicionPedidaEnLaUrl.set(false);
       this.abrirEditar();
+    });
+
+    // Rellena el formulario del registro GPON en cuanto llega (o cambia) su dato real.
+    effect(() => {
+      const resp = this.registroGponResp();
+      if (resp.estado === 'cargando') return;
+      this.cargarFormularioGpon(resp.dato);
     });
   }
 

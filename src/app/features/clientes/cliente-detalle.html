@@ -434,6 +434,132 @@
               </div>
             }
           </div>
+        } @else if (tabActiva() === 6) {
+          <!-- ============ Registro GPON (ficha técnica de instalación) ============ -->
+          <div class="card fact-tab">
+            <div class="fact-head">
+              <div>
+                <h3 class="card-title mb0">Registro GPON</h3>
+                <p class="sub">Datos técnicos de la instalación en la OLT para el servicio de Internet.</p>
+              </div>
+            </div>
+
+            @if (!contratoGponCodigo()) {
+              <div class="fact-estado">
+                Este cliente todavía no tiene un contrato de Internet donde registrar su GPON.
+              </div>
+            } @else if (gponCargando()) {
+              <div class="fact-estado"><app-icon name="refresh" [size]="20" /> Cargando registro GPON…</div>
+            } @else if (gponError()) {
+              <div class="fact-estado error">No se pudo cargar el registro GPON.</div>
+            } @else {
+              @if (avisoGpon(); as aviso) {
+                <div class="servicio-banner" [class.error]="aviso.error">
+                  <span>{{ aviso.texto }}</span>
+                  <button type="button" class="banner-x" aria-label="Cerrar" (click)="avisoGpon.set(null)">×</button>
+                </div>
+              }
+
+              <div class="gpon-form form-grid servicio-form-grid">
+                <div class="field">
+                  <label>IP</label>
+                  <input
+                    type="text"
+                    placeholder="192.168.1.1"
+                    [ngModel]="gponIp()"
+                    (ngModelChange)="gponIp.set($event)"
+                    [disabled]="!puedeEditar()"
+                  />
+                </div>
+                <div class="field">
+                  <label>Router</label>
+                  <input
+                    type="text"
+                    placeholder="Nombre o modelo del router"
+                    [ngModel]="gponRouter()"
+                    (ngModelChange)="gponRouter.set($event)"
+                    [disabled]="!puedeEditar()"
+                  />
+                </div>
+                <div class="field">
+                  <label>Metraje de cable (m)</label>
+                  <input
+                    type="text"
+                    inputmode="decimal"
+                    placeholder="Ej. 121 a 145"
+                    [ngModel]="gponMetraje()"
+                    (ngModelChange)="gponMetraje.set($event)"
+                    [disabled]="!puedeEditar()"
+                  />
+                </div>
+                <div class="field">
+                  <label>Port</label>
+                  <input
+                    type="text"
+                    inputmode="numeric"
+                    placeholder="5"
+                    [ngModel]="gponPuerto()"
+                    (ngModelChange)="gponPuerto.set($event)"
+                    [disabled]="!puedeEditar()"
+                  />
+                </div>
+                <div class="field">
+                  <label>Tarjeta</label>
+                  <input
+                    type="text"
+                    placeholder="0/1/2"
+                    [ngModel]="gponTarjeta()"
+                    (ngModelChange)="gponTarjeta.set($event)"
+                    [disabled]="!puedeEditar()"
+                  />
+                </div>
+                <div class="field">
+                  <label>ONT</label>
+                  <input
+                    type="text"
+                    inputmode="numeric"
+                    placeholder="5"
+                    [ngModel]="gponOnt()"
+                    (ngModelChange)="gponOnt.set($event)"
+                    [disabled]="!puedeEditar()"
+                  />
+                </div>
+                <div class="field">
+                  <label>Port Service</label>
+                  <input
+                    type="text"
+                    inputmode="numeric"
+                    placeholder="10"
+                    [ngModel]="gponPuertoServicio()"
+                    (ngModelChange)="gponPuertoServicio.set($event)"
+                    [disabled]="!puedeEditar()"
+                  />
+                </div>
+                <div class="field span2">
+                  <label>AMS</label>
+                  <textarea
+                    rows="4"
+                    placeholder="Comandos para la terminal del router (ej. interfaz gpon…). Se completa manualmente."
+                    [ngModel]="gponAms()"
+                    (ngModelChange)="gponAms.set($event)"
+                    [disabled]="!puedeEditar()"
+                  ></textarea>
+                </div>
+              </div>
+
+              @if (errorGpon()) {
+                <div class="modal-error">{{ errorGpon() }}</div>
+              }
+
+              @if (puedeEditar()) {
+                <div class="gpon-acciones">
+                  <button type="button" class="btn btn-primary" (click)="guardarGpon()" [disabled]="guardandoGpon()">
+                    {{ guardandoGpon() ? 'Guardando…' : 'Guardar registro GPON' }}
+                  </button>
+                </div>
+              }
+            }
+          </div>
         } @else {
           <div class="card tab-empty">
             <div class="tab-empty-ico"><app-icon name="box" [size]="26" /></div>
