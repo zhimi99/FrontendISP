@@ -799,11 +799,22 @@ export class ClienteDetalleComponent implements OnDestroy {
     this.route.snapshot.queryParamMap.get('editar') === '1',
   );
 
+  /** Igual que `edicionPedidaEnLaUrl`, pero para llegar desde "Nuevo cliente" con `?agregarServicio=1`. */
+  private readonly servicioPedidoEnLaUrl = signal(
+    this.route.snapshot.queryParamMap.get('agregarServicio') === '1',
+  );
+
   constructor() {
     effect(() => {
       if (!this.edicionPedidaEnLaUrl() || !this.detalle() || !this.puedeEditar()) return;
       this.edicionPedidaEnLaUrl.set(false);
       this.abrirEditar();
+    });
+
+    effect(() => {
+      if (!this.servicioPedidoEnLaUrl() || !this.detalle() || !this.puedeEditar()) return;
+      this.servicioPedidoEnLaUrl.set(false);
+      this.abrirAgregarServicio();
     });
 
     // Rellena el formulario del registro GPON en cuanto llega (o cambia) su dato real.

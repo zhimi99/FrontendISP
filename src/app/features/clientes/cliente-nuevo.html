@@ -10,7 +10,7 @@
         <span class="cur">Nuevo Cliente</span>
       </nav>
       <h2 class="title">Nuevo Cliente</h2>
-      <p class="subtitle">Registra un cliente y su primer servicio contratado.</p>
+      <p class="subtitle">Registra los datos del cliente. El primer servicio (Internet, TV u otro) se agrega después desde su ficha.</p>
     </div>
     <div class="crumb-actions">
       <a class="btn" routerLink="/clientes">Cancelar</a>
@@ -27,11 +27,10 @@
       <h3>Cliente registrado</h3>
       <p>
         <strong>{{ nombrePreview() }}</strong> se creó con el código
-        <span class="mono strong">{{ codigoNuevo() }}</span> en estado
-        <span class="badge info">Pendiente</span>.
+        <span class="mono strong">{{ codigoNuevo() }}</span>.
       </p>
       <p class="muted fs-13">
-        El contrato queda pendiente hasta que se complete la orden de instalación, que lo activa.
+        Todavía no tiene ningún servicio contratado. Agrégale Internet, TV u otro servicio para completar el alta.
       </p>
       @if (identificacionCargada()) {
         <p class="done-document ok">
@@ -48,7 +47,9 @@
       <div class="done-actions">
         <button class="btn" (click)="crearOtro()"><app-icon name="plus" [size]="15" /> Crear otro</button>
         <button class="btn" (click)="irALista()">Ir a la lista</button>
-        <button class="btn btn-primary" (click)="irADetalle()">Ver ficha</button>
+        <button class="btn btn-primary" (click)="irAAgregarServicio()">
+          <app-icon name="plus" [size]="15" /> Agregar servicio
+        </button>
       </div>
     </div>
   } @else {
@@ -216,30 +217,6 @@
           </div>
         </section>
 
-        <!-- Servicio -->
-        <section class="card">
-          <h3 class="card-title">Servicio contratado</h3>
-          <div class="card-in grid-2">
-            <div class="field" [class.has-error]="err('plan')">
-              <label>Plan <span class="req">*</span></label>
-              <select class="select" formControlName="plan" (change)="onPlanChange()" [class.placeholder]="!form.controls.plan.value">
-                <option value="" disabled>Selecciona un plan</option>
-                @for (p of planes(); track p.codigo) {
-                  <option [value]="p.codigo">{{ p.nombre }} — {{ p.velocidad }} — {{ '$' + p.precioMensual.toFixed(2) }}</option>
-                }
-              </select>
-              @if (err('plan')) { <span class="err-msg">Selecciona un plan.</span> }
-            </div>
-            <div class="field">
-              <label>Día de corte</label>
-              <select class="select" formControlName="diaCorte">
-                @for (dc of diasCorte; track dc) { <option [value]="dc">Día {{ dc }}</option> }
-              </select>
-              <span class="hint">Día del mes en que se emite la factura.</span>
-            </div>
-          </div>
-        </section>
-
         <div class="form-actions">
           <a class="btn" routerLink="/clientes">Cancelar</a>
           <button type="submit" class="btn btn-primary" [disabled]="enviando()">
@@ -270,17 +247,7 @@
 
           <div class="pv-servicio">
             <div class="pv-servicio-cap">Servicio a contratar</div>
-            @if (planSel(); as p) {
-              <div class="pv-plan">{{ p.nombre }}</div>
-              <div class="pv-vel">{{ p.velocidad }} · Corte día {{ form.controls.diaCorte.value }}</div>
-              <div class="pv-totales">
-                <div><span>Mensual</span><b>{{ '$' + totales().precio.toFixed(2) }}</b></div>
-                <div><span>IVA 15%</span><b>{{ '$' + totales().iva.toFixed(2) }}</b></div>
-                <div class="tot"><span>Total</span><b>{{ '$' + totales().total.toFixed(2) }}</b></div>
-              </div>
-            } @else {
-              <div class="pv-empty">Selecciona un plan para ver el valor.</div>
-            }
+            <div class="pv-empty">Se agrega después de guardar, desde la ficha del cliente.</div>
           </div>
         </div>
       </aside>

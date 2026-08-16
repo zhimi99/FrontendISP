@@ -5,8 +5,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 
 import { IconComponent } from '../../shared/icon';
 import { ClientesService } from '../../core/services/clientes.service';
-import { PlanesService } from '../../core/services/planes.service';
-import { AltaClienteRequest, PlanCatalogo } from '../../core/models/contratos.model';
+import { AltaClienteRequest } from '../../core/models/contratos.model';
 
 type TipoCliente = 'PERSONA' | 'EMPRESA';
 type TipoId = 'CEDULA' | 'RUC' | 'PASAPORTE';
@@ -24,11 +23,6 @@ export class ClienteNuevoComponent {
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
   private readonly clientesService = inject(ClientesService);
-  private readonly planesService = inject(PlanesService);
-
-  /** Catálogo real (GET /api/planes). */
-  readonly planes = signal<PlanCatalogo[]>([]);
-  readonly diasCorte = Array.from({ length: 28 }, (_, i) => i + 1);
 
   readonly enviado = signal(false);
   readonly enviando = signal(false);
@@ -63,31 +57,13 @@ export class ClienteNuevoComponent {
     referencia: this.fb.control('', { nonNullable: true }),
     latitud: this.fb.control('', { nonNullable: true }),
     longitud: this.fb.control('', { nonNullable: true }),
-    plan: this.fb.control('', { nonNullable: true, validators: [Validators.required] }),
-    diaCorte: this.fb.control(5, { nonNullable: true, validators: [Validators.required] }),
   });
-
-  constructor() {
-    this.planesService.listar().subscribe({
-      next: (p) => this.planes.set(p),
-      error: () => this.errorAlta.set('No se pudo cargar el catálogo de planes desde el gateway.'),
-    });
-  }
 
   private readonly valor = toSignal(this.form.valueChanges, {
     initialValue: this.form.getRawValue(),
   });
 
   readonly esEmpresa = computed(() => this.valor().tipoCliente === 'EMPRESA');
-
-  /** Plan seleccionado, buscado por su código (el value del selector). */
-  readonly planSel = computed(() => this.planes().find((p) => p.codigo === this.valor().plan) ?? null);
-
-  readonly totales = computed(() => {
-    const precio = this.planSel()?.precioMensual ?? 0;
-    const iva = Math.round(precio * 0.15 * 100) / 100;
-    return { precio, iva, total: Math.round((precio + iva) * 100) / 100 };
-  });
 
   readonly nombrePreview = computed(() => {
     const v = this.valor();
@@ -119,10 +95,6 @@ export class ClienteNuevoComponent {
   onTipoIdChange(tipoId: TipoId) {
     this.form.patchValue({ tipoId });
     this.aplicarValidadorId(tipoId);
-  }
-
-  onPlanChange() {
-    // La vista previa se actualiza sola vía la señal `valor`.
   }
 
   private aplicarValidadoresNombre(tipo: TipoCliente) {
@@ -287,8 +259,6 @@ export class ClienteNuevoComponent {
       referencia: v.referencia.trim() || null,
       latitud: this.numero(v.latitud),
       longitud: this.numero(v.longitud),
-      planCodigo: v.plan,
-      diaCorte: Number(v.diaCorte),
     };
   }
 
@@ -322,7 +292,7 @@ export class ClienteNuevoComponent {
   }
 
   crearOtro() {
-    this.form.reset({ tipoCliente: 'PERSONA', tipoId: 'CEDULA', diaCorte: 5 });
+    this.form.reset({ tipoCliente: 'PERSONA', tipoId: 'CEDULA' });
     this.enviado.set(false);
     this.guardado.set(false);
     this.errorAlta.set(null);
@@ -334,8 +304,9 @@ export class ClienteNuevoComponent {
     this.errorCargaIdentificacion.set(null);
   }
 
-  irADetalle() {
-    this.router.navigate(['/clientes', this.codigoNuevo()]);
+  /** Va a la ficha con el modal de "Agregar servicio" ya abierto: el paso natural tras crear el cliente. */
+  irAAgregarServicio() {
+    this.router.navigate(['/clientes', this.codigoNuevo()], { queryParams: { agregarServicio: 1 } });
   }
 
   irALista() {

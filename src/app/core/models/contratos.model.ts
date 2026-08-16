@@ -303,7 +303,11 @@ export interface EditarPlanRequest {
   precioMensual: number;
 }
 
-/** Cuerpo del alta de cliente (`POST /api/clientes`). */
+/**
+ * Cuerpo del alta de cliente (`POST /api/clientes`). Sin servicio: el cliente nace
+ * sin contrato, el primer servicio (Internet, TV u otro) se agrega después con
+ * `CrearContratoServicioRequest`, igual que cualquier servicio adicional.
+ */
 export interface AltaClienteRequest {
   tipoCliente: TipoCliente;
   tipoIdentificacion: TipoIdentificacion;
@@ -318,15 +322,11 @@ export interface AltaClienteRequest {
   referencia: string | null;
   latitud: number | null;
   longitud: number | null;
-  planCodigo: string;
-  diaCorte: number;
 }
 
-/** Respuesta del alta: códigos asignados para navegar a la ficha. */
+/** Respuesta del alta: el código asignado para navegar a la ficha. */
 export interface AltaClienteResponse {
   clienteCodigo: string;
-  contratoCodigo: string;
-  estadoServicio: EstadoServicio;
 }
 
 /** Oferta activa del catálogo extensible que puede venderse a un cliente. */
