@@ -220,12 +220,29 @@
               <div class="lineas-material">
                 @for (l of materialesUsados(); track $index) {
                   <div class="linea-material">
-                    <select [ngModel]="l.materialId" (ngModelChange)="actualizarLineaMaterial($index, 'materialId', $event)">
-                      <option [ngValue]="null" disabled>Selecciona…</option>
-                      @for (m of materialesOrdenados(); track m.id) {
-                        <option [ngValue]="m.id">{{ m.codigo }} · {{ m.nombre }}</option>
-                      }
-                    </select>
+                    @if (materialSeleccionado(l.materialId); as m) {
+                      <div class="cliente-elegido">
+                        <span>{{ m.codigo }} <span class="muted">· {{ m.nombre }}</span></span>
+                        <button type="button" class="btn mini" (click)="cambiarMaterial($index)">Cambiar</button>
+                      </div>
+                    } @else {
+                      <div class="material-buscador">
+                        <input type="text" placeholder="Busca por nombre o código, o mira la lista…"
+                               [ngModel]="l.busqueda" (ngModelChange)="actualizarBusquedaMaterial($index, $event)" />
+                        <ul class="sugerencias material-lista">
+                          @for (m of materialesFiltrados(l.busqueda); track m.id) {
+                            <li>
+                              <button type="button" (click)="elegirMaterial($index, m)">
+                                <span class="sug-nombre">{{ m.codigo }} · {{ m.nombre }}</span>
+                                <span class="sug-meta mono">{{ unidadEtq[m.unidad] }}</span>
+                              </button>
+                            </li>
+                          } @empty {
+                            <li class="sug-vacio">Sin coincidencias.</li>
+                          }
+                        </ul>
+                      </div>
+                    }
                     <input type="number" min="0" step="0.01" placeholder="Cant."
                            [ngModel]="l.cantidad" (ngModelChange)="actualizarLineaMaterial($index, 'cantidad', $event)" />
                     <button type="button" class="linea-quitar" (click)="quitarLineaMaterial($index)" aria-label="Quitar línea">✕</button>
@@ -234,7 +251,7 @@
               </div>
             }
             <button type="button" class="btn mini" (click)="agregarLineaMaterial()">+ Agregar material</button>
-            <span class="hint">Se descuenta de tu furgoneta y queda registrado contra esta orden.</span>
+            <span class="hint">Se descuenta de la furgoneta y queda registrado contra esta orden.</span>
           </div>
 
           <div class="field">
@@ -248,7 +265,7 @@
               </select>
               <span class="hint">Marca, modelo y MAC ya quedaron registrados al dar de alta el equipo; esto solo lo pasa a nombre del cliente.</span>
             } @else {
-              <span class="hint">No tienes equipos disponibles en tu furgoneta. Si dejaste uno, primero pide el traslado desde Inventario.</span>
+              <span class="hint">No hay equipos disponibles en la furgoneta. Si se dejó uno en otro lado, primero pide el traslado desde Inventario.</span>
             }
           </div>
         }

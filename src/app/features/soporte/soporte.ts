@@ -10,7 +10,7 @@ import { InventarioService } from '../../core/services/inventario.service';
 import { AuthService } from '../../core/services/auth.service';
 import { UsuarioResumen } from '../../core/models/auth.model';
 import { ClienteListado, ContratoResumen } from '../../core/models/contratos.model';
-import { Equipo, Material, Ubicacion } from '../../core/models/inventario.model';
+import { Equipo, Material, Ubicacion, UNIDAD_ETIQUETA } from '../../core/models/inventario.model';
 import {
   EstadoOrden,
   Orden,
@@ -29,6 +29,8 @@ const RANGO_PRIORIDAD: Record<PrioridadOrden, number> = { URGENTE: 0, ALTA: 1, N
 interface LineaMaterialUsado {
   materialId: number | null;
   cantidad: number | null;
+  /** Lo que se lleva tecleado en el buscador mientras no hay material elegido. */
+  busqueda: string;
 }
 
 /**
@@ -59,6 +61,7 @@ export class SoporteComponent {
   readonly estadoTono = ESTADO_ORDEN_TONO;
   readonly prioridadEtq = PRIORIDAD_ETIQUETA;
   readonly prioridadTono = PRIORIDAD_TONO;
+  readonly unidadEtq = UNIDAD_ETIQUETA;
 
   /** Despacho (genera/asigna/cancela); técnico (inicia/cierra). ADMIN puede todo. */
   readonly puedeCrear = computed(() => this.auth.tieneRol('SOPORTE', 'ADMINISTRADOR'));
@@ -269,13 +272,22 @@ export class SoporteComponent {
     [...this.materialesInv()].sort((a, b) => a.nombre.localeCompare(b.nombre)),
   );
 
-  /** La furgoneta del técnico que tiene la sesión abierta (Ubicacion.usuarioId la liga a él). */
+  /**
+   * La furgoneta desde la que se descuenta al cerrar. Por ahora la empresa tiene una
+   * sola furgoneta, compartida por todo el equipo de soporte (técnicos, secretaria,
+   * administrador), así que cualquiera que cierre un ticket descuenta de esa misma:
+   * si solo hay una ubicación TECNICO activa, es esa, sin importar quién tenga la
+   * sesión abierta. Si en el futuro cada técnico tiene la suya, se prioriza la que
+   * está a su nombre (Ubicacion.usuarioId).
+   */
   private ubicacionTecnico(): Ubicacion | null {
+    const furgonetas = this.ubicacionesInv().filter((u) => u.tipo === 'TECNICO' && u.activa);
+    if (furgonetas.length === 1) return furgonetas[0];
     const miId = this.auth.perfil()?.usuarioId;
-    return this.ubicacionesInv().find((u) => u.tipo === 'TECNICO' && u.usuarioId === miId) ?? null;
+    return furgonetas.find((u) => u.usuarioId === miId) ?? null;
   }
 
-  /** Solo lo que ya está en su furgoneta: si no lo tiene encima, primero toca un traslado. */
+  /** Solo lo que ya está en la furgoneta: si no lo tiene encima, primero toca un traslado. */
   readonly equiposEntregables = computed(() => {
     const ub = this.ubicacionTecnico();
     if (!ub) return [];
@@ -301,13 +313,50 @@ export class SoporteComponent {
   }
 
   agregarLineaMaterial() {
-    this.materialesUsados.update((arr) => [...arr, { materialId: null, cantidad: null }]);
+    this.materialesUsados.update((arr) => [...arr, { materialId: null, cantidad: null, busqueda: '' }]);
   }
   quitarLineaMaterial(i: number) {
     this.materialesUsados.update((arr) => arr.filter((_, idx) => idx !== i));
   }
-  actualizarLineaMaterial(i: number, campo: keyof LineaMaterialUsado, valor: number | null) {
+  actualizarLineaMaterial(i: number, campo: 'cantidad', valor: number | null) {
     this.materialesUsados.update((arr) => arr.map((l, idx) => (idx === i ? { ...l, [campo]: valor } : l)));
+  }
+
+  /** El material ya elegido en esa línea, para pintar el chip en vez del buscador. */
+  materialSeleccionado(id: number | null): Material | null {
+    if (id == null) return null;
+    return this.materialesInv().find((m) => m.id === id) ?? null;
+  }
+
+  actualizarBusquedaMaterial(i: number, texto: string) {
+    this.materialesUsados.update((arr) => arr.map((l, idx) => (idx === i ? { ...l, busqueda: texto } : l)));
+  }
+
+  elegirMaterial(i: number, m: Material) {
+    this.materialesUsados.update((arr) =>
+      arr.map((l, idx) => (idx === i ? { ...l, materialId: m.id, busqueda: '' } : l)),
+    );
+  }
+
+  /** Deshace la elección para poder buscar otro, sin perder la cantidad ya tecleada. */
+  cambiarMaterial(i: number) {
+    this.materialesUsados.update((arr) =>
+      arr.map((l, idx) => (idx === i ? { ...l, materialId: null, busqueda: '' } : l)),
+    );
+  }
+
+  /** Vacío = el catálogo completo (modo lista); si no, filtra por nombre o código. */
+  materialesFiltrados(texto: string): Material[] {
+    const q = this.normalizarTexto(texto.trim());
+    if (!q) return this.materialesOrdenados();
+    return this.materialesOrdenados().filter(
+      (m) => this.normalizarTexto(m.codigo).includes(q) || this.normalizarTexto(m.nombre).includes(q),
+    );
+  }
+
+  private normalizarTexto(t: string): string {
+    const sinAcentos = t.normalize('NFD').replace(new RegExp('[\\u0300-\\u036f]', 'g'), '');
+    return sinAcentos.toLowerCase();
   }
 
   equipoLabel(e: Equipo): string {
@@ -410,7 +459,7 @@ export class SoporteComponent {
     }
     const ubicacion = this.ubicacionTecnico();
     if ((lineas.length || equipoId != null) && !ubicacion) {
-      this.errorAccion.set('No se encontró tu furgoneta en el catálogo de ubicaciones: no se puede descontar del inventario.');
+      this.errorAccion.set('No se encontró la furgoneta en el catálogo de ubicaciones: no se puede descontar del inventario.');
       return;
     }
 

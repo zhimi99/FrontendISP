@@ -514,7 +514,9 @@ export class ClienteDetalleComponent implements OnDestroy {
         this.tabActiva.set(1);
         this.avisoServicio.set({
           texto: `Servicio ${respuesta.contratoCodigo} registrado con estado ${respuesta.estadoServicio.toLowerCase()}${
-            respuesta.requiereInstalacion ? '; requiere coordinación de instalación.' : '.'
+            respuesta.requiereInstalacion
+              ? '; se generó automáticamente el ticket de instalación en Soporte.'
+              : '.'
           }`,
           error: false,
         });

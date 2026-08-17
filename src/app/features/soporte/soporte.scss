@@ -238,7 +238,40 @@
   display: grid;
   grid-template-columns: 1fr 90px auto;
   gap: 8px;
-  align-items: center;
+  align-items: start;
+}
+.material-buscador {
+  position: relative;
+}
+.material-buscador input[type='text'] {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13.5px;
+  font-family: inherit;
+}
+.material-buscador input[type='text']:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+.material-lista {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin-top: 4px;
+}
+.linea-material .cliente-elegido {
+  height: 34px;
+  box-sizing: border-box;
+}
+.linea-material input[type='number'] {
+  height: 34px;
+  box-sizing: border-box;
 }
 .linea-quitar {
   appearance: none;
