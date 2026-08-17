@@ -479,6 +479,16 @@
                     (ngModelChange)="gponRouter.set($event)"
                     [disabled]="!puedeEditar()"
                   />
+                  @if (routerAsignadoGpon(); as equipo) {
+                    <span class="hint">
+                      Un técnico dejó instalado {{ equipo.marca }} {{ equipo.modelo }} (S/N {{ equipo.numeroSerie }}{{
+                        equipo.macAddress ? ', MAC ' + equipo.macAddress : ''
+                      }}).
+                      @if (puedeEditar()) {
+                        <button type="button" class="btn mini" (click)="usarRouterAsignadoGpon()">Usar este</button>
+                      }
+                    </span>
+                  }
                 </div>
                 <div class="field">
                   <label>Metraje de cable (m)</label>

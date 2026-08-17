@@ -268,6 +268,32 @@ export class ClienteDetalleComponent implements OnDestroy {
     return conRed?.codigo ?? null;
   });
 
+  private readonly contratoGponId = computed(() => {
+    const contratos = this.detalle()?.contratos ?? [];
+    const conRed =
+      contratos.find((c) => c.usaRed && c.estadoServicio !== 'RETIRADO') ??
+      contratos.find((c) => c.usaRed);
+    return conRed?.id ?? null;
+  });
+
+  /**
+   * El router que un técnico dejó instalado (pestaña Red/Equipos) para este mismo
+   * contrato. Su marca, modelo, serie y MAC ya quedaron registrados al darlo de alta
+   * en inventario y asignarlo — aquí solo se ofrece como atajo para no volver a
+   * teclearlo en el campo "Router" del registro GPON.
+   */
+  readonly routerAsignadoGpon = computed(() => {
+    const contratoId = this.contratoGponId();
+    if (contratoId == null) return null;
+    return this.equipos().find((e) => e.contratoId === contratoId && e.tipo === 'ROUTER') ?? null;
+  });
+
+  usarRouterAsignadoGpon() {
+    const equipo = this.routerAsignadoGpon();
+    if (!equipo) return;
+    this.gponRouter.set(`${equipo.marca} ${equipo.modelo} · S/N ${equipo.numeroSerie}`);
+  }
+
   private readonly registroGponResp = toSignal(
     toObservable(this.contratoGponCodigo).pipe(
       switchMap((codigo): Observable<EstadoRegistroGpon> => {

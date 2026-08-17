@@ -222,7 +222,7 @@
                   <div class="linea-material">
                     @if (materialSeleccionado(l.materialId); as m) {
                       <div class="cliente-elegido">
-                        <span>{{ m.codigo }} <span class="muted">· {{ m.nombre }}</span></span>
+                        <span>{{ m.codigo }} <span class="muted">· {{ m.material }}</span></span>
                         <button type="button" class="btn mini" (click)="cambiarMaterial($index)">Cambiar</button>
                       </div>
                     } @else {
@@ -230,15 +230,19 @@
                         <input type="text" placeholder="Busca por nombre o código, o mira la lista…"
                                [ngModel]="l.busqueda" (ngModelChange)="actualizarBusquedaMaterial($index, $event)" />
                         <ul class="sugerencias material-lista">
-                          @for (m of materialesFiltrados(l.busqueda); track m.id) {
+                          @for (m of materialesFiltrados(l.busqueda); track m.materialId) {
                             <li>
                               <button type="button" (click)="elegirMaterial($index, m)">
-                                <span class="sug-nombre">{{ m.codigo }} · {{ m.nombre }}</span>
-                                <span class="sug-meta mono">{{ unidadEtq[m.unidad] }}</span>
+                                <span class="sug-nombre">{{ m.codigo }} · {{ m.material }}</span>
+                                <span class="sug-meta mono">{{ m.cantidad }} {{ unidadEtq[m.unidad] }} en la furgoneta</span>
                               </button>
                             </li>
                           } @empty {
-                            <li class="sug-vacio">Sin coincidencias.</li>
+                            @if (materialesOrdenados().length === 0) {
+                              <li class="sug-vacio">No hay material cargado en la furgoneta.</li>
+                            } @else {
+                              <li class="sug-vacio">Sin coincidencias.</li>
+                            }
                           }
                         </ul>
                       </div>

@@ -240,9 +240,6 @@
   gap: 8px;
   align-items: start;
 }
-.material-buscador {
-  position: relative;
-}
 .material-buscador input[type='text'] {
   width: 100%;
   padding: 9px 11px;
@@ -257,12 +254,10 @@
   outline: none;
   border-color: var(--brand);
 }
+/* Fluye en el documento (no position:absolute): con la lista acotada a lo que
+ * trae la furgoneta es corta, y así se evita el problema de clics fantasma que
+ * daba una lista flotante superpuesta sobre los controles de al lado. */
 .material-lista {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  z-index: 20;
   margin-top: 4px;
 }
 .linea-material .cliente-elegido {

@@ -10,7 +10,7 @@ import { InventarioService } from '../../core/services/inventario.service';
 import { AuthService } from '../../core/services/auth.service';
 import { UsuarioResumen } from '../../core/models/auth.model';
 import { ClienteListado, ContratoResumen } from '../../core/models/contratos.model';
-import { Equipo, Material, Ubicacion, UNIDAD_ETIQUETA } from '../../core/models/inventario.model';
+import { Equipo, Existencia, Ubicacion, UNIDAD_ETIQUETA } from '../../core/models/inventario.model';
 import {
   EstadoOrden,
   Orden,
@@ -263,13 +263,15 @@ export class SoporteComponent {
 
   /* ---------- Cerrar: material usado y equipo entregado ---------- */
   readonly recursosInvCargando = signal(false);
-  private readonly materialesInv = signal<Material[]>([]);
+  /** Solo lo que hay EN LA FURGONETA: no tiene sentido ofrecer descontar de una
+   * bodega a la que el técnico no tiene acceso físico ahora mismo. */
+  private readonly existenciasFurgoneta = signal<Existencia[]>([]);
   private readonly ubicacionesInv = signal<Ubicacion[]>([]);
   private readonly equiposDisponibles = signal<Equipo[]>([]);
   readonly materialesUsados = signal<LineaMaterialUsado[]>([]);
   readonly equipoEntregadoId = signal<number | null>(null);
   readonly materialesOrdenados = computed(() =>
-    [...this.materialesInv()].sort((a, b) => a.nombre.localeCompare(b.nombre)),
+    [...this.existenciasFurgoneta()].sort((a, b) => a.material.localeCompare(b.material)),
   );
 
   /**
@@ -295,21 +297,32 @@ export class SoporteComponent {
   });
 
   private cargarRecursosInventario() {
-    if (this.materialesInv().length || this.recursosInvCargando()) return;
+    if (this.ubicacionesInv().length || this.recursosInvCargando()) return;
     this.recursosInvCargando.set(true);
     forkJoin({
-      materiales: this.inventario.listarMateriales(),
       ubicaciones: this.inventario.listarUbicaciones(),
       equipos: this.inventario.listarEquipos({ estado: 'DISPONIBLE' }),
-    }).subscribe({
-      next: (r) => {
-        this.materialesInv.set(r.materiales);
-        this.ubicacionesInv.set(r.ubicaciones);
-        this.equiposDisponibles.set(r.equipos);
-        this.recursosInvCargando.set(false);
-      },
-      error: () => this.recursosInvCargando.set(false),
-    });
+    })
+      .pipe(
+        switchMap((r) => {
+          this.ubicacionesInv.set(r.ubicaciones);
+          this.equiposDisponibles.set(r.equipos);
+          const furgoneta = this.ubicacionTecnico();
+          // Sin furgoneta todavía no hay nada que ofrecer; confirmarCerrar ya avisa
+          // con claridad si el técnico intenta descontar material de todas formas.
+          return furgoneta
+            ? this.inventario.listarExistencias({ ubicacionId: furgoneta.id })
+            : of<Existencia[]>([]);
+        }),
+        catchError(() => of<Existencia[]>([])),
+      )
+      .subscribe({
+        next: (existencias) => {
+          this.existenciasFurgoneta.set(existencias.filter((e) => e.cantidad > 0));
+          this.recursosInvCargando.set(false);
+        },
+        error: () => this.recursosInvCargando.set(false),
+      });
   }
 
   agregarLineaMaterial() {
@@ -323,18 +336,18 @@ export class SoporteComponent {
   }
 
   /** El material ya elegido en esa línea, para pintar el chip en vez del buscador. */
-  materialSeleccionado(id: number | null): Material | null {
+  materialSeleccionado(id: number | null): Existencia | null {
     if (id == null) return null;
-    return this.materialesInv().find((m) => m.id === id) ?? null;
+    return this.existenciasFurgoneta().find((e) => e.materialId === id) ?? null;
   }
 
   actualizarBusquedaMaterial(i: number, texto: string) {
     this.materialesUsados.update((arr) => arr.map((l, idx) => (idx === i ? { ...l, busqueda: texto } : l)));
   }
 
-  elegirMaterial(i: number, m: Material) {
+  elegirMaterial(i: number, m: Existencia) {
     this.materialesUsados.update((arr) =>
-      arr.map((l, idx) => (idx === i ? { ...l, materialId: m.id, busqueda: '' } : l)),
+      arr.map((l, idx) => (idx === i ? { ...l, materialId: m.materialId, busqueda: '' } : l)),
     );
   }
 
@@ -345,12 +358,12 @@ export class SoporteComponent {
     );
   }
 
-  /** Vacío = el catálogo completo (modo lista); si no, filtra por nombre o código. */
-  materialesFiltrados(texto: string): Material[] {
+  /** Vacío = lo que hay en la furgoneta (modo lista); si no, filtra por nombre o código. */
+  materialesFiltrados(texto: string): Existencia[] {
     const q = this.normalizarTexto(texto.trim());
     if (!q) return this.materialesOrdenados();
     return this.materialesOrdenados().filter(
-      (m) => this.normalizarTexto(m.codigo).includes(q) || this.normalizarTexto(m.nombre).includes(q),
+      (m) => this.normalizarTexto(m.codigo).includes(q) || this.normalizarTexto(m.material).includes(q),
     );
   }
 
