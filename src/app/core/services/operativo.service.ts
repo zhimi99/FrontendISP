@@ -48,6 +48,11 @@ export class OperativoService {
     return this.http.post<Orden>(`${environment.apiBase}/api/ordenes/${id}/iniciar`, {});
   }
 
+  /** GET /api/ordenes/{id} — el estado real de una orden, para reconciliar tras un conflicto. */
+  porId(id: number): Observable<Orden> {
+    return this.http.get<Orden>(`${environment.apiBase}/api/ordenes/${id}`);
+  }
+
   /** POST /api/ordenes/{id}/cerrar — cierra con resultado (EN_PROCESO → CERRADA). */
   cerrar(id: number, resultado: string): Observable<Orden> {
     return this.http.post<Orden>(`${environment.apiBase}/api/ordenes/${id}/cerrar`, { resultado });

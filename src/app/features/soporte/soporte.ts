@@ -505,6 +505,29 @@ export class SoporteComponent {
           this.cargar();
         },
         error: (e) => {
+          // Un backend lento puede hacer que un segundo clic (o un reintento tras
+          // recargar) llegue después de que el primero ya cerró la orden: el 409
+          // que responde el segundo no es un error real, es la orden ya resuelta.
+          // Sin este chequeo el modal se queda atascado repitiendo el mismo error.
+          if (e.status === 409 || e.status === 422) {
+            this.operativo.porId(o.id).subscribe({
+              next: (actual) => {
+                this.guardando.set(false);
+                if (actual.estado === 'CERRADA') {
+                  this.accion.set(null);
+                  this.banner.set({ texto: `Orden ${o.numero} ya estaba cerrada.`, error: false });
+                } else {
+                  this.errorAccion.set(this.mensajeAccion(e));
+                }
+                this.cargar();
+              },
+              error: () => {
+                this.guardando.set(false);
+                this.errorAccion.set(this.mensajeAccion(e));
+              },
+            });
+            return;
+          }
           this.guardando.set(false);
           this.errorAccion.set(this.mensajeAccion(e));
         },
