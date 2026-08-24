@@ -48,6 +48,15 @@ export class OperativoService {
     return this.http.post<Orden>(`${environment.apiBase}/api/ordenes/${id}/iniciar`, {});
   }
 
+  /**
+   * POST /api/ordenes/{id}/aceptar — un técnico toma una orden PENDIENTE por su
+   * cuenta (PENDIENTE → ASIGNADA), sin esperar a que despacho se la asigne. El
+   * técnico sale del token en el backend, no viaja nada en el cuerpo.
+   */
+  aceptar(id: number): Observable<Orden> {
+    return this.http.post<Orden>(`${environment.apiBase}/api/ordenes/${id}/aceptar`, {});
+  }
+
   /** GET /api/ordenes/{id} — el estado real de una orden, para reconciliar tras un conflicto. */
   porId(id: number): Observable<Orden> {
     return this.http.get<Orden>(`${environment.apiBase}/api/ordenes/${id}`);

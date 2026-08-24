@@ -111,6 +111,11 @@
                   @if (o.estado === 'PENDIENTE' && puedeAsignar()) {
                     <button class="btn mini" (click)="abrirAsignar(o)">Asignar</button>
                   }
+                  @if (o.estado === 'PENDIENTE' && puedeAceptar()) {
+                    <button class="btn mini" [disabled]="procesandoId() === o.id" (click)="aceptarOrden(o)">
+                      {{ procesandoId() === o.id ? '…' : 'Aceptar' }}
+                    </button>
+                  }
                   @if (o.estado === 'ASIGNADA' && puedeOperarOrden(o)) {
                     <button class="btn mini" [disabled]="procesandoId() === o.id" (click)="iniciarOrden(o)">
                       {{ procesandoId() === o.id ? '…' : 'Iniciar' }}

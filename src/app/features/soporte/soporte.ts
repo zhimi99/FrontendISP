@@ -63,17 +63,16 @@ export class SoporteComponent {
   readonly prioridadTono = PRIORIDAD_TONO;
   readonly unidadEtq = UNIDAD_ETIQUETA;
 
-  /** Despacho (genera/asigna/cancela); técnico (inicia/cierra). ADMIN puede todo. */
+  /** Despacho (genera/asigna/cancela); técnico (inicia/cierra/acepta). ADMIN puede todo. */
   readonly puedeCrear = computed(() => this.auth.tieneRol('SOPORTE', 'ADMINISTRADOR'));
   readonly puedeAsignar = computed(() => this.auth.tieneRol('SOPORTE', 'ADMINISTRADOR'));
   readonly puedeCancelar = computed(() => this.auth.tieneRol('SOPORTE', 'ADMINISTRADOR'));
   /**
-   * Un técnico sin rol de despacho solo ve —y solo puede operar— lo que le asignaron
-   * a él. SOPORTE/ADMIN despachan pero no ejecutan trabajo de campo.
+   * Cualquier técnico ve el tablero completo (igual que despacho) y puede tomar una
+   * PENDIENTE sin esperar a que se la asignen — "Aceptar" es la misma transición
+   * que "Asignar", solo que la dispara el propio técnico sobre sí mismo.
    */
-  readonly esSoloTecnico = computed(
-    () => this.auth.tieneRol('TECNICO') && !this.auth.tieneRol('ADMINISTRADOR', 'SOPORTE'),
-  );
+  readonly puedeAceptar = computed(() => this.auth.tieneRol('TECNICO', 'ADMINISTRADOR'));
 
   private readonly abiertas = signal<Orden[]>([]);
   private readonly bajoDemanda = signal<Orden[]>([]);
@@ -95,21 +94,14 @@ export class SoporteComponent {
 
   private cargar() {
     this.cargando.set(true);
-    // Un técnico sin rol de despacho no ve lo PENDIENTE (aún no es suyo) y solo
-    // recibe lo ASIGNADA/EN_PROCESO que el backend le filtra a él.
-    const miId = this.auth.perfil()?.usuarioId ?? undefined;
-    const soloTecnico = this.esSoloTecnico();
+    // Tablero único: cualquiera con acceso a Soporte ve TODO lo abierto, técnico
+    // incluido. Lo que sí se restringe por técnico es qué puede OPERAR (ver
+    // puedeOperarOrden) y qué PENDIENTE puede tomar por su cuenta (ver puedeAceptar).
     forkJoin({
       clientes: this.clientesService.listar().pipe(catchError(() => of([]))),
-      pendientes: soloTecnico ? of([]) : this.operativo.listarOrdenes({ estado: 'PENDIENTE' }),
-      asignadas: this.operativo.listarOrdenes({
-        estado: 'ASIGNADA',
-        tecnicoUsuarioId: soloTecnico ? miId : undefined,
-      }),
-      enProceso: this.operativo.listarOrdenes({
-        estado: 'EN_PROCESO',
-        tecnicoUsuarioId: soloTecnico ? miId : undefined,
-      }),
+      pendientes: this.operativo.listarOrdenes({ estado: 'PENDIENTE' }),
+      asignadas: this.operativo.listarOrdenes({ estado: 'ASIGNADA' }),
+      enProceso: this.operativo.listarOrdenes({ estado: 'EN_PROCESO' }),
     }).subscribe({
       next: (r) => {
         this.clientes.set(r.clientes);
@@ -172,8 +164,7 @@ export class SoporteComponent {
 
   private cargarBajoDemanda(v: EstadoOrden) {
     this.otrasCargando.set(true);
-    const miId = this.auth.perfil()?.usuarioId ?? undefined;
-    this.operativo.listarOrdenes({ estado: v, tecnicoUsuarioId: this.esSoloTecnico() ? miId : undefined }).subscribe({
+    this.operativo.listarOrdenes({ estado: v }).subscribe({
       next: (lista) => {
         this.bajoDemanda.set(lista);
         this.otrasCargando.set(false);
@@ -570,6 +561,25 @@ export class SoporteComponent {
       },
       error: (e) => {
         this.procesandoId.set(null);
+        this.banner.set({ texto: this.mensajeAccion(e), error: true });
+      },
+    });
+  }
+
+  /** El técnico toma una PENDIENTE por su cuenta, sin pasar por el despacho. */
+  aceptarOrden(o: Orden) {
+    if (this.procesandoId() != null) return;
+    this.banner.set(null);
+    this.procesandoId.set(o.id);
+    this.operativo.aceptar(o.id).subscribe({
+      next: () => {
+        this.procesandoId.set(null);
+        this.banner.set({ texto: `Orden ${o.numero} aceptada.`, error: false });
+        this.cargar();
+      },
+      error: (e) => {
+        this.procesandoId.set(null);
+        // Otro técnico pudo habérsela adelantado: el 409 aquí es justamente eso.
         this.banner.set({ texto: this.mensajeAccion(e), error: true });
       },
     });
