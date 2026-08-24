@@ -114,7 +114,7 @@
               <label>{{ tipoIdLabel() }} <span class="req">*</span></label>
               <input class="input" formControlName="identificacion" [placeholder]="idHelp()" />
               @if (err('identificacion')) {
-                <span class="err-msg">Ingresa un número válido ({{ idHelp() }}).</span>
+                <span class="err-msg">{{ identificacionErrorMsg() }}</span>
               } @else {
                 <span class="hint">{{ idHelp() }}</span>
               }
