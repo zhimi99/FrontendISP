@@ -12,6 +12,7 @@ import { ContratosComponent } from './features/contratos/contratos';
 import { FacturacionComponent } from './features/facturacion/facturacion';
 import { InventarioComponent } from './features/inventario/inventario';
 import { CierresCajaComponent } from './features/reportes/cierres-caja';
+import { VentasReporteComponent } from './features/reportes/ventas-reporte';
 import { ConfiguracionComponent } from './features/configuracion/configuracion';
 import { RedComponent } from './features/red/red';
 import { SesionComponent } from './features/sesion/sesion';
@@ -50,6 +51,7 @@ export const routes: Routes = [
       { path: 'inventario', component: InventarioComponent },
       { path: 'reportes', pathMatch: 'full', redirectTo: 'reportes/cierres-caja' },
       { path: 'reportes/cierres-caja', component: CierresCajaComponent },
+      { path: 'reportes/ventas', component: VentasReporteComponent },
       { path: 'configuracion', component: ConfiguracionComponent },
 
       { path: '**', redirectTo: 'dashboard' },

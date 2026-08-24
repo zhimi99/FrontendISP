@@ -1,0 +1,134 @@
+<div class="page">
+  <!-- ============ Encabezado + acciones (no se imprime) ============ -->
+  <div class="page-head no-print">
+    <div>
+      <h2>Reporte de ventas</h2>
+      <p class="sub">Qué se vendió y cuánto se recaudó por período, aparte de la jornada de Cobranzas.</p>
+    </div>
+    <div class="head-actions">
+      <button class="btn btn-primary" (click)="imprimir()" [disabled]="!reporte()?.ventas?.length">
+        <app-icon name="invoice" [size]="15" /> Imprimir / PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- ============ Alterna entre los reportes disponibles (no se imprime) ============ -->
+  <div class="seg rep-tabs no-print">
+    <a class="seg-btn" routerLink="/reportes/cierres-caja">Cierres de caja</a>
+    <button class="seg-btn active" type="button">Ventas</button>
+  </div>
+
+  <!-- ============ Controles de período (no se imprimen) ============ -->
+  <div class="card rep-controls no-print">
+    <div class="seg">
+      @for (p of periodos; track p.valor) {
+        <button class="seg-btn" [class.active]="periodo() === p.valor" (click)="setPeriodo(p.valor)">{{ p.etq }}</button>
+      }
+    </div>
+
+    <div class="rep-ref">
+      @switch (periodo()) {
+        @case ('MES') {
+          <div class="field">
+            <label>Mes</label>
+            <input type="month" [ngModel]="mes()" (ngModelChange)="mes.set($event); generar()" />
+          </div>
+        }
+        @case ('PERSONALIZADO') {
+          <div class="field">
+            <label>Desde</label>
+            <input type="date" [ngModel]="desdePersonalizado()"
+                   (ngModelChange)="desdePersonalizado.set($event); generar()" />
+          </div>
+          <div class="field">
+            <label>Hasta</label>
+            <input type="date" [ngModel]="hastaPersonalizado()"
+                   (ngModelChange)="hastaPersonalizado.set($event); generar()" />
+          </div>
+        }
+      }
+    </div>
+
+    <button class="btn" (click)="generar()"><app-icon name="refresh" [size]="15" /> Generar</button>
+  </div>
+
+  <!-- ============ Encabezado de impresión (solo en PDF) ============ -->
+  <div class="print-only rep-print-head">
+    <div class="rep-brand">SMARTUZ · ISP</div>
+    <h1>Reporte de ventas</h1>
+    <div class="rep-meta">
+      <span>{{ periodoLabel() }}</span>
+      <span>Generado: {{ fechaHora(generadoEn().toISOString()) }}</span>
+    </div>
+  </div>
+
+  <!-- ============ Resumen del período ============ -->
+  @if (reporte(); as rep) {
+    <div class="rep-chips">
+      <div class="chip">
+        <span class="chip-cap">Período</span>
+        <span class="chip-val sm">{{ periodoLabel() }}</span>
+      </div>
+      <div class="chip">
+        <span class="chip-cap">Ventas</span>
+        <span class="chip-val">{{ rep.resumen.cantidad }}</span>
+      </div>
+      <div class="chip">
+        <span class="chip-cap">Total recaudado</span>
+        <span class="chip-val">{{ moneda(rep.resumen.totalVendido) }}</span>
+      </div>
+      <div class="chip">
+        <span class="chip-cap">Consumidor final</span>
+        <span class="chip-val sm">{{ rep.resumen.cantidadConsumidorFinal }} · {{ moneda(rep.resumen.totalConsumidorFinal) }}</span>
+      </div>
+      <div class="chip">
+        <span class="chip-cap">Cliente identificado</span>
+        <span class="chip-val sm">{{ rep.resumen.cantidadClienteIdentificado }} · {{ moneda(rep.resumen.totalClienteIdentificado) }}</span>
+      </div>
+    </div>
+  }
+
+  <!-- ============ Tabla de ventas ============ -->
+  <div class="card table-card">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>N° venta</th>
+            <th>Comprador</th>
+            <th>Tipo</th>
+            <th>Forma de pago</th>
+            <th>Vendedor</th>
+            <th class="right">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (v of reporte()?.ventas ?? []; track v.id) {
+            <tr>
+              <td class="muted">{{ fechaHora(v.fecha) }}</td>
+              <td class="mono">{{ v.numero }}</td>
+              <td>{{ v.compradorNombre }}</td>
+              <td><span class="badge" [class]="tipoCompradorTono(v)">{{ tipoCompradorEtq(v) }}</span></td>
+              <td>{{ v.formaPago }}</td>
+              <td>{{ vendedorNombre(v) }}</td>
+              <td class="right mono">{{ moneda(v.total) }}</td>
+            </tr>
+          } @empty {
+            <tr><td colspan="7" class="empty">{{ mensajeTabla() }}</td></tr>
+          }
+        </tbody>
+        @if (reporte(); as rep) {
+          @if (rep.ventas.length) {
+            <tfoot>
+              <tr class="tot">
+                <td colspan="6">Total ({{ rep.resumen.cantidad }} venta(s))</td>
+                <td class="right mono">{{ moneda(rep.resumen.totalVendido) }}</td>
+              </tr>
+            </tfoot>
+          }
+        }
+      </table>
+    </div>
+  </div>
+</div>

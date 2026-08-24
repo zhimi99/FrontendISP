@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
-import { ArticuloVendible, RegistrarVentaRequest, Venta } from '../models/ventas.model';
+import { ArticuloVendible, RegistrarVentaRequest, Venta, VentasReporte } from '../models/ventas.model';
 
 /** Venta de productos en mostrador (MS-FINANZAS · /api/ventas). */
 @Injectable({ providedIn: 'root' })
@@ -48,5 +48,15 @@ export class VentasService {
   /** GET /api/ventas/{id} — una venta concreta, para reimprimir su recibo. */
   detalle(id: number): Observable<Venta> {
     return this.http.get<Venta>(`${environment.apiBase}/api/ventas/${id}`);
+  }
+
+  /**
+   * GET /api/ventas/reporte?desde=&hasta= — ventas del período (ambos inclusive),
+   * con su resumen: total recaudado y desglose consumidor final vs. cliente
+   * identificado. Para Reportes, no para Cobranzas.
+   */
+  reporte(desde: string, hasta: string): Observable<VentasReporte> {
+    const params = new HttpParams().set('desde', desde).set('hasta', hasta);
+    return this.http.get<VentasReporte>(`${environment.apiBase}/api/ventas/reporte`, { params });
   }
 }

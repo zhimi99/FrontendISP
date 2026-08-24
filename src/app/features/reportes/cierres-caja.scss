@@ -1,8 +1,21 @@
-/* Reporte de cierres de caja. Base heredada de clientes.scss. */
+/* Reporte de cierres de caja. Base heredada de clientes.scss.
+ * También la usa ventas-reporte.ts (styleUrls): las reglas .rep-* y .seg de acá
+ * abajo son compartidas por los dos reportes, para que se vean como una sola
+ * familia y no dos pantallas con estilos por separado. */
 
 .head-actions {
   display: flex;
   gap: 10px;
+}
+
+/* Pestañas para saltar entre los reportes del módulo. */
+.rep-tabs {
+  margin-bottom: 14px;
+}
+.rep-tabs a.seg-btn {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
 }
 
 /* ============ Controles de período ============ */

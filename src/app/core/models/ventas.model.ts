@@ -120,3 +120,22 @@ export const COMPROBANTE_ETIQUETA: Record<ComprobanteVenta, string> = {
   FACTURA: 'Con factura',
   RECIBO: 'Sin factura (solo recibo)',
 };
+
+/**
+ * Reporte de ventas en un período (`GET /api/ventas/reporte`). Proceso aparte de
+ * Cobranzas: aquello es la jornada de una caja; esto es "qué se vendió" en
+ * cualquier rango de fechas, sin caja de por medio.
+ */
+export interface VentasReporte {
+  desde: string;
+  hasta: string;
+  ventas: Venta[];
+  resumen: {
+    cantidad: number;
+    totalVendido: number;
+    cantidadConsumidorFinal: number;
+    totalConsumidorFinal: number;
+    cantidadClienteIdentificado: number;
+    totalClienteIdentificado: number;
+  };
+}
