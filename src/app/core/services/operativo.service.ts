@@ -68,6 +68,16 @@ export class OperativoService {
   }
 
   /**
+   * POST /api/ordenes/{id}/foto — foto opcional del trabajo terminado. Solo procede
+   * sobre una orden ya CERRADA; subirla de nuevo reemplaza la anterior.
+   */
+  subirFoto(id: number, archivo: File): Observable<void> {
+    const cuerpo = new FormData();
+    cuerpo.append('archivo', archivo, archivo.name);
+    return this.http.post<void>(`${environment.apiBase}/api/ordenes/${id}/foto`, cuerpo);
+  }
+
+  /**
    * POST /api/ordenes/{id}/cancelar — anula la orden con motivo obligatorio (cualquier
    * estado no terminal → CANCELADA). Cancelar una ya cerrada/cancelada devuelve 409.
    */

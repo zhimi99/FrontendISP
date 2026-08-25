@@ -399,7 +399,13 @@
   font-weight: 600;
 }
 .banner.error {
-  border-left-color: var(--warn);
+  border-left-color: var(--danger);
+  background: var(--danger-soft);
+}
+.banner.error span {
+  color: var(--danger);
+  font-size: 16px;
+  font-weight: 700;
 }
 .banner-x {
   appearance: none;

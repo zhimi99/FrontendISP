@@ -206,86 +206,130 @@
     <div class="modal modal-lg" (click)="$event.stopPropagation()">
       <div class="modal-head">
         <h3>Cerrar orden · {{ ordenAccion()?.numero }}</h3>
-        <button class="modal-x" (click)="cerrarModal()" [disabled]="guardando()" aria-label="Cerrar">✕</button>
+        <button class="modal-x" (click)="cerrarModal()" [disabled]="guardando() || subiendoFoto()" aria-label="Cerrar">✕</button>
       </div>
       <div class="modal-body">
-        <div class="field">
-          <label>Resultado del trabajo *</label>
-          <textarea rows="4" [ngModel]="resultado()" (ngModelChange)="resultado.set($event)"
-                    placeholder="Qué se hizo, observaciones para el cliente o para quien lo revise después…"></textarea>
-          <span class="hint">Obligatorio: queda en la auditoría de la orden.</span>
-        </div>
-
-        @if (recursosInvCargando()) {
-          <span class="hint">Cargando tu inventario…</span>
-        } @else {
+        @if (!ordenYaCerrada()) {
           <div class="field">
-            <label>Material utilizado (opcional)</label>
-            @if (materialesUsados().length) {
-              <div class="lineas-material">
-                @for (l of materialesUsados(); track $index) {
-                  <div class="linea-material">
-                    @if (materialSeleccionado(l.materialId); as m) {
-                      <div class="cliente-elegido">
-                        <span>{{ m.codigo }} <span class="muted">· {{ m.material }}</span></span>
-                        <button type="button" class="btn mini" (click)="cambiarMaterial($index)">Cambiar</button>
-                      </div>
-                    } @else {
-                      <div class="material-buscador">
-                        <input type="text" placeholder="Busca por nombre o código, o mira la lista…"
-                               [ngModel]="l.busqueda" (ngModelChange)="actualizarBusquedaMaterial($index, $event)" />
-                        <ul class="sugerencias material-lista">
-                          @for (m of materialesFiltrados(l.busqueda); track m.materialId) {
-                            <li>
-                              <button type="button" (click)="elegirMaterial($index, m)">
-                                <span class="sug-nombre">{{ m.codigo }} · {{ m.material }}</span>
-                                <span class="sug-meta mono">{{ m.cantidad }} {{ unidadEtq[m.unidad] }} en la furgoneta</span>
-                              </button>
-                            </li>
-                          } @empty {
-                            @if (materialesOrdenados().length === 0) {
-                              <li class="sug-vacio">No hay material cargado en la furgoneta.</li>
-                            } @else {
-                              <li class="sug-vacio">Sin coincidencias.</li>
-                            }
-                          }
-                        </ul>
-                      </div>
-                    }
-                    <input type="number" min="0" step="0.01" placeholder="Cant."
-                           [ngModel]="l.cantidad" (ngModelChange)="actualizarLineaMaterial($index, 'cantidad', $event)" />
-                    <button type="button" class="linea-quitar" (click)="quitarLineaMaterial($index)" aria-label="Quitar línea">✕</button>
-                  </div>
-                }
-              </div>
-            }
-            <button type="button" class="btn mini" (click)="agregarLineaMaterial()">+ Agregar material</button>
-            <span class="hint">Se descuenta de la furgoneta y queda registrado contra esta orden.</span>
+            <label>Resultado del trabajo *</label>
+            <textarea rows="4" [ngModel]="resultado()" (ngModelChange)="resultado.set($event)"
+                      placeholder="Qué se hizo, observaciones para el cliente o para quien lo revise después…"></textarea>
+            <span class="hint">Obligatorio: queda en la auditoría de la orden.</span>
           </div>
 
+          @if (recursosInvCargando()) {
+            <span class="hint">Cargando tu inventario…</span>
+          } @else {
+            <div class="field">
+              <label>Material utilizado (opcional)</label>
+              @if (materialesUsados().length) {
+                <div class="lineas-material">
+                  @for (l of materialesUsados(); track $index) {
+                    <div class="linea-material">
+                      @if (materialSeleccionado(l.materialId); as m) {
+                        <div class="cliente-elegido">
+                          <span>{{ m.codigo }} <span class="muted">· {{ m.material }}</span></span>
+                          <button type="button" class="btn mini" (click)="cambiarMaterial($index)">Cambiar</button>
+                        </div>
+                      } @else {
+                        <div class="material-buscador">
+                          <input type="text" placeholder="Busca por nombre o código, o mira la lista…"
+                                 [ngModel]="l.busqueda" (ngModelChange)="actualizarBusquedaMaterial($index, $event)" />
+                          <ul class="sugerencias material-lista">
+                            @for (m of materialesFiltrados(l.busqueda); track m.materialId) {
+                              <li>
+                                <button type="button" (click)="elegirMaterial($index, m)">
+                                  <span class="sug-nombre">{{ m.codigo }} · {{ m.material }}</span>
+                                  <span class="sug-meta mono">{{ m.cantidad }} {{ unidadEtq[m.unidad] }} en la furgoneta</span>
+                                </button>
+                              </li>
+                            } @empty {
+                              @if (materialesOrdenados().length === 0) {
+                                <li class="sug-vacio">No hay material cargado en la furgoneta.</li>
+                              } @else {
+                                <li class="sug-vacio">Sin coincidencias.</li>
+                              }
+                            }
+                          </ul>
+                        </div>
+                      }
+                      <input type="number" min="0" step="0.01" placeholder="Cant."
+                             [ngModel]="l.cantidad" (ngModelChange)="actualizarLineaMaterial($index, 'cantidad', $event)" />
+                      <button type="button" class="linea-quitar" (click)="quitarLineaMaterial($index)" aria-label="Quitar línea">✕</button>
+                    </div>
+                  }
+                </div>
+              }
+              <button type="button" class="btn mini" (click)="agregarLineaMaterial()">+ Agregar material</button>
+              <span class="hint">Se descuenta de la furgoneta y queda registrado contra esta orden.</span>
+            </div>
+
+            <div class="field">
+              <label>Equipos entregados (opcional)</label>
+              @if (equiposEntregados().length) {
+                <div class="lineas-material">
+                  @for (l of equiposEntregados(); track $index) {
+                    <div class="linea-equipo">
+                      <select [ngModel]="l.equipoId" (ngModelChange)="elegirEquipo($index, $event)">
+                        <option [ngValue]="null">Elige un equipo…</option>
+                        @for (e of opcionesEquipoPara($index); track e.id) {
+                          <option [ngValue]="e.id">{{ equipoLabel(e) }}</option>
+                        }
+                      </select>
+                      <button type="button" class="linea-quitar" (click)="quitarLineaEquipo($index)" aria-label="Quitar línea">✕</button>
+                    </div>
+                  }
+                </div>
+              }
+              @if (equiposEntregables().length) {
+                <button type="button" class="btn mini" (click)="agregarLineaEquipo()">+ Agregar equipo</button>
+                <span class="hint">Un router, un repetidor, o cualquier combinación: marca, modelo y MAC ya quedaron registrados al dar de alta cada equipo; esto solo los pasa a nombre del cliente.</span>
+              } @else {
+                <span class="hint">No hay equipos disponibles en la furgoneta. Si se dejó uno en otro lado, primero pide el traslado desde Inventario.</span>
+              }
+            </div>
+
+            <div class="field">
+              <label>Foto del trabajo terminado (opcional)</label>
+              <input #fotoInput type="file" accept="image/jpeg,image/png,image/webp"
+                     (change)="onFotoSeleccionada($event)" [style.display]="foto() ? 'none' : 'block'" />
+              @if (foto(); as archivo) {
+                <div class="cliente-elegido">
+                  <span>{{ archivo.name }}</span>
+                  <button type="button" class="btn mini" (click)="quitarFoto(fotoInput)">Quitar</button>
+                </div>
+              }
+              @if (errorFoto()) {
+                <span class="hint danger">{{ errorFoto() }}</span>
+              } @else {
+                <span class="hint">JPG, PNG o WebP, hasta 8 MB. Se sube después de cerrar la orden.</span>
+              }
+            </div>
+          }
+
+          @if (errorAccion()) { <div class="modal-error">{{ errorAccion() }}</div> }
+        } @else {
           <div class="field">
-            <label>Equipo entregado (opcional)</label>
-            @if (equiposEntregables().length) {
-              <select [ngModel]="equipoEntregadoId()" (ngModelChange)="equipoEntregadoId.set($event)">
-                <option [ngValue]="null">No se entregó equipo</option>
-                @for (e of equiposEntregables(); track e.id) {
-                  <option [ngValue]="e.id">{{ equipoLabel(e) }}</option>
-                }
-              </select>
-              <span class="hint">Marca, modelo y MAC ya quedaron registrados al dar de alta el equipo; esto solo lo pasa a nombre del cliente.</span>
-            } @else {
-              <span class="hint">No hay equipos disponibles en la furgoneta. Si se dejó uno en otro lado, primero pide el traslado desde Inventario.</span>
+            @if (subiendoFoto()) {
+              <span class="hint">Orden cerrada. Subiendo la foto…</span>
+            } @else if (errorFoto()) {
+              <p>Orden cerrada. {{ errorFoto() }}</p>
+              <button type="button" class="btn mini" (click)="reintentarFoto()">Reintentar subir foto</button>
             }
           </div>
         }
-
-        @if (errorAccion()) { <div class="modal-error">{{ errorAccion() }}</div> }
       </div>
       <div class="modal-foot">
-        <button type="button" class="btn" (click)="cerrarModal()" [disabled]="guardando()">Cancelar</button>
-        <button type="button" class="btn btn-primary" (click)="confirmarCerrar()" [disabled]="guardando()">
-          {{ guardando() ? 'Cerrando…' : 'Cerrar orden' }}
-        </button>
+        @if (!ordenYaCerrada()) {
+          <button type="button" class="btn" (click)="cerrarModal()" [disabled]="guardando()">Cancelar</button>
+          <button type="button" class="btn btn-primary" (click)="confirmarCerrar()" [disabled]="guardando()">
+            {{ guardando() ? 'Cerrando…' : 'Cerrar orden' }}
+          </button>
+        } @else {
+          <button type="button" class="btn btn-primary" (click)="cerrarModal()" [disabled]="subiendoFoto()">
+            {{ subiendoFoto() ? 'Subiendo…' : 'Listo' }}
+          </button>
+        }
       </div>
     </div>
   </div>

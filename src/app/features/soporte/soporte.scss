@@ -290,3 +290,25 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ============ Equipos entregados (Cerrar orden) ============ */
+.linea-equipo {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+.linea-equipo select {
+  height: 34px;
+  box-sizing: border-box;
+  padding: 0 9px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13.5px;
+}
+
+.hint.danger {
+  color: var(--danger);
+}

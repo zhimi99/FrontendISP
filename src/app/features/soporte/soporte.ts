@@ -249,6 +249,12 @@ export class SoporteComponent {
   readonly tecnicoSel = signal<number | null>(null);
   // Cerrar
   readonly resultado = signal('');
+  /** Foto opcional del trabajo terminado: se sube después de cerrar, sin bloquearlo. */
+  readonly foto = signal<File | null>(null);
+  readonly errorFoto = signal<string | null>(null);
+  readonly subiendoFoto = signal(false);
+  /** true desde que POST /cerrar tuvo éxito: de ahí en más el modal solo resuelve la foto. */
+  readonly ordenYaCerrada = signal(false);
   // Cancelar
   readonly motivo = signal('');
 
@@ -260,7 +266,11 @@ export class SoporteComponent {
   private readonly ubicacionesInv = signal<Ubicacion[]>([]);
   private readonly equiposDisponibles = signal<Equipo[]>([]);
   readonly materialesUsados = signal<LineaMaterialUsado[]>([]);
-  readonly equipoEntregadoId = signal<number | null>(null);
+  /**
+   * Varios equipos, no uno: una instalación puede dejar router + repetidor, o
+   * cualquier otra combinación, no necesariamente "un router más".
+   */
+  readonly equiposEntregados = signal<{ equipoId: number | null }[]>([]);
   readonly materialesOrdenados = computed(() =>
     [...this.existenciasFurgoneta()].sort((a, b) => a.material.localeCompare(b.material)),
   );
@@ -367,6 +377,27 @@ export class SoporteComponent {
     return `${e.marca} ${e.modelo} · S/N ${e.numeroSerie}${e.macAddress ? ' · MAC ' + e.macAddress : ''}`;
   }
 
+  agregarLineaEquipo() {
+    this.equiposEntregados.update((arr) => [...arr, { equipoId: null }]);
+  }
+  quitarLineaEquipo(i: number) {
+    this.equiposEntregados.update((arr) => arr.filter((_, idx) => idx !== i));
+  }
+  elegirEquipo(i: number, equipoId: number | null) {
+    this.equiposEntregados.update((arr) => arr.map((l, idx) => (idx === i ? { equipoId } : l)));
+  }
+  /** Las opciones de esta línea, sin los equipos que ya se eligieron en otra: no se
+   * puede entregar el mismo equipo dos veces. */
+  opcionesEquipoPara(i: number): Equipo[] {
+    const elegidosEnOtras = new Set(
+      this.equiposEntregados()
+        .filter((_, idx) => idx !== i)
+        .map((l) => l.equipoId)
+        .filter((id): id is number => id != null),
+    );
+    return this.equiposEntregables().filter((e) => !elegidosEnOtras.has(e.id));
+  }
+
   abrirAsignar(o: Orden) {
     this.banner.set(null);
     this.ordenAccion.set(o);
@@ -381,7 +412,10 @@ export class SoporteComponent {
     this.ordenAccion.set(o);
     this.resultado.set('');
     this.materialesUsados.set([]);
-    this.equipoEntregadoId.set(null);
+    this.equiposEntregados.set([]);
+    this.foto.set(null);
+    this.errorFoto.set(null);
+    this.ordenYaCerrada.set(false);
     this.errorAccion.set(null);
     this.accion.set('cerrar');
     this.cargarRecursosInventario();
@@ -396,7 +430,7 @@ export class SoporteComponent {
   }
 
   cerrarModal() {
-    if (this.guardando()) return;
+    if (this.guardando() || this.subiendoFoto()) return;
     this.accion.set(null);
     this.ordenAccion.set(null);
   }
@@ -456,13 +490,15 @@ export class SoporteComponent {
         return;
       }
     }
-    const equipoId = this.equipoEntregadoId();
-    if (equipoId != null && o.contratoId == null) {
-      this.errorAccion.set('Esta orden no tiene un contrato asociado; no se puede entregar el equipo.');
+    const equiposIds = this.equiposEntregados()
+      .map((l) => l.equipoId)
+      .filter((id): id is number => id != null);
+    if (equiposIds.length && o.contratoId == null) {
+      this.errorAccion.set('Esta orden no tiene un contrato asociado; no se pueden entregar equipos.');
       return;
     }
     const ubicacion = this.ubicacionTecnico();
-    if ((lineas.length || equipoId != null) && !ubicacion) {
+    if ((lineas.length || equiposIds.length) && !ubicacion) {
       this.errorAccion.set('No se encontró la furgoneta en el catálogo de ubicaciones: no se puede descontar del inventario.');
       return;
     }
@@ -479,21 +515,21 @@ export class SoporteComponent {
         contratoId: o.contratoId,
       }),
     );
+    const asignaciones = equiposIds.map((id) =>
+      this.inventario.asignarEquipo(id, { contratoId: o.contratoId! }),
+    );
 
     of(null)
       .pipe(
         switchMap(() => (consumos.length ? forkJoin(consumos) : of(null))),
-        switchMap(() =>
-          equipoId != null ? this.inventario.asignarEquipo(equipoId, { contratoId: o.contratoId! }) : of(null),
-        ),
+        switchMap(() => (asignaciones.length ? forkJoin(asignaciones) : of(null))),
         switchMap(() => this.operativo.cerrar(o.id, res)),
       )
       .subscribe({
         next: () => {
           this.guardando.set(false);
-          this.accion.set(null);
-          this.banner.set({ texto: `Orden ${o.numero} cerrada.`, error: false });
           this.cargar();
+          this.finalizarCierre(o);
         },
         error: (e) => {
           // Un backend lento puede hacer que un segundo clic (o un reintento tras
@@ -505,8 +541,7 @@ export class SoporteComponent {
               next: (actual) => {
                 this.guardando.set(false);
                 if (actual.estado === 'CERRADA') {
-                  this.accion.set(null);
-                  this.banner.set({ texto: `Orden ${o.numero} ya estaba cerrada.`, error: false });
+                  this.finalizarCierre(o, 'ya estaba cerrada');
                 } else {
                   this.errorAccion.set(this.mensajeAccion(e));
                 }
@@ -523,6 +558,85 @@ export class SoporteComponent {
           this.errorAccion.set(this.mensajeAccion(e));
         },
       });
+  }
+
+  /**
+   * La orden ya quedó CERRADA (justo ahora o por un intento anterior). Si eligieron
+   * foto, la sube sin bloquear ni deshacer el cierre: es opcional, un fallo aquí no
+   * es un fallo de cerrar la orden.
+   */
+  private finalizarCierre(o: Orden, comoQuedo: 'cerrada' | 'ya estaba cerrada' = 'cerrada') {
+    this.ordenYaCerrada.set(true);
+    const archivo = this.foto();
+    if (!archivo) {
+      this.accion.set(null);
+      this.ordenAccion.set(null);
+      this.banner.set({ texto: `Orden ${o.numero} ${comoQuedo}.`, error: false });
+      return;
+    }
+    this.subirFoto(o, archivo);
+  }
+
+  private subirFoto(o: Orden, archivo: File) {
+    this.subiendoFoto.set(true);
+    this.errorFoto.set(null);
+    this.operativo.subirFoto(o.id, archivo).subscribe({
+      next: () => {
+        this.subiendoFoto.set(false);
+        this.accion.set(null);
+        this.ordenAccion.set(null);
+        this.banner.set({ texto: `Orden ${o.numero} cerrada, con foto adjunta.`, error: false });
+      },
+      error: (e) => {
+        this.subiendoFoto.set(false);
+        this.errorFoto.set(this.mensajeErrorFoto(e));
+      },
+    });
+  }
+
+  /** La orden ya está cerrada pase lo que pase aquí: solo reintenta subir la foto. */
+  reintentarFoto() {
+    const o = this.ordenAccion();
+    const archivo = this.foto();
+    if (!o || !archivo) return;
+    this.subirFoto(o, archivo);
+  }
+
+  onFotoSeleccionada(evento: Event) {
+    const input = evento.target as HTMLInputElement;
+    const archivo = input.files?.[0] ?? null;
+    this.errorFoto.set(null);
+    if (!archivo) {
+      this.foto.set(null);
+      return;
+    }
+    const tiposPermitidos = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!tiposPermitidos.includes(archivo.type) && !/\.(jpe?g|png|webp)$/i.test(archivo.name)) {
+      this.foto.set(null);
+      this.errorFoto.set('Usa una imagen JPG, PNG o WebP.');
+      input.value = '';
+      return;
+    }
+    if (archivo.size > 8 * 1024 * 1024) {
+      this.foto.set(null);
+      this.errorFoto.set('La foto no puede superar 8 MB.');
+      input.value = '';
+      return;
+    }
+    this.foto.set(archivo);
+  }
+
+  quitarFoto(input: HTMLInputElement) {
+    input.value = '';
+    this.foto.set(null);
+    this.errorFoto.set(null);
+  }
+
+  private mensajeErrorFoto(e: { status?: number }): string {
+    if (e.status === 400) return 'La orden quedó cerrada, pero la foto no tiene un formato válido.';
+    if (e.status === 413) return 'La orden quedó cerrada, pero la foto supera el tamaño máximo de 8 MB.';
+    if (e.status === 0) return 'La orden quedó cerrada, pero no se pudo contactar el gateway para subir la foto.';
+    return 'La orden quedó cerrada, pero no se pudo subir la foto. Puedes reintentarlo.';
   }
 
   confirmarCancelar() {
