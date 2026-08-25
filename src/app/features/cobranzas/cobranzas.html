@@ -430,7 +430,7 @@
             <label>Fondo inicial *</label>
             <input type="number" min="0" step="0.01" [ngModel]="montoInicial()" (ngModelChange)="montoInicial.set($event)"
                    placeholder="0.00" />
-            <span class="hint">El efectivo con el que arranca la jornada.</span>
+            <span class="hint hint-italic">El efectivo con el que arranca la jornada.</span>
           </div>
           <div class="field span2">
             <label>Observación</label>
@@ -460,7 +460,7 @@
       <div class="modal-body">
         @if (caja()?.sesionAbierta; as s) {
           <div class="caja-sesion-info">
-            <span class="hint">Efectivo esperado en gaveta (inicial + cobrado):
+            <span class="hint hint-italic">Efectivo esperado en gaveta (inicial + cobrado):
               <span class="mono strong">{{ moneda(s.efectivoEnCaja) }}</span></span>
           </div>
         }
@@ -469,7 +469,7 @@
             <label>Efectivo contado *</label>
             <input type="number" min="0" step="0.01" [ngModel]="montoDeclarado()" (ngModelChange)="montoDeclarado.set($event)"
                    placeholder="0.00" />
-            <span class="hint">Lo que cuentas físicamente; el sistema calcula la diferencia.</span>
+            <span class="hint hint-italic">Lo que cuentas físicamente; el sistema calcula la diferencia.</span>
           </div>
           <div class="field span2">
             <label>Observación</label>
