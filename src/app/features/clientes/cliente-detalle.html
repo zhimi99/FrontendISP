@@ -111,34 +111,53 @@
           <!-- Paneles: info servicio + dirección -->
           <div class="panels">
             <div class="card panel">
-              <h3 class="card-title">Información del Servicio</h3>
-              <dl class="kv">
-                <div><dt>Servicio contratado</dt><dd class="strong">{{ v.base.servicio }}</dd></div>
-                @if (v.base.plan) {
-                  <div><dt>Plan de Internet</dt><dd>{{ v.base.plan }}</dd></div>
+              <div class="panel-head">
+                <h3 class="card-title">Información del Servicio</h3>
+                @if (serviciosSelector().length > 1) {
+                  <select
+                    class="selector-servicio"
+                    [ngModel]="servicioSeleccionado()?.id ?? null"
+                    (ngModelChange)="onServicioSeleccionadoChange($event)"
+                    title="Elegir qué servicio del cliente ver"
+                  >
+                    @for (contrato of serviciosSelector(); track contrato.id) {
+                      <option [value]="contrato.id">
+                        {{ contrato.ofertaNombre }} — {{ contrato.direccion?.etiqueta || contrato.direccion?.direccionTexto || 'Sin dirección' }}
+                        @if (contrato.estadoServicio === 'RETIRADO') { (retirado) }
+                      </option>
+                    }
+                  </select>
                 }
-                @if (v.base.velocidad) {
-                  <div><dt>Velocidad</dt><dd>{{ v.base.velocidad }}</dd></div>
-                }
-                <div><dt>Tecnología</dt><dd>{{ v.tecnologia }}</dd></div>
-                <div><dt>IP / Usuario</dt><dd class="mono">{{ v.ipUsuario }}</dd></div>
-                <div><dt>OLT</dt><dd class="mono">{{ v.olt }}</dd></div>
-                <div><dt>Puerto / ONU</dt><dd class="mono">{{ v.puertoOnu }}</dd></div>
-                <div><dt>Estado</dt><dd><span class="badge" [class]="estadosMap[v.base.estado].tono">{{ estadosMap[v.base.estado].texto }}</span></dd></div>
-                <div><dt>Fecha activación</dt><dd>{{ v.base.fechaRegistro }}</dd></div>
-                <div>
-                  <dt>Contrato</dt>
-                  <dd>
-                    @if (v.base.contratoCodigo; as contratoCodigo) {
-                      <a class="link" href="javascript:void(0)" (click)="contratoEnVisor.set(contratoCodigo)">
+              </div>
+              @if (servicioActual(); as s) {
+                <dl class="kv">
+                  <div><dt>Servicio contratado</dt><dd class="strong">{{ s.servicio }}</dd></div>
+                  @if (s.plan) {
+                    <div><dt>Plan de Internet</dt><dd>{{ s.plan }}</dd></div>
+                  }
+                  @if (s.velocidad) {
+                    <div><dt>Velocidad</dt><dd>{{ s.velocidad }}</dd></div>
+                  }
+                  <div><dt>Tecnología</dt><dd>{{ s.tecnologia }}</dd></div>
+                  <div><dt>IP / Usuario</dt><dd class="mono">{{ s.ipUsuario }}</dd></div>
+                  <div><dt>OLT</dt><dd class="mono">{{ v.olt }}</dd></div>
+                  <div><dt>Puerto / ONU</dt><dd class="mono">{{ v.puertoOnu }}</dd></div>
+                  <div><dt>Estado</dt><dd><span class="badge" [class]="estadosMap[s.estado].tono">{{ estadosMap[s.estado].texto }}</span></dd></div>
+                  <div><dt>Fecha activación</dt><dd>{{ s.fechaActivacion }}</dd></div>
+                  <div>
+                    <dt>Contrato</dt>
+                    <dd>
+                      <a class="link" href="javascript:void(0)" (click)="contratoEnVisor.set(s.codigo)">
                         <app-icon name="contract" [size]="14" /> Ver contrato
                       </a>
-                    } @else {
-                      <span class="muted">Sin contrato registrado</span>
-                    }
-                  </dd>
-                </div>
-              </dl>
+                    </dd>
+                  </div>
+                </dl>
+              } @else {
+                <dl class="kv">
+                  <div><dt>Servicio contratado</dt><dd class="muted">Sin servicios registrados</dd></div>
+                </dl>
+              }
             </div>
 
             <div class="card panel">
@@ -146,20 +165,20 @@
               <div class="map">
                 @if (mapaEstaticoUrl(); as mapa) {
                   <!-- Imagen plana: ni se desplaza ni hace zoom, solo sitúa el domicilio. -->
-                  <img class="map-img" [src]="mapa" [alt]="'Mapa de ' + v.base.direccion" loading="lazy" />
+                  <img class="map-img" [src]="mapa" [alt]="'Mapa de ' + (servicioActual()?.direccionTexto ?? '')" loading="lazy" />
                 } @else {
                   <div class="map-grid"></div>
                   <div class="map-pin"><app-icon name="location" [size]="34" /></div>
                 }
               </div>
               <div class="map-foot">
-                <span class="map-addr">{{ v.base.direccion }}</span>
+                <span class="map-addr">{{ servicioActual()?.direccionTexto ?? '—' }}</span>
                 @if (comoLlegarUrl(); as ruta) {
                   <a class="btn btn-primary btn-sm" [href]="ruta" target="_blank" rel="noopener noreferrer">
                     <app-icon name="location" [size]="14" /> Cómo llegar
                   </a>
                 } @else {
-                  <span class="map-sin-coords">Domicilio sin coordenadas registradas</span>
+                  <span class="map-sin-coords">Servicio sin coordenadas registradas</span>
                 }
               </div>
             </div>

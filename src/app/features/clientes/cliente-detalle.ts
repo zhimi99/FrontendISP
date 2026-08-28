@@ -153,11 +153,80 @@ export class ClienteDetalleComponent implements OnDestroy {
   readonly direccionesCliente = computed(() => this.detalle()?.direcciones ?? []);
 
   /**
-   * Coordenadas del domicilio principal. Nulas cuando se dio de alta sin
-   * georreferenciar, que es un caso corriente: el alta las pide opcionales.
+   * Contrato "principal" para el resumen general (ficha del cliente, tarjetas de
+   * métricas): el de Internet vigente si existe, si no el primero no retirado, etc.
+   * El backend los devuelve por fecha de alta descendente, así que "el primero" es
+   * el servicio contratado más recientemente.
+   *
+   * Es el candidato por defecto de `servicioSeleccionado`, no necesariamente lo que
+   * se está viendo en Información del Servicio: si el usuario eligió otro en el
+   * selector, ese manda ahí. Se extrajo aparte porque antes vivía duplicado dentro
+   * de `armarVista` y aquí hace falta también para inicializar la selección.
+   */
+  private readonly contratoPrincipal = computed(() => {
+    const contratos = this.detalle()?.contratos ?? [];
+    return (
+      contratos.find((c) => c.usaRed && c.estadoServicio !== 'RETIRADO') ??
+      contratos.find((c) => c.estadoServicio !== 'RETIRADO') ??
+      contratos.find((c) => c.usaRed) ??
+      contratos[0] ??
+      null
+    );
+  });
+
+  /**
+   * Servicio elegido en el selector de "Información del Servicio". `null` = no se
+   * ha elegido nada todavía (o el cliente solo tiene uno): cae al principal.
+   */
+  readonly servicioSeleccionadoId = signal<number | null>(null);
+  /** Código del cliente cuya selección quedó activa; cambia -> se reinicia a "el principal". */
+  private ultimoClienteCodigo: string | undefined;
+
+  readonly servicioSeleccionado = computed(() => {
+    const id = this.servicioSeleccionadoId();
+    const contratos = this.detalle()?.contratos ?? [];
+    return (id != null ? contratos.find((c) => c.id === id) : undefined) ?? this.contratoPrincipal();
+  });
+
+  /** Todos los servicios del cliente, para poblar el selector (solo se muestra con más de uno). */
+  readonly serviciosSelector = computed(() => this.detalle()?.contratos ?? []);
+
+  onServicioSeleccionadoChange(valor: string | number | null) {
+    const id = Number(valor);
+    this.servicioSeleccionadoId.set(Number.isInteger(id) && id > 0 ? id : null);
+  }
+
+  /**
+   * Vista ya formateada del servicio elegido, para los paneles "Información del
+   * Servicio" y "Dirección del Servicio". Separada de `v.base` (que resume SIEMPRE
+   * el contrato principal, para la ficha y las tarjetas de métricas) porque ambas
+   * cosas dejan de coincidir en cuanto el cliente tiene más de un servicio.
+   */
+  readonly servicioActual = computed(() => {
+    const c = this.servicioSeleccionado();
+    if (!c) return null;
+    return {
+      codigo: c.codigo,
+      servicio: c.ofertaNombre,
+      plan: c.plan,
+      velocidad: c.velocidad,
+      estado: c.estadoServicio as EstadoCliente,
+      fechaActivacion: this.fmt(c.fechaInstalacion ?? c.fechaAlta),
+      tecnologia: c.red ? c.red.tipoConexion : '—',
+      ipUsuario: c.red?.ipAsignada ?? c.red?.pppoeUsuario ?? '—',
+      direccionTexto: c.direccion?.direccionTexto ?? 'Sin dirección asociada',
+      direccion: c.direccion,
+    };
+  });
+
+  /**
+   * Coordenadas del servicio elegido (no del domicilio del cliente en general): un
+   * cliente con dos servicios en dos direcciones distintas debe ver el mapa de la
+   * que corresponde al servicio que está mirando. Nulas cuando esa dirección no
+   * tiene GPS registrado, que es un caso corriente: el alta lo pide opcional.
    */
   private readonly coordenadas = computed(() => {
-    const dir = this.detalle()?.direccionPrincipal;
+    const dir = this.servicioActual()?.direccion;
     return dir && dir.latitud != null && dir.longitud != null
       ? { lat: dir.latitud, lng: dir.longitud }
       : null;
@@ -761,13 +830,7 @@ export class ClienteDetalleComponent implements OnDestroy {
 
   /* ---------- Derivación de la vista desde datos reales ---------- */
   private armarVista(det: ClienteDetalle) {
-    // Los contratos llegan ordenados por fecha de alta desc: el primero es el vigente.
-    const principal =
-      det.contratos.find((contrato) => contrato.usaRed && contrato.estadoServicio !== 'RETIRADO') ??
-      det.contratos.find((contrato) => contrato.estadoServicio !== 'RETIRADO') ??
-      det.contratos.find((contrato) => contrato.usaRed) ??
-      det.contratos[0] ??
-      null;
+    const principal = this.contratoPrincipal();
     const estado = (principal?.estadoServicio ?? 'PENDIENTE') as EstadoCliente;
     const red = principal?.red ?? null;
 
@@ -897,6 +960,17 @@ export class ClienteDetalleComponent implements OnDestroy {
       const resp = this.registroGponResp();
       if (resp.estado === 'cargando') return;
       this.cargarFormularioGpon(resp.dato);
+    });
+
+    // Cambiar de cliente reinicia el selector de servicio: el id que tenía elegido
+    // pertenece a un contrato de OTRO cliente y no debe sobrevivir a la navegación
+    // (el componente se reutiliza al variar solo el :id de la ruta). Recargar el
+    // MISMO cliente (editar, agregar servicio) no debe tocar la selección.
+    effect(() => {
+      const codigo = this.detalle()?.codigo;
+      if (codigo === this.ultimoClienteCodigo) return;
+      this.ultimoClienteCodigo = codigo;
+      this.servicioSeleccionadoId.set(null);
     });
   }
 
