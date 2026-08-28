@@ -155,8 +155,8 @@ export class ClienteDetalleComponent implements OnDestroy {
   /**
    * Contrato "principal" para el resumen general (ficha del cliente, tarjetas de
    * métricas): el de Internet vigente si existe, si no el primero no retirado, etc.
-   * El backend los devuelve por fecha de alta descendente, así que "el primero" es
-   * el servicio contratado más recientemente.
+   * El backend los devuelve del más antiguo al más reciente, así que "el primero"
+   * es el servicio con el que el cliente entró.
    *
    * Es el candidato por defecto de `servicioSeleccionado`, no necesariamente lo que
    * se está viendo en Información del Servicio: si el usuario eligió otro en el
@@ -197,10 +197,11 @@ export class ClienteDetalleComponent implements OnDestroy {
   }
 
   /**
-   * Vista ya formateada del servicio elegido, para los paneles "Información del
-   * Servicio" y "Dirección del Servicio". Separada de `v.base` (que resume SIEMPRE
-   * el contrato principal, para la ficha y las tarjetas de métricas) porque ambas
-   * cosas dejan de coincidir en cuanto el cliente tiene más de un servicio.
+   * Vista ya formateada del servicio elegido: alimenta los paneles "Información del
+   * Servicio" y "Dirección del Servicio" y las tarjetas que hablan de un servicio
+   * concreto. Separada de `v.base`, que resume SIEMPRE el contrato principal para
+   * la ficha del cliente, porque ambas cosas dejan de coincidir en cuanto el
+   * cliente tiene más de un servicio.
    */
   readonly servicioActual = computed(() => {
     const c = this.servicioSeleccionado();
@@ -216,6 +217,28 @@ export class ClienteDetalleComponent implements OnDestroy {
       ipUsuario: c.red?.ipAsignada ?? c.red?.pppoeUsuario ?? '—',
       direccionTexto: c.direccion?.direccionTexto ?? 'Sin dirección asociada',
       direccion: c.direccion,
+    };
+  });
+
+  /**
+   * Lo que pintan las tarjetas "Servicio Contratado" y "Estado de Conexión", que
+   * hablan del servicio elegido y no del cliente. Nunca es nulo —un cliente sin
+   * servicios igual tiene que ver las tarjetas, en blanco— por eso no se resuelve
+   * con `servicioActual()` directo en la plantilla.
+   *
+   * "Estado del Cliente" y "Valor recurrente" NO salen de aquí a propósito: el
+   * primero describe al cliente y el segundo suma todos sus servicios.
+   */
+  readonly tarjetaServicio = computed(() => {
+    const s = this.servicioActual();
+    const estado = s?.estado ?? ('PENDIENTE' as EstadoCliente);
+    return {
+      servicio: s?.servicio ?? '—',
+      velocidad: s?.velocidad ?? '',
+      desde: s?.fechaActivacion ?? '—',
+      ipUsuario: s?.ipUsuario ?? '—',
+      conectado: estado === 'ACTIVO',
+      estadoConexion: this.estadoConexion(estado),
     };
   });
 
@@ -375,6 +398,8 @@ export class ClienteDetalleComponent implements OnDestroy {
   /**
    * El registro GPON es del contrato de Internet (el que usa red), no del cliente en
    * general: un cliente con TV Cable pero sin Internet no tiene nada que registrar.
+   * Con varios servicios de Internet toma el primero, o sea el original, igual que
+   * el selector del Resumen. No sigue a ese selector: vive en otra pestaña.
    */
   readonly contratoGponCodigo = computed(() => {
     const contratos = this.detalle()?.contratos ?? [];
@@ -873,15 +898,13 @@ export class ClienteDetalleComponent implements OnDestroy {
       email: det.email ?? '—',
       grupo: det.tipoCliente === 'EMPRESA' ? 'Corporativo' : 'Residencial',
       // Datos de red reales (identidad_red); lo que no tenemos queda en "—".
-      tecnologia: red ? red.tipoConexion : '—',
-      ipUsuario: red?.ipAsignada ?? red?.pppoeUsuario ?? '—',
+      // Tecnología, IP y estado de conexión ya no salen de aquí: dependen del
+      // servicio elegido en el selector, no del principal (ver `tarjetaServicio`).
       perfilRed: red?.perfilRadiusActual ?? '—',
       sincronizado: red?.sincronizadoRed ?? false,
       olt: '—',
       puertoOnu: '—',
       uptime: '—',
-      conectado: estado === 'ACTIVO',
-      estadoConexion: this.estadoConexion(estado),
       // Facturación: no vive en MS-CONTRATOS. Solo mostramos la mensualidad (suma de planes).
       valorTotal,
       servicios,

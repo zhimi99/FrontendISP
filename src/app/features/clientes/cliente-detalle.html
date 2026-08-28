@@ -81,9 +81,9 @@
               <div class="metric-ico ink"><app-icon name="network" [size]="22" /></div>
               <div class="metric-body">
                 <span class="metric-cap">Servicio Contratado</span>
-                <span class="metric-main">{{ v.base.servicio }}</span>
-                <span class="metric-sub">{{ v.base.velocidad }}</span>
-                <span class="metric-sub">Desde: {{ v.base.fechaRegistro }}</span>
+                <span class="metric-main">{{ tarjetaServicio().servicio }}</span>
+                <span class="metric-sub">{{ tarjetaServicio().velocidad }}</span>
+                <span class="metric-sub">Desde: {{ tarjetaServicio().desde }}</span>
               </div>
             </div>
 
@@ -98,11 +98,11 @@
             </div>
 
             <div class="card metric">
-              <div class="metric-ico" [class]="v.conectado ? 'ok' : 'danger'"><app-icon name="network" [size]="22" /></div>
+              <div class="metric-ico" [class]="tarjetaServicio().conectado ? 'ok' : 'danger'"><app-icon name="network" [size]="22" /></div>
               <div class="metric-body">
                 <span class="metric-cap">Estado de Conexión</span>
-                <span class="metric-main" [class]="'text-' + v.estadoConexion.tono">{{ v.estadoConexion.texto }}</span>
-                <span class="metric-sub">IP: {{ v.ipUsuario }}</span>
+                <span class="metric-main" [class]="'text-' + tarjetaServicio().estadoConexion.tono">{{ tarjetaServicio().estadoConexion.texto }}</span>
+                <span class="metric-sub">IP: {{ tarjetaServicio().ipUsuario }}</span>
                 <span class="metric-sub">Uptime: {{ v.uptime }}</span>
               </div>
             </div>
