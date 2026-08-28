@@ -43,9 +43,14 @@ __screenshots__/
 .DS_Store
 Thumbs.db
 
-# Generado en cada build por scripts/generar-environment.mjs a partir del entorno.
-# Versionarlo significaria que una URL de un despliegue pisa la de otro.
+# Generados por scripts/generar-environment.mjs a partir del entorno. Versionarlos
+# significaria que la URL de un despliegue pisa la de otro, y que la clave de Maps
+# usada en local acabaria publicada en el repositorio.
+src/environments/environment.ts
 src/environments/environment.prod.ts
 
 .vercel
+
+# La configuracion local no se publica; la plantilla que la documenta, si.
 .env*
+!.env.example
