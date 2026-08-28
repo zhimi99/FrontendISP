@@ -48,6 +48,7 @@ import {
   TIPO_EQUIPO_ETIQUETA,
 } from '../../core/models/inventario.model';
 import { EstadoCliente, ESTADOS } from './clientes.model';
+import { environment } from '../../../environments/environment';
 
 /** Estado de la carga perezosa de facturas para la pestaña de Facturación. */
 type EstadoFacturas = { estado: 'cargando' | 'ok' | 'error'; lista: FacturaVista[] };
@@ -150,6 +151,52 @@ export class ClienteDetalleComponent implements OnDestroy {
   });
   /** Direcciones propias del cliente que se pueden reutilizar al vender otro servicio. */
   readonly direccionesCliente = computed(() => this.detalle()?.direcciones ?? []);
+
+  /**
+   * Coordenadas del domicilio principal. Nulas cuando se dio de alta sin
+   * georreferenciar, que es un caso corriente: el alta las pide opcionales.
+   */
+  private readonly coordenadas = computed(() => {
+    const dir = this.detalle()?.direccionPrincipal;
+    return dir && dir.latitud != null && dir.longitud != null
+      ? { lat: dir.latitud, lng: dir.longitud }
+      : null;
+  });
+
+  /**
+   * Mapa del domicilio como imagen (Static Maps API), no como mapa incrustado:
+   * es un PNG plano, sin JavaScript de Google ni desplazamiento ni zoom. La ficha
+   * solo necesita mostrar dónde queda el punto, y así no se arrastra el SDK ni se
+   * pierde el foco del usuario dentro de un mapa navegable.
+   *
+   * Nulo si falta la clave o las coordenadas; la plantilla cae entonces al mapa
+   * decorativo propio.
+   */
+  readonly mapaEstaticoUrl = computed(() => {
+    const c = this.coordenadas();
+    const clave = environment.googleMapsApiKey;
+    if (!c || !clave) return null;
+    const punto = `${c.lat},${c.lng}`;
+    // scale=2 entrega el doble de píxeles para que no se vea borroso en pantallas HiDPI.
+    return (
+      'https://maps.googleapis.com/maps/api/staticmap' +
+      `?center=${punto}&zoom=17&size=640x280&scale=2&maptype=roadmap` +
+      `&markers=${encodeURIComponent(`color:0x3d8c2c|${punto}`)}` +
+      `&key=${encodeURIComponent(clave)}`
+    );
+  });
+
+  /**
+   * Ruta hasta el domicilio en Google Maps. El parámetro `destination` sin
+   * `origin` hace que Maps tome la ubicación actual de quien abre el enlace —el
+   * técnico en la calle— como punto de partida.
+   *
+   * No consume clave ni cuota, así que funciona aunque no haya Static Maps.
+   */
+  readonly comoLlegarUrl = computed(() => {
+    const c = this.coordenadas();
+    return c ? `https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}` : null;
+  });
 
   /**
    * Facturas del cliente (MS-FACTURACION) para la pestaña de Facturación. Se cargan

@@ -144,12 +144,23 @@
             <div class="card panel">
               <h3 class="card-title">Dirección del Servicio</h3>
               <div class="map">
-                <div class="map-grid"></div>
-                <div class="map-pin"><app-icon name="location" [size]="34" /></div>
+                @if (mapaEstaticoUrl(); as mapa) {
+                  <!-- Imagen plana: ni se desplaza ni hace zoom, solo sitúa el domicilio. -->
+                  <img class="map-img" [src]="mapa" [alt]="'Mapa de ' + v.base.direccion" loading="lazy" />
+                } @else {
+                  <div class="map-grid"></div>
+                  <div class="map-pin"><app-icon name="location" [size]="34" /></div>
+                }
               </div>
               <div class="map-foot">
                 <span class="map-addr">{{ v.base.direccion }}</span>
-                <button class="btn btn-primary btn-sm"><app-icon name="location" [size]="14" /> Ver en mapa</button>
+                @if (comoLlegarUrl(); as ruta) {
+                  <a class="btn btn-primary btn-sm" [href]="ruta" target="_blank" rel="noopener noreferrer">
+                    <app-icon name="location" [size]="14" /> Cómo llegar
+                  </a>
+                } @else {
+                  <span class="map-sin-coords">Domicilio sin coordenadas registradas</span>
+                }
               </div>
             </div>
           </div>

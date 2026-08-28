@@ -30,6 +30,10 @@ const destino = resolve(aqui, '../src/environments/environment.prod.ts');
 // rompe, pero el resultado apunta a localhost y eso se nota de inmediato.
 const API_BASE = process.env.API_BASE ?? 'http://localhost:8089';
 
+// Sin clave, la ficha del cliente cae al mapa propio en vez de romperse, así que
+// aquí no se aborta la construcción: es una mejora visual, no un requisito.
+const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY ?? '';
+
 if (process.env.VERCEL && API_BASE.includes('localhost')) {
   // En Vercel, apuntar a localhost significa apuntar al ordenador de quien visita la
   // página. La aplicación se desplegaría "bien" y fallaría entera en el navegador,
@@ -52,6 +56,7 @@ const contenido = `/**
 export const environment = {
   produccion: true,
   apiBase: '${API_BASE}',
+  googleMapsApiKey: '${GOOGLE_MAPS_API_KEY}',
 };
 `;
 
@@ -60,3 +65,4 @@ writeFileSync(destino, contenido, 'utf8');
 
 console.log(`[environment] escrito ${destino}`);
 console.log(`[environment]   apiBase = ${API_BASE}`);
+console.log(`[environment]   googleMapsApiKey = ${GOOGLE_MAPS_API_KEY ? 'definida' : '(sin definir: mapa propio)'}`);
