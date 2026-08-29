@@ -805,13 +805,11 @@
 
               @if (servicioSujetoMora()) {
                 <div class="field">
-                  <label>Día de corte</label>
-                  <select [ngModel]="diaCorteServicio()" (ngModelChange)="onDiaCorteServicioChange($event)">
-                    @for (dia of diasCorte; track dia) {
-                      <option [value]="dia">Día {{ dia }}</option>
-                    }
-                  </select>
-                  <span class="hint">Se usará para la facturación recurrente.</span>
+                  <label>Facturación</label>
+                  <p class="hint sin-margen">
+                    Se cobra del 1 al 10 de cada mes. El primer comprobante va prorrateado
+                    desde el día de la instalación.
+                  </p>
                 </div>
               }
 

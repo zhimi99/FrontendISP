@@ -550,7 +550,6 @@ export class ClienteDetalleComponent implements OnDestroy {
   readonly nuevaDireccionLongitud = signal('');
   readonly planServicioCodigo = signal('');
   readonly precioAcordadoServicio = signal('');
-  readonly diaCorteServicio = signal(1);
   readonly observacionesServicio = signal('');
 
   readonly ofertaServicioSeleccionada = computed(
@@ -565,7 +564,6 @@ export class ClienteDetalleComponent implements OnDestroy {
   readonly servicioSujetoMora = computed(
     () => this.ofertaServicioSeleccionada()?.sujetoMora ?? false,
   );
-  readonly diasCorte = Array.from({ length: 28 }, (_, i) => i + 1);
   private cargaCatalogosServicio?: Subscription;
   private altaServicio?: Subscription;
 
@@ -583,7 +581,6 @@ export class ClienteDetalleComponent implements OnDestroy {
     this.nuevaDireccionLongitud.set('');
     this.planServicioCodigo.set('');
     this.precioAcordadoServicio.set('');
-    this.diaCorteServicio.set(1);
     this.observacionesServicio.set('');
     this.errorServicio.set(null);
     this.errorCatalogosServicio.set(null);
@@ -604,7 +601,6 @@ export class ClienteDetalleComponent implements OnDestroy {
     // o precio referencial de la oferta para los demás servicios.
     this.precioAcordadoServicio.set('');
     if (!oferta?.requierePlanInternet) this.planServicioCodigo.set('');
-    if (!oferta?.sujetoMora) this.diaCorteServicio.set(1);
   }
 
   cambiarModoDireccionServicio(modo: ModoDireccionServicio) {
@@ -617,11 +613,6 @@ export class ClienteDetalleComponent implements OnDestroy {
   onDireccionServicioChange(valor: string | number | null) {
     const direccionId = Number(valor);
     this.direccionServicioId.set(Number.isInteger(direccionId) && direccionId > 0 ? direccionId : null);
-  }
-
-  onDiaCorteServicioChange(valor: string | number | null) {
-    const dia = Number(valor);
-    this.diaCorteServicio.set(Number.isInteger(dia) && dia >= 1 && dia <= 28 ? dia : 1);
   }
 
   guardarServicio() {
@@ -666,7 +657,6 @@ export class ClienteDetalleComponent implements OnDestroy {
       nuevaDireccion,
       planCodigo: oferta.requierePlanInternet ? planCodigo : null,
       precioAcordado,
-      diaCorte: oferta.sujetoMora ? this.diaCorteServicio() : null,
       observaciones: this.observacionesServicio().trim() || null,
     };
 

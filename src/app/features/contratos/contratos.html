@@ -289,13 +289,6 @@
                 <input type="number" min="0" step="0.01"
                        [ngModel]="precioAcordado()" (ngModelChange)="precioAcordado.set($event)" />
               </div>
-              @if (oferta.sujetoMora) {
-                <div class="form-row">
-                  <label>Día de pago (1–28)</label>
-                  <input type="number" min="1" max="28"
-                         [ngModel]="diaCorte()" (ngModelChange)="diaCorte.set($event)" />
-                </div>
-              }
             </div>
 
             <div class="form-row">
@@ -323,7 +316,7 @@
                   </dd>
                 </div>
                 @if (oferta.sujetoMora) {
-                  <div><dt>Día de pago</dt><dd>{{ diaCorte() }}</dd></div>
+                  <div><dt>Día de pago</dt><dd>Del 1 al 10 de cada mes</dd></div>
                 }
               </dl>
               <p class="previa-pie">
@@ -373,11 +366,6 @@
             <label>Precio acordado (USD)</label>
             <input type="number" min="0" step="0.01"
                    [ngModel]="edicionPrecio()" (ngModelChange)="edicionPrecio.set($event)" />
-          </div>
-          <div class="form-row">
-            <label>Día de pago (1–28)</label>
-            <input type="number" min="1" max="28"
-                   [ngModel]="edicionDiaCorte()" (ngModelChange)="edicionDiaCorte.set($event)" />
           </div>
         </div>
 

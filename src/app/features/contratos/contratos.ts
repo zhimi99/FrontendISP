@@ -76,13 +76,11 @@ export class ContratosComponent implements OnDestroy {
   readonly planCodigo = signal('');
   readonly direccionId = signal<number | null>(null);
   readonly precioAcordado = signal<number | null>(null);
-  readonly diaCorte = signal<number>(1);
   readonly observaciones = signal('');
 
   // ---- Edición y baja -----------------------------------------------------------
   readonly contratoEnEdicion = signal<ContratoListado | null>(null);
   readonly edicionPrecio = signal<number | null>(null);
-  readonly edicionDiaCorte = signal<number | null>(null);
   readonly edicionPlan = signal('');
   readonly edicionObservaciones = signal('');
 
@@ -367,7 +365,6 @@ export class ContratosComponent implements OnDestroy {
           nuevaDireccion: null,
           planCodigo: oferta.requierePlanInternet ? this.planCodigo() : null,
           precioAcordado: this.precioAcordado(),
-          diaCorte: oferta.sujetoMora ? this.diaCorte() : null,
           observaciones: this.observaciones().trim() || null,
         })
         .subscribe({
@@ -400,7 +397,6 @@ export class ContratosComponent implements OnDestroy {
     this.planCodigo.set('');
     this.direccionId.set(null);
     this.precioAcordado.set(null);
-    this.diaCorte.set(1);
     this.observaciones.set('');
     this.errorFormulario.set(null);
   }
@@ -410,7 +406,6 @@ export class ContratosComponent implements OnDestroy {
   abrirEditar(c: ContratoListado) {
     this.errorFormulario.set(null);
     this.edicionPrecio.set(c.planPrecio ?? null);
-    this.edicionDiaCorte.set(c.diaCorte ?? null);
     this.edicionPlan.set('');
     this.edicionObservaciones.set('');
     this.contratoEnEdicion.set(c);
@@ -421,7 +416,6 @@ export class ContratosComponent implements OnDestroy {
       this.contratosService.detalle(c.codigo).subscribe({
         next: (detalle) => {
           this.edicionPrecio.set(detalle.precioAcordado);
-          this.edicionDiaCorte.set(detalle.diaCorte);
           this.edicionObservaciones.set(detalle.observaciones ?? '');
         },
         error: () => this.errorFormulario.set('No se pudo cargar la ficha del contrato.'),
@@ -441,7 +435,6 @@ export class ContratosComponent implements OnDestroy {
         .editar(contrato.codigo, {
           planCodigo: this.edicionPlan() || null,
           precioAcordado: this.edicionPrecio(),
-          diaCorte: this.edicionDiaCorte(),
           direccionId: null,
           observaciones: this.edicionObservaciones().trim(),
         })
