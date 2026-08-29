@@ -86,6 +86,8 @@
                    [disabled]="!creando()" placeholder="PLAN-50" />
             @if (!creando()) {
               <span class="hint">No se edita: identifica el plan en el contrato firmado.</span>
+            } @else {
+              <span class="hint">Letras, dígitos, punto, guion y guion bajo. Sin espacios ni acentos.</span>
             }
           </div>
           <div class="field">

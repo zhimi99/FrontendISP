@@ -5,6 +5,15 @@ import { IconComponent } from '../../shared/icon';
 import { PlanesService } from '../../core/services/planes.service';
 import { PlanCatalogo } from '../../core/models/contratos.model';
 
+/** El detalle que Spring pone en el cuerpo de un 400 con include-binding-errors. */
+interface HttpError {
+  status?: number;
+  error?: {
+    message?: string;
+    errors?: { field?: string; defaultMessage?: string }[];
+  };
+}
+
 /**
  * Catálogo comercial: qué planes se venden y a qué precio.
  *
@@ -102,13 +111,24 @@ export class PlanesComponent {
     return Math.round(Number(mbps) * 1024);
   }
 
+  /** Igual que la @Pattern del backend en CrearPlanRequest: sin esto el 400 dice poco. */
+  private static readonly CODIGO_VALIDO = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
   guardar() {
     if (!this.pNombre().trim() || (this.creando() && !this.pCodigo().trim())) {
       this.errorForm.set('El código y el nombre son obligatorios.');
       return;
     }
+    if (this.creando() && !PlanesComponent.CODIGO_VALIDO.test(this.pCodigo().trim())) {
+      this.errorForm.set('El código solo admite letras, dígitos, punto, guion y guion bajo. Sin espacios.');
+      return;
+    }
     if (this.aKbps(this.pBajada()) < 128 || this.aKbps(this.pSubida()) < 128) {
       this.errorForm.set('Las velocidades no pueden ser menores de 0,125 Mbps (128 kbps).');
+      return;
+    }
+    if (this.aKbps(this.pBajada()) > 10_000_000 || this.aKbps(this.pSubida()) > 10_000_000) {
+      this.errorForm.set('Las velocidades no pueden pasar de 10 000 Mbps (10 Gbps).');
       return;
     }
     if (Number(this.pPrecio()) < 0) {
@@ -171,21 +191,49 @@ export class PlanesComponent {
     });
   }
 
-  private mensajeDeError(e: { status?: number }): string {
+  private mensajeDeError(e: HttpError): string {
     if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
     if (e.status === 403) return 'No tienes permiso para ver el catálogo de planes.';
     return `No se pudo cargar el catálogo (${e.status ?? 'error'}).`;
   }
 
-  private mensajeAccion(e: { status?: number }): string {
+  private mensajeAccion(e: HttpError): string {
     if (e.status === 409) return 'Ya existe un plan con ese código.';
     if (e.status === 422) {
       return 'No se pudo: o el plan todavía lo tienen contratos activos, o ya estaba en ese estado.';
     }
-    if (e.status === 400) return 'Revisa los datos: velocidades desde 0,125 Mbps y precio con dos decimales como mucho.';
+    if (e.status === 400) return this.mensajeValidacion(e);
     if (e.status === 403) return 'Solo un administrador puede mantener el catálogo de planes.';
     if (e.status === 404) return 'Ese plan ya no existe; recarga la página.';
     if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
     return 'No se pudo guardar el plan.';
+  }
+
+  /**
+   * Convierte el 400 del backend en algo que el operador entienda. Spring devuelve
+   * `errors[]` cuando activamos server.error.include-binding-errors: cada elemento
+   * trae el campo y el mensaje declarado en el DTO. Si no vino la lista, se muestra
+   * `message`, y si tampoco, un mensaje genérico —pero eso ya no debería pasar—.
+   */
+  private mensajeValidacion(e: HttpError): string {
+    const errores = e.error?.errors ?? [];
+    if (errores.length) {
+      const detalle = errores
+        .map((f) => `${this.etiqueta(f.field)}: ${f.defaultMessage}`)
+        .join(' · ');
+      return 'Revisa los datos. ' + detalle + '.';
+    }
+    return e.error?.message ?? 'Revisa los datos: hay algún campo inválido.';
+  }
+
+  private etiqueta(campo?: string): string {
+    switch (campo) {
+      case 'codigo': return 'código';
+      case 'nombre': return 'nombre';
+      case 'velocidadBajadaKbps': return 'bajada';
+      case 'velocidadSubidaKbps': return 'subida';
+      case 'precioMensual': return 'precio';
+      default: return campo ?? 'dato';
+    }
   }
 }
