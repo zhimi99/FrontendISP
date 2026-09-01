@@ -1,10 +1,11 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { catchError, forkJoin, of, switchMap } from 'rxjs';
+import { catchError, forkJoin, of, switchMap, throwError } from 'rxjs';
 
 import { IconComponent } from '../../shared/icon';
 import { OperativoService } from '../../core/services/operativo.service';
 import { ClientesService } from '../../core/services/clientes.service';
+import { ContratosService } from '../../core/services/contratos.service';
 import { UsuariosService } from '../../core/services/usuarios.service';
 import { InventarioService } from '../../core/services/inventario.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -52,6 +53,7 @@ interface LineaMaterialUsado {
 export class SoporteComponent {
   private readonly operativo = inject(OperativoService);
   private readonly clientesService = inject(ClientesService);
+  private readonly contratosService = inject(ContratosService);
   private readonly usuarios = inject(UsuariosService);
   private readonly inventario = inject(InventarioService);
   private readonly auth = inject(AuthService);
@@ -258,6 +260,26 @@ export class SoporteComponent {
   // Cancelar
   readonly motivo = signal('');
 
+  /* ---------- Cerrar: ficha GPON (solo en una INSTALACION) ----------
+   * Son los mismos campos de la pestaña «Registro GPON» de la ficha del cliente y
+   * viajan al mismo endpoint, así que lo que el técnico anota al cerrar es
+   * exactamente lo que se ve allá: una sola ficha técnica, no dos que se
+   * contradicen. Se precarga porque despacho suele dejar puerto/tarjeta ya
+   * asignados en la OLT, y mandar el formulario en blanco los borraría.
+   */
+  readonly gponContratoCodigo = signal<string | null>(null);
+  readonly gponCargando = signal(false);
+  readonly gponIp = signal('');
+  readonly gponRouter = signal('');
+  readonly gponMetraje = signal('');
+  readonly gponPuerto = signal('');
+  readonly gponTarjeta = signal('');
+  readonly gponOnt = signal('');
+  readonly gponPuertoServicio = signal('');
+  readonly gponAms = signal('');
+  /** La ficha GPON documenta el alta del servicio; una visita de soporte no la toca. */
+  readonly pideGpon = computed(() => this.ordenAccion()?.tipo === 'INSTALACION');
+
   /* ---------- Cerrar: material usado y equipo entregado ---------- */
   readonly recursosInvCargando = signal(false);
   /** Solo lo que hay EN LA FURGONETA: no tiene sentido ofrecer descontar de una
@@ -417,8 +439,62 @@ export class SoporteComponent {
     this.errorFoto.set(null);
     this.ordenYaCerrada.set(false);
     this.errorAccion.set(null);
+    this.limpiarGpon();
     this.accion.set('cerrar');
     this.cargarRecursosInventario();
+    if (o.tipo === 'INSTALACION') this.cargarGpon(o);
+  }
+
+  private limpiarGpon() {
+    this.gponContratoCodigo.set(null);
+    this.gponCargando.set(false);
+    this.gponIp.set('');
+    this.gponRouter.set('');
+    this.gponMetraje.set('');
+    this.gponPuerto.set('');
+    this.gponTarjeta.set('');
+    this.gponOnt.set('');
+    this.gponPuertoServicio.set('');
+    this.gponAms.set('');
+  }
+
+  /**
+   * La orden solo trae `contratoId` (referencia lógica a otro módulo) y el endpoint
+   * GPON trabaja por código de contrato, así que hay que resolverlo: cliente → su
+   * ficha → el contrato con ese id. Si falla, el formulario queda visible pero sin
+   * dónde guardar y se avisa al confirmar; nunca impide cerrar la orden.
+   */
+  private cargarGpon(o: Orden) {
+    const cliente = this.clientes().find((c) => c.id === o.clienteId);
+    if (!cliente || o.contratoId == null) return;
+
+    this.gponCargando.set(true);
+    this.clientesService
+      .detalle(cliente.codigo)
+      .pipe(
+        switchMap((d) => {
+          const contrato = d.contratos.find((c: ContratoResumen) => c.id === o.contratoId);
+          if (!contrato) return of(null);
+          this.gponContratoCodigo.set(contrato.codigo);
+          // 204 (sin ficha todavía) llega como null: es lo normal en una instalación nueva.
+          return this.contratosService.registroGpon(contrato.codigo).pipe(catchError(() => of(null)));
+        }),
+        catchError(() => of(null)),
+      )
+      .subscribe((gpon) => {
+        this.gponCargando.set(false);
+        if (!gpon) return;
+        this.gponIp.set(gpon.ip ?? '');
+        this.gponRouter.set(gpon.router ?? '');
+        this.gponMetraje.set(gpon.metrajeCable != null ? String(gpon.metrajeCable) : '');
+        this.gponPuerto.set(gpon.puerto != null ? String(gpon.puerto) : '');
+        this.gponTarjeta.set(gpon.tarjeta ?? '');
+        this.gponOnt.set(gpon.ont != null ? String(gpon.ont) : '');
+        this.gponPuertoServicio.set(
+          gpon.puertoServicio != null ? String(gpon.puertoServicio) : '',
+        );
+        this.gponAms.set(gpon.ams ?? '');
+      });
   }
 
   abrirCancelar(o: Orden) {
@@ -523,6 +599,11 @@ export class SoporteComponent {
       .pipe(
         switchMap(() => (consumos.length ? forkJoin(consumos) : of(null))),
         switchMap(() => (asignaciones.length ? forkJoin(asignaciones) : of(null))),
+        // La ficha GPON va ANTES del cierre a propósito: es un upsert idempotente, así
+        // que si algo falla aquí la orden sigue abierta y el técnico reintenta sin
+        // haber perdido nada. Al revés —cerrar y luego guardar— dejaría instalaciones
+        // cerradas sin su ficha técnica y nadie se enteraría.
+        switchMap(() => this.guardarGponSiCorresponde()),
         switchMap(() => this.operativo.cerrar(o.id, res)),
       )
       .subscribe({
@@ -558,6 +639,47 @@ export class SoporteComponent {
           this.errorAccion.set(this.mensajeAccion(e));
         },
       });
+  }
+
+  /**
+   * Guarda la ficha GPON si es una instalación y el técnico anotó algo. Si dejó
+   * el formulario entero en blanco no se manda nada: un PUT vacío borraría lo que
+   * despacho hubiera dejado asignado en la OLT.
+   */
+  private guardarGponSiCorresponde() {
+    if (!this.pideGpon()) return of(null);
+
+    const codigo = this.gponContratoCodigo();
+    const req = {
+      ip: this.gponIp().trim() || null,
+      router: this.gponRouter().trim() || null,
+      metrajeCable: this.decimalGpon(this.gponMetraje()),
+      puerto: this.enteroGpon(this.gponPuerto()),
+      tarjeta: this.gponTarjeta().trim() || null,
+      ont: this.enteroGpon(this.gponOnt()),
+      puertoServicio: this.enteroGpon(this.gponPuertoServicio()),
+      ams: this.gponAms().trim() || null,
+    };
+    if (Object.values(req).every((v) => v == null)) return of(null);
+    if (!codigo) {
+      // Se pidió guardar pero no se pudo resolver el contrato: mejor detenerse que
+      // cerrar la instalación perdiendo la ficha que el técnico acaba de escribir.
+      return throwError(() => ({ status: -1 }));
+    }
+    return this.contratosService.guardarRegistroGpon(codigo, req);
+  }
+
+  /** Acepta coma o punto decimal: el técnico teclea "121,5" tan a menudo como "121.5". */
+  private decimalGpon(valor: string): number | null {
+    const texto = valor.trim().replace(',', '.');
+    if (!texto) return null;
+    const n = Number(texto);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  private enteroGpon(valor: string): number | null {
+    const n = this.decimalGpon(valor);
+    return n != null ? Math.trunc(n) : null;
   }
 
   /**
@@ -700,6 +822,9 @@ export class SoporteComponent {
   }
 
   private mensajeAccion(e: { status?: number; error?: unknown }): string {
+    if (e.status === -1) {
+      return 'No se pudo identificar el contrato de esta orden para guardar la ficha GPON. Recarga el tablero e inténtalo de nuevo.';
+    }
     if (e.status === 409 || e.status === 422) {
       return 'La orden ya cambió de estado; recarga e inténtalo de nuevo.';
     }
