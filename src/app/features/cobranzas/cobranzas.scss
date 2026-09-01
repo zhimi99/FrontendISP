@@ -10,14 +10,16 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  max-height: 320px;
+  gap: 6px;
+  /* Con muchas facturas la lista scrollea sola en vez de estirar el modal.
+     En dvh para que la barra del navegador móvil no la deje sin sitio. */
+  max-height: min(300px, 38dvh);
   overflow-y: auto;
 }
 .fila-factura {
   border: 1px solid var(--border-2);
   border-radius: var(--radius-sm);
-  background: var(--bg);
+  background: var(--card);
   transition:
     border-color 0.14s,
     background 0.14s;
@@ -29,132 +31,150 @@
 .factura-check {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: 9px;
+  padding: 9px 11px;
   cursor: pointer;
-  flex-wrap: wrap;
 }
 .factura-check input[type='checkbox'] {
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   accent-color: var(--brand);
   cursor: pointer;
   flex: none;
 }
 .factura-num {
   font-weight: 650;
-  font-size: 13.5px;
+  font-size: 13px;
+  /* Un número largo se recorta en vez de empujar el saldo fuera de la fila. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 .factura-saldo {
   margin-left: auto;
   font-size: 13px;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  flex: none;
 }
+
+/* Al marcar, la fila despliega solo lo que hay que decidir. Va en línea —no en
+   campos apilados— para que sumar tres o cuatro facturas no alargue el modal. */
 .factura-detalle {
-  display: grid;
-  grid-template-columns: 160px 1fr;
-  gap: 10px 14px;
-  padding: 0 12px 12px 38px;
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  padding: 0 11px 10px 35px;
 }
-.factura-detalle input[type='number'] {
-  width: 100%;
-  padding: 7px 10px;
+.campo-mini {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.campo-mini > label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--muted);
+}
+
+/* El símbolo va dentro del recuadro para que el número quede alineado con los
+   demás importes y no haga falta una etiqueta que diga que son dólares. */
+.monto-input {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 9px;
   border: 1px solid var(--border-2);
   border-radius: var(--radius-sm);
   background: var(--card);
+  transition:
+    border-color 0.14s,
+    box-shadow 0.14s;
+}
+.monto-input:focus-within {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(92, 187, 70, 0.16);
+}
+.monto-simbolo {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--faint);
+}
+.factura-detalle input[type='number'] {
+  width: 92px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  background: transparent;
   color: var(--text);
   font-size: 13px;
+  font-weight: 650;
   font-family: inherit;
+  font-variant-numeric: tabular-nums;
 }
 .factura-detalle input[type='number']:focus {
   outline: none;
-  border-color: var(--brand);
-}
-/* Dentro de una fila el par de opciones va compacto: compite por el ancho con el
- * monto, no con el modal entero. */
-.opciones-cobro.compactas {
-  gap: 8px;
-}
-.opciones-cobro.compactas .opcion-cobro {
-  padding: 7px 10px;
-  gap: 7px;
-}
-.opciones-cobro.compactas .opcion-cobro-ico {
-  width: 24px;
-  height: 24px;
-  border-radius: 7px;
-}
-.opciones-cobro.compactas .opcion-cobro-titulo {
-  font-size: 12.5px;
 }
 
-@media (max-width: 620px) {
-  .factura-detalle {
-    grid-template-columns: 1fr;
-    padding-left: 12px;
-  }
+.nota-parcial {
+  flex-basis: 100%;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--warn);
 }
 
-/* ============ Selector de las dos opciones de cobro ============ */
-.opciones-cobro {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-.opcion-cobro {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
+/* ============ Segmentado «Con factura / Sin factura» ============
+ * Dos alternativas excluyentes y de una palabra no necesitan dos tarjetas con
+ * icono: un segmentado ocupa una fila de 34px en vez de dos bloques de 55px, y
+ * al estar juntas se lee de un golpe cuál está activa. */
+.segmento {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
   border: 1px solid var(--border-2);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
+  border-radius: 999px;
   background: var(--bg);
-  transition:
-    border-color 0.14s,
-    background 0.14s,
-    box-shadow 0.14s;
 }
-.opcion-cobro:hover {
-  border-color: var(--brand);
-}
-.opcion-cobro.activa {
-  border-color: var(--brand);
-  box-shadow: 0 0 0 1px var(--brand) inset;
-  background: var(--brand-soft);
-}
-.opcion-cobro input[type='radio'] {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--brand);
-  cursor: pointer;
-  flex: none;
-}
-.opcion-cobro-ico {
+.segmento-op {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
-  background: var(--card);
-  color: var(--slate);
-  flex: none;
+  padding: 6px 13px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 0.14s,
+    color 0.14s;
 }
-.opcion-cobro.activa .opcion-cobro-ico {
+.segmento-op:hover {
+  color: var(--text);
+}
+/* El radio sigue en el DOM —no se sustituye por clics sueltos— para conservar
+   el grupo, el teclado y los lectores de pantalla; solo se oculta a la vista. */
+.segmento-op input[type='radio'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  margin: 0;
+  pointer-events: none;
+}
+.segmento-op.activa {
   background: var(--card);
   color: var(--brand-700);
+  box-shadow: 0 1px 2px rgba(16, 24, 16, 0.12);
 }
-.opcion-cobro-titulo {
-  font-weight: 650;
-  font-size: 13.5px;
-  line-height: 1.3;
-}
-@media (max-width: 520px) {
-  .opciones-cobro {
-    grid-template-columns: 1fr;
-  }
+/* Al ocultar el radio se pierde su anillo de foco: se repone en la etiqueta para
+   que siga viéndose por dónde va el teclado. */
+.segmento-op:has(input:focus-visible) {
+  box-shadow: 0 0 0 2px var(--brand);
 }
 
 /* Tonos que la hoja compartida no define */
@@ -175,7 +195,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 8vh 16px 16px;
+  padding: 6vh 16px 16px;
   z-index: 60;
 }
 .modal {
@@ -185,14 +205,16 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  max-height: 84vh;
+  /* dvh y no vh: en móvil la barra de direcciones se retrae y con vh el pie del
+     modal quedaría por debajo del borde visible de la pantalla. */
+  max-height: 88dvh;
   overflow: auto;
 }
 .modal-head {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px 18px;
+  gap: 11px;
+  padding: 13px 16px;
   border-bottom: 1px solid var(--border);
   /* Fijo arriba: en un formulario largo, el título y la X para cerrar nunca
      deben quedar fuera de vista al hacer scroll. */
@@ -204,15 +226,15 @@
 }
 .modal-head h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: 15px;
 }
 .modal-head-ico {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 11px;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
   background: var(--brand-soft);
   color: var(--brand-700);
   flex: none;
@@ -245,13 +267,13 @@
   color: var(--text);
 }
 .modal-body {
-  padding: 18px;
+  padding: 16px;
 }
 .modal-foot {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  padding: 14px 18px;
+  padding: 12px 16px;
   border-top: 1px solid var(--border);
   /* Fijo abajo: "Cancelar"/"Registrar pago" siempre alcanzables, sin tener que
      volver a subir en un formulario largo o en una pantalla chica. */
@@ -264,7 +286,7 @@
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 12px;
 }
 .form-grid .field.span2 {
   grid-column: 1 / -1;
@@ -279,25 +301,34 @@
   font-weight: 600;
   color: var(--muted);
 }
-.modal .field input,
-.modal .field select {
+/*
+ * Solo el control propio del campo (hijo directo), no cualquier input que caiga
+ * dentro. El campo "Facturas por cobrar" contiene una lista con casillas, montos
+ * y radios que tienen su propio tamaño; sin el `>`, este bloque los alcanzaba
+ * —empata en especificidad y va después, así que ganaba— y les imponía
+ * `width: 100%` y 38px de alto: la casilla se estiraba a lo ancho de la fila y
+ * dejaba sin sitio al número, al estado y al saldo.
+ */
+.modal .field > input,
+.modal .field > select {
   width: 100%;
-  min-height: 42px;
-  padding: 10px 12px;
+  min-height: 38px;
+  padding: 8px 11px;
   border: 1px solid var(--border-2);
   border-radius: var(--radius-sm);
   background: var(--bg);
   color: var(--text);
-  font-size: 14px;
+  font-size: 13.5px;
+  font-family: inherit;
   transition:
     border-color 0.14s,
     box-shadow 0.14s;
 }
-.modal .field input:disabled {
+.modal .field > input:disabled {
   opacity: 0.6;
 }
-.modal .field input:focus,
-.modal .field select:focus {
+.modal .field > input:focus,
+.modal .field > select:focus {
   outline: none;
   border-color: var(--brand);
   box-shadow: 0 0 0 3px rgba(92, 187, 70, 0.16);
@@ -328,30 +359,32 @@
 
 /* ============ Modal "Registrar pago": secciones y resumen ============ */
 .modal-pago {
-  max-width: 620px;
+  max-width: 560px;
 }
 .pago-seccion + .pago-seccion,
 .resumen-cobro + .pago-seccion {
-  margin-top: 20px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
 }
 .pago-seccion-titulo {
   display: flex;
   align-items: center;
-  gap: 7px;
-  margin: 0 0 12px;
-  font-size: 12.5px;
+  gap: 6px;
+  margin: 0 0 10px;
+  font-size: 11.5px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
-  color: var(--muted);
+  letter-spacing: 0.4px;
+  color: var(--faint);
 }
 .pago-vacio {
   margin: 0;
-  padding: 14px;
+  padding: 11px;
   border: 1px dashed var(--border-2);
   border-radius: var(--radius-sm);
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12.5px;
   text-align: center;
 }
 
@@ -361,40 +394,43 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  margin-top: 16px;
-  padding: 14px 16px;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 9px 13px;
   border: 1px solid var(--brand);
   border-radius: var(--radius-sm);
   background: var(--brand-soft);
-  flex-wrap: wrap;
 }
 .resumen-cobro-info {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  min-width: 0;
 }
 .resumen-cobro-num {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--muted);
 }
+/* En una línea: la etiqueta al lado del importe, no encima. Ahorra alto y el
+   total sigue siendo lo más grande de la tarjeta. */
 .resumen-cobro-saldo {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 1px;
+  align-items: baseline;
+  gap: 7px;
+  flex: none;
 }
 .resumen-cobro-label {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 10.5px;
+  font-weight: 700;
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
 .resumen-cobro-monto {
-  font-size: 22px;
+  font-size: 17px;
   font-weight: 800;
-  letter-spacing: -0.4px;
+  letter-spacing: -0.3px;
   color: var(--brand-700);
   font-variant-numeric: tabular-nums;
 }
@@ -402,6 +438,20 @@
 @media (max-width: 520px) {
   .form-grid {
     grid-template-columns: 1fr;
+  }
+  /* La sangría que alinea el detalle con el texto de la fila se vuelve un lujo
+     cuando solo quedan ~300px de ancho: se recupera para los campos. */
+  .factura-detalle {
+    padding-left: 11px;
+  }
+  /* El segmentado pasa a ocupar el ancho entero repartido a medias, que es más
+     fácil de acertar con el pulgar que dos pastillas del tamaño del texto. */
+  .campo-mini:has(.segmento) {
+    flex: 1 1 100%;
+  }
+  .segmento {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
   }
 }
 

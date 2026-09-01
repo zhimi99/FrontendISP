@@ -271,44 +271,52 @@
                         <input type="checkbox" [checked]="estaSeleccionada(f.id)" (change)="alternarFactura(f)" />
                         <span class="factura-num mono">{{ f.numeroDocumento }}</span>
                         <span class="badge" [class]="estadoDoc(f).tono">{{ estadoDoc(f).texto }}</span>
-                        <span class="factura-saldo">saldo {{ moneda(f.saldoPendiente) }}</span>
+                        <span class="factura-saldo mono">{{ moneda(f.saldoPendiente) }}</span>
                       </label>
 
                       @if (lineaDe(f.id); as linea) {
+                        <!-- Solo lo que hay que decidir por factura: cuánto y, si aún
+                             no está facturada, con qué comprobante. -->
                         <div class="factura-detalle">
-                          <div class="field">
-                            <label>Monto a aplicar</label>
-                            <input type="number" min="0" step="0.01" [max]="linea.saldoPendiente"
-                                   [ngModel]="linea.montoAplicado"
-                                   (ngModelChange)="cambiarMontoLinea(f.id, $event)" />
-                            <span class="hint">Menos que el saldo deja la factura en abono parcial.</span>
+                          <div class="campo-mini">
+                            <label [attr.for]="'monto-' + f.id">Monto</label>
+                            <div class="monto-input">
+                              <span class="monto-simbolo">$</span>
+                              <input type="number" min="0" step="0.01" [max]="linea.saldoPendiente"
+                                     [id]="'monto-' + f.id"
+                                     [ngModel]="linea.montoAplicado"
+                                     (ngModelChange)="cambiarMontoLinea(f.id, $event)" />
+                            </div>
                           </div>
 
+                          <!-- Una factura ya emitida no admite elección, así que ahí no
+                               se pinta nada en vez de un campo que solo dice que no. -->
                           @if (esPreFactura(f)) {
-                            <div class="field">
-                              <label>Tipo de cobro</label>
-                              <div class="opciones-cobro compactas">
-                                <label class="opcion-cobro" [class.activa]="linea.opcion === 'FACTURA'">
+                            <div class="campo-mini">
+                              <label>Comprobante</label>
+                              <div class="segmento" role="radiogroup">
+                                <label class="segmento-op" [class.activa]="linea.opcion === 'FACTURA'">
                                   <input type="radio" [name]="'opcionCobro-' + f.id"
                                          [checked]="linea.opcion === 'FACTURA'"
                                          (change)="cambiarOpcionLinea(f.id, 'FACTURA')" />
-                                  <span class="opcion-cobro-ico"><app-icon name="invoice" [size]="15" /></span>
-                                  <span class="opcion-cobro-titulo">Con factura</span>
+                                  <span>Con factura</span>
                                 </label>
-                                <label class="opcion-cobro" [class.activa]="linea.opcion === 'RECIBO'">
+                                <label class="segmento-op" [class.activa]="linea.opcion === 'RECIBO'">
                                   <input type="radio" [name]="'opcionCobro-' + f.id"
                                          [checked]="linea.opcion === 'RECIBO'"
                                          (change)="cambiarOpcionLinea(f.id, 'RECIBO')" />
-                                  <span class="opcion-cobro-ico"><app-icon name="cash" [size]="15" /></span>
-                                  <span class="opcion-cobro-titulo">Sin factura</span>
+                                  <span>Sin factura</span>
                                 </label>
                               </div>
                             </div>
-                          } @else {
-                            <div class="field">
-                              <label>Tipo de cobro</label>
-                              <span class="hint">Ya está facturada: no hay nada que decidir.</span>
-                            </div>
+                          }
+
+                          <!-- El aviso de abono parcial solo aparece cuando de verdad
+                               queda saldo, y dice cuánto: así no ocupa sitio siempre. -->
+                          @if (linea.montoAplicado > 0 && linea.montoAplicado < linea.saldoPendiente) {
+                            <span class="nota-parcial">
+                              Abono parcial · quedan {{ moneda(linea.saldoPendiente - linea.montoAplicado) }}
+                            </span>
                           }
                         </div>
                       }
