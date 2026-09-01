@@ -206,14 +206,24 @@
               <label>Referencia</label>
               <input class="input" formControlName="referencia" placeholder="Ej. Casa de dos pisos, portón verde" />
             </div>
-            <div class="field">
-              <label>Latitud</label>
-              <input class="input" formControlName="latitud" placeholder="-2.92361" />
+            <div class="field span-2">
+              <label>Ubicación en el mapa</label>
+              <app-mapa-selector (ubicacionElegida)="onUbicacionElegida($event)" />
+              <span class="hint">Arrastra el pin o toca el mapa sobre el domicilio del cliente.</span>
             </div>
-            <div class="field">
-              <label>Longitud</label>
-              <input class="input" formControlName="longitud" placeholder="-78.78028" />
-            </div>
+            <details class="field span-2 mapa-manual">
+              <summary>¿No carga el mapa? Ingresa las coordenadas a mano</summary>
+              <div class="grid-2">
+                <div class="field">
+                  <label>Latitud</label>
+                  <input class="input" formControlName="latitud" placeholder="-2.92361" />
+                </div>
+                <div class="field">
+                  <label>Longitud</label>
+                  <input class="input" formControlName="longitud" placeholder="-78.78028" />
+                </div>
+              </div>
+            </details>
           </div>
         </section>
 

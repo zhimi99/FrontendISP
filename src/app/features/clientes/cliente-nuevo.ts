@@ -4,7 +4,9 @@ import { Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 
 import { IconComponent } from '../../shared/icon';
+import { MapaSelectorComponent } from '../../shared/mapa-selector';
 import { ClientesService } from '../../core/services/clientes.service';
+import { LatLngLiteral } from '../../core/services/google-maps-loader.service';
 import { AltaClienteRequest } from '../../core/models/contratos.model';
 
 type TipoCliente = 'PERSONA' | 'EMPRESA';
@@ -86,7 +88,7 @@ function rucEcuatorianoValido(control: AbstractControl): ValidationErrors | null
 @Component({
   selector: 'app-cliente-nuevo',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, IconComponent],
+  imports: [ReactiveFormsModule, RouterLink, IconComponent, MapaSelectorComponent],
   templateUrl: './cliente-nuevo.html',
   styleUrl: './cliente-nuevo.scss',
 })
@@ -216,6 +218,11 @@ export class ClienteNuevoComponent {
     if (errores?.['cedulaInvalida']) return 'Esa cédula no existe (dígito verificador incorrecto).';
     if (errores?.['rucInvalido']) return 'Ese RUC no es válido (dígito verificador incorrecto).';
     return `Ingresa un número válido (${this.idHelp()}).`;
+  }
+
+  /** El pin del mapa reemplaza la escritura manual; solo el modo "a mano" del `<details>` la usa. */
+  onUbicacionElegida(pos: LatLngLiteral) {
+    this.form.patchValue({ latitud: String(pos.lat), longitud: String(pos.lng) });
   }
 
   err(nombre: keyof typeof this.form.controls): boolean {
