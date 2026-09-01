@@ -222,7 +222,12 @@ export function estadoDocumento(
     if (f.estadoPago === 'PENDIENTE') {
       return { texto: 'Comprobante pendiente', tono: 'warn' };
     }
-    if (f.estadoPago === 'PARCIAL' || f.estadoPago === 'PAGADA') {
+    // Con saldo abierto sigue siendo un comprobante por cobrar: llamarlo "cobrada"
+    // haría creer que ya no se le debe nada, cuando aún queda parte por recaudar.
+    if (f.estadoPago === 'PARCIAL') {
+      return { texto: 'Comprobante con abono parcial', tono: 'warn' };
+    }
+    if (f.estadoPago === 'PAGADA') {
       return { texto: 'Cobrada · pendiente de autorización SRI', tono: 'info' };
     }
   }
