@@ -1,0 +1,439 @@
+/* Estilos propios de Proveedores; el resto se hereda de clientes.scss. */
+
+.badge.neutral {
+  background: var(--slate-soft);
+  color: var(--slate);
+}
+.badge.info {
+  background: var(--info-soft);
+  color: var(--info);
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  border-left: 3px solid var(--ok);
+  font-size: 13px;
+  font-weight: 600;
+}
+.banner.error {
+  border-left-color: var(--danger);
+  color: var(--danger);
+}
+.banner-x {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.acc {
+  display: flex;
+  gap: 6px;
+}
+.btn.mini {
+  padding: 5px 12px;
+  font-size: 12px;
+}
+
+.card-head {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.card-head h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* ============ Subir el XML ============ */
+.carga-xml {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 34px 24px;
+  text-align: center;
+  margin-bottom: 18px;
+  color: var(--muted);
+}
+.carga-xml h3 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text);
+}
+.carga-xml .sub {
+  max-width: 560px;
+  font-size: 13px;
+  margin: 0;
+}
+.carga-xml input[type='file'] {
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+/* ============ Cabecera de la factura leída ============ */
+.resumen-factura {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  margin-bottom: 12px;
+}
+.rf-num {
+  font-size: 15px;
+  font-weight: 700;
+  display: block;
+}
+.rf-prov {
+  font-size: 13.5px;
+  font-weight: 600;
+  display: block;
+}
+.rf-total {
+  text-align: right;
+}
+.rf-monto {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============ Barra: bodega, margen y total ============ */
+.barra-import {
+  display: flex;
+  align-items: flex-start;
+  gap: 22px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  margin-bottom: 14px;
+}
+.barra-import .field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.barra-import label {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--muted);
+}
+.barra-import select,
+.barra-import input[type='number'] {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+.margen-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.margen-control input[type='number'] {
+  width: 78px;
+}
+.pct {
+  font-weight: 700;
+  color: var(--muted);
+}
+.resumen-import {
+  margin-left: auto;
+  text-align: right;
+}
+.hint.danger {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+/* ============ Las líneas de la factura ============ */
+.lineas-import {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.linea-import {
+  padding: 12px 16px;
+}
+/* Una línea desmarcada no se oculta: sigue visible para poder recuperarla, pero
+   apagada para que no compita con lo que sí va a entrar. */
+.linea-import.excluida {
+  opacity: 0.55;
+}
+.li-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.li-check {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  min-width: 0;
+}
+.li-check input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--brand);
+  cursor: pointer;
+  flex: none;
+}
+.li-original {
+  font-weight: 650;
+  font-size: 13.5px;
+}
+.li-datos {
+  font-size: 12.5px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.li-cuerpo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px 14px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+.li-cuerpo .field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.li-cuerpo label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--muted);
+}
+.li-cuerpo input,
+.li-cuerpo select {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  width: 100%;
+}
+.li-cuerpo input:focus,
+.li-cuerpo select:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+
+/* ============ Series de los equipos ============ */
+.li-series {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+.series-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.serie-fila {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.serie-fila input {
+  height: 32px;
+  padding: 0 9px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+}
+.serie-fila input:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+
+/* ============ Segmentado equipo / material ============ */
+.segmento {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border-2);
+  border-radius: 999px;
+  background: var(--bg);
+}
+.segmento-op {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 0.14s,
+    color 0.14s;
+}
+/* El radio sigue en el DOM para conservar el grupo y el teclado; solo se oculta. */
+.segmento-op input[type='radio'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  margin: 0;
+  pointer-events: none;
+}
+.segmento-op.activa {
+  background: var(--card);
+  color: var(--brand-700);
+  box-shadow: 0 1px 2px rgba(16, 24, 16, 0.12);
+}
+.segmento-op:has(input:focus-visible) {
+  box-shadow: 0 0 0 2px var(--brand);
+}
+
+.acciones-import {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.modal-error {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ============ Modal de proveedor ============ */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 8vh 16px 16px;
+  z-index: 60;
+}
+.modal {
+  width: 100%;
+  max-width: 560px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-height: 84vh;
+  overflow: auto;
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-head h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.modal-x {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.modal-body {
+  padding: 18px;
+}
+.modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--border);
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 14px;
+}
+.form-grid .field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.form-grid .field.span2 {
+  grid-column: 1 / -1;
+}
+.form-grid label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.form-grid input,
+.form-grid textarea {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+.form-grid input:focus,
+.form-grid textarea:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+.form-grid input:disabled {
+  opacity: 0.6;
+}
+
+@media (max-width: 640px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .serie-fila {
+    grid-template-columns: 1fr;
+  }
+}

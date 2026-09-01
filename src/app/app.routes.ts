@@ -49,6 +49,14 @@ export const routes: Routes = [
       { path: 'soporte', component: SoporteComponent },
       { path: 'red', component: RedComponent },
       { path: 'inventario', component: InventarioComponent },
+      // Perezoso: solo lo abre ADMIN y de vez en cuando (al llegar mercadería), así
+      // que su pantalla de importación no tiene por qué viajar en el paquete inicial
+      // que carga todo el mundo al entrar.
+      {
+        path: 'proveedores',
+        loadComponent: () =>
+          import('./features/proveedores/proveedores').then((m) => m.ProveedoresComponent),
+      },
       { path: 'reportes', pathMatch: 'full', redirectTo: 'reportes/cierres-caja' },
       { path: 'reportes/cierres-caja', component: CierresCajaComponent },
       { path: 'reportes/ventas', component: VentasReporteComponent },
