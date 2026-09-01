@@ -329,12 +329,29 @@ export class SoporteComponent {
     return furgonetas.find((u) => u.usuarioId === miId) ?? null;
   }
 
-  /** Solo lo que ya está en la furgoneta: si no lo tiene encima, primero toca un traslado. */
+  /**
+   * Todo lo que está DISPONIBLE, venga de la furgoneta o de bodega, con lo de la
+   * furgoneta primero.
+   *
+   * Antes solo se ofrecía lo que el técnico llevaba encima. En la práctica los
+   * equipos viven en la bodega matriz y el técnico los recoge de camino, así que
+   * la lista salía vacía y no se podía entregar ningún equipo al cerrar. El
+   * backend nunca exigió la furgoneta —solo que el equipo esté DISPONIBLE— y
+   * registra el movimiento desde donde estaba de verdad, así que el rastro de
+   * inventario queda igual de completo.
+   */
   readonly equiposEntregables = computed(() => {
     const ub = this.ubicacionTecnico();
-    if (!ub) return [];
-    return this.equiposDisponibles().filter((e) => e.ubicacionId === ub.id);
+    return [...this.equiposDisponibles()].sort((a, b) => {
+      const enFurgoneta = (e: Equipo) => (ub && e.ubicacionId === ub.id ? 0 : 1);
+      return enFurgoneta(a) - enFurgoneta(b) || a.numeroSerie.localeCompare(b.numeroSerie);
+    });
   });
+
+  /** De dónde sale el equipo, para que el técnico sepa si lo tiene encima o lo recoge. */
+  ubicacionDeEquipo(e: Equipo): string {
+    return this.ubicacionesInv().find((u) => u.id === e.ubicacionId)?.nombre ?? 'Sin ubicación';
+  }
 
   private cargarRecursosInventario() {
     if (this.ubicacionesInv().length || this.recursosInvCargando()) return;
@@ -413,7 +430,8 @@ export class SoporteComponent {
   }
 
   equipoLabel(e: Equipo): string {
-    return `${e.marca} ${e.modelo} · S/N ${e.numeroSerie}${e.macAddress ? ' · MAC ' + e.macAddress : ''}`;
+    const base = `${e.marca} ${e.modelo} · S/N ${e.numeroSerie}`;
+    return `${base}${e.macAddress ? ' · MAC ' + e.macAddress : ''} · ${this.ubicacionDeEquipo(e)}`;
   }
 
   agregarLineaEquipo() {

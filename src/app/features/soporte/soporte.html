@@ -217,62 +217,6 @@
             <span class="hint">Obligatorio: queda en la auditoría de la orden.</span>
           </div>
 
-          @if (pideGpon()) {
-            <div class="gpon-bloque">
-              <h4 class="gpon-titulo">Registro GPON</h4>
-              @if (gponCargando()) {
-                <span class="hint">Cargando la ficha del contrato…</span>
-              } @else {
-                <span class="hint">
-                  Es la misma ficha que se ve en la pestaña «Registro GPON» del cliente.
-                  Deja en blanco lo que no aplique.
-                </span>
-                <div class="gpon-grid">
-                  <div class="field">
-                    <label>IP</label>
-                    <input type="text" placeholder="192.168.1.1"
-                           [ngModel]="gponIp()" (ngModelChange)="gponIp.set($event)" />
-                  </div>
-                  <div class="field">
-                    <label>Router</label>
-                    <input type="text" placeholder="Nombre o modelo del router"
-                           [ngModel]="gponRouter()" (ngModelChange)="gponRouter.set($event)" />
-                  </div>
-                  <div class="field">
-                    <label>Metraje de cable (m)</label>
-                    <input type="text" inputmode="decimal" placeholder="Ej. 121 a 145"
-                           [ngModel]="gponMetraje()" (ngModelChange)="gponMetraje.set($event)" />
-                  </div>
-                  <div class="field">
-                    <label>Port</label>
-                    <input type="text" inputmode="numeric" placeholder="5"
-                           [ngModel]="gponPuerto()" (ngModelChange)="gponPuerto.set($event)" />
-                  </div>
-                  <div class="field">
-                    <label>Tarjeta</label>
-                    <input type="text" placeholder="0/1/2"
-                           [ngModel]="gponTarjeta()" (ngModelChange)="gponTarjeta.set($event)" />
-                  </div>
-                  <div class="field">
-                    <label>ONT</label>
-                    <input type="text" inputmode="numeric" placeholder="5"
-                           [ngModel]="gponOnt()" (ngModelChange)="gponOnt.set($event)" />
-                  </div>
-                  <div class="field">
-                    <label>Port Service</label>
-                    <input type="text" inputmode="numeric" placeholder="10"
-                           [ngModel]="gponPuertoServicio()" (ngModelChange)="gponPuertoServicio.set($event)" />
-                  </div>
-                  <div class="field gpon-span2">
-                    <label>AMS</label>
-                    <textarea rows="3" placeholder="Comandos para la terminal del router (ej. interfaz gpon…)."
-                              [ngModel]="gponAms()" (ngModelChange)="gponAms.set($event)"></textarea>
-                  </div>
-                </div>
-              }
-            </div>
-          }
-
           @if (recursosInvCargando()) {
             <span class="hint">Cargando tu inventario…</span>
           } @else {
@@ -339,11 +283,67 @@
               }
               @if (equiposEntregables().length) {
                 <button type="button" class="btn mini" (click)="agregarLineaEquipo()">+ Agregar equipo</button>
-                <span class="hint">Un router, un repetidor, o cualquier combinación: marca, modelo y MAC ya quedaron registrados al dar de alta cada equipo; esto solo los pasa a nombre del cliente.</span>
+                <span class="hint">Uno o varios: un router, un repetidor, o cualquier combinación. Cada opción dice de dónde sale (furgoneta o bodega); marca, modelo y MAC ya quedaron registrados al dar de alta el equipo, esto solo lo pasa a nombre del cliente.</span>
               } @else {
-                <span class="hint">No hay equipos disponibles en la furgoneta. Si se dejó uno en otro lado, primero pide el traslado desde Inventario.</span>
+                <span class="hint">No hay ningún equipo DISPONIBLE en el inventario. Si acaba de llegar mercadería, primero regístrala en Inventario.</span>
               }
             </div>
+
+            @if (pideGpon()) {
+              <div class="gpon-bloque">
+                <h4 class="gpon-titulo">Registro GPON</h4>
+                @if (gponCargando()) {
+                  <span class="hint">Cargando la ficha del contrato…</span>
+                } @else {
+                  <span class="hint">
+                    Es la misma ficha que se ve en la pestaña «Registro GPON» del cliente.
+                    Deja en blanco lo que no aplique.
+                  </span>
+                  <div class="gpon-grid">
+                    <div class="field">
+                      <label>IP</label>
+                      <input type="text" placeholder="192.168.1.1"
+                             [ngModel]="gponIp()" (ngModelChange)="gponIp.set($event)" />
+                    </div>
+                    <div class="field">
+                      <label>Router</label>
+                      <input type="text" placeholder="Nombre o modelo del router"
+                             [ngModel]="gponRouter()" (ngModelChange)="gponRouter.set($event)" />
+                    </div>
+                    <div class="field">
+                      <label>Metraje de cable (m)</label>
+                      <input type="text" inputmode="decimal" placeholder="Ej. 121 a 145"
+                             [ngModel]="gponMetraje()" (ngModelChange)="gponMetraje.set($event)" />
+                    </div>
+                    <div class="field">
+                      <label>Port</label>
+                      <input type="text" inputmode="numeric" placeholder="5"
+                             [ngModel]="gponPuerto()" (ngModelChange)="gponPuerto.set($event)" />
+                    </div>
+                    <div class="field">
+                      <label>Tarjeta</label>
+                      <input type="text" placeholder="0/1/2"
+                             [ngModel]="gponTarjeta()" (ngModelChange)="gponTarjeta.set($event)" />
+                    </div>
+                    <div class="field">
+                      <label>ONT</label>
+                      <input type="text" inputmode="numeric" placeholder="5"
+                             [ngModel]="gponOnt()" (ngModelChange)="gponOnt.set($event)" />
+                    </div>
+                    <div class="field">
+                      <label>Port Service</label>
+                      <input type="text" inputmode="numeric" placeholder="10"
+                             [ngModel]="gponPuertoServicio()" (ngModelChange)="gponPuertoServicio.set($event)" />
+                    </div>
+                    <div class="field gpon-span2">
+                      <label>AMS</label>
+                      <textarea rows="3" placeholder="Comandos para la terminal del router (ej. interfaz gpon…)."
+                                [ngModel]="gponAms()" (ngModelChange)="gponAms.set($event)"></textarea>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
 
             <div class="field">
               <label>Foto del trabajo terminado (opcional)</label>
