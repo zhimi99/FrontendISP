@@ -401,21 +401,49 @@ export class ClienteDetalleComponent implements OnDestroy {
    * Con varios servicios de Internet toma el primero, o sea el original, igual que
    * el selector del Resumen. No sigue a ese selector: vive en otra pestaña.
    */
-  readonly contratoGponCodigo = computed(() => {
-    const contratos = this.detalle()?.contratos ?? [];
-    const conRed =
-      contratos.find((c) => c.usaRed && c.estadoServicio !== 'RETIRADO') ??
-      contratos.find((c) => c.usaRed);
-    return conRed?.codigo ?? null;
+  /**
+   * Los servicios que pueden tener ficha GPON: los que usan la red. Un TV Cable o
+   * un mantenimiento no se aprovisionan en la OLT, así que no entran al selector.
+   */
+  readonly serviciosGpon = computed(() =>
+    (this.detalle()?.contratos ?? []).filter((c) => c.usaRed),
+  );
+
+  /** Servicio elegido en la pestaña GPON. `null` = ninguno todavía: cae al de por defecto. */
+  readonly gponSeleccionadoId = signal<number | null>(null);
+
+  /**
+   * El servicio cuya ficha GPON se está viendo. Cada servicio de red tiene la suya
+   * —un cliente con dos enlaces tiene dos puertos distintos en la OLT—, así que sin
+   * elegir se cae al vigente más antiguo, que es con el que entró el cliente.
+   *
+   * No sigue al selector del Resumen a propósito: son dos pestañas y dos listas
+   * distintas (aquella incluye servicios sin red, que aquí no tendrían sentido).
+   */
+  private readonly contratoGpon = computed(() => {
+    const candidatos = this.serviciosGpon();
+    const id = this.gponSeleccionadoId();
+    return (
+      (id != null ? candidatos.find((c) => c.id === id) : undefined) ??
+      candidatos.find((c) => c.estadoServicio !== 'RETIRADO') ??
+      candidatos[0] ??
+      null
+    );
   });
 
-  private readonly contratoGponId = computed(() => {
-    const contratos = this.detalle()?.contratos ?? [];
-    const conRed =
-      contratos.find((c) => c.usaRed && c.estadoServicio !== 'RETIRADO') ??
-      contratos.find((c) => c.usaRed);
-    return conRed?.id ?? null;
-  });
+  readonly contratoGponCodigo = computed(() => this.contratoGpon()?.codigo ?? null);
+
+  /** También lo lee el selector de la plantilla, para reflejar la caída al de por defecto. */
+  readonly contratoGponId = computed(() => this.contratoGpon()?.id ?? null);
+
+  onGponSeleccionadoChange(valor: string | number | null) {
+    const id = Number(valor);
+    this.gponSeleccionadoId.set(Number.isInteger(id) && id > 0 ? id : null);
+    // El aviso de "guardado" es del servicio anterior: dejarlo puesto haría creer
+    // que se acaba de guardar la ficha del que se está abriendo ahora.
+    this.avisoGpon.set(null);
+    this.errorGpon.set(null);
+  }
 
   /**
    * El router que un técnico dejó instalado (pestaña Red/Equipos) para este mismo
@@ -984,6 +1012,7 @@ export class ClienteDetalleComponent implements OnDestroy {
       if (codigo === this.ultimoClienteCodigo) return;
       this.ultimoClienteCodigo = codigo;
       this.servicioSeleccionadoId.set(null);
+      this.gponSeleccionadoId.set(null);
     });
   }
 

@@ -471,6 +471,21 @@
                 <h3 class="card-title mb0">Registro GPON</h3>
                 <p class="sub">Datos técnicos de la instalación en la OLT para el servicio de Internet.</p>
               </div>
+              @if (serviciosGpon().length > 1) {
+                <select
+                  class="selector-servicio"
+                  [ngModel]="contratoGponId()"
+                  (ngModelChange)="onGponSeleccionadoChange($event)"
+                  title="Elegir de qué servicio ver el registro GPON"
+                >
+                  @for (contrato of serviciosGpon(); track contrato.id) {
+                    <option [value]="contrato.id">
+                      {{ contrato.codigo }} · {{ contrato.ofertaNombre }} — {{ contrato.direccion?.etiqueta || contrato.direccion?.direccionTexto || 'Sin dirección' }}
+                      @if (contrato.estadoServicio === 'RETIRADO') { (retirado) }
+                    </option>
+                  }
+                </select>
+              }
             </div>
 
             @if (!contratoGponCodigo()) {
