@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { catchError, forkJoin, of, switchMap, throwError } from 'rxjs';
+import { Observable, catchError, forkJoin, of, switchMap, tap, throwError } from 'rxjs';
 
 import { IconComponent } from '../../shared/icon';
 import { OperativoService } from '../../core/services/operativo.service';
@@ -25,6 +25,15 @@ import {
 
 /** Rango de prioridad para ordenar el tablero (lo urgente arriba). */
 const RANGO_PRIORIDAD: Record<PrioridadOrden, number> = { URGENTE: 0, ALTA: 1, NORMAL: 2, BAJA: 3 };
+
+/** Los pasos en que se descompone cerrar una orden, en orden de ejecución. */
+type PasoCierre = 'material' | 'equipo' | 'gpon' | 'cerrar';
+
+/** Lo mínimo que se lee de un error HTTP; `status: -1` marca un fallo propio del cliente. */
+interface RespuestaError {
+  status?: number;
+  error?: unknown;
+}
 
 /** Una línea del material que el técnico gastó, antes de confirmarla. */
 interface LineaMaterialUsado {
@@ -280,6 +289,14 @@ export class SoporteComponent {
   /** La ficha GPON documenta el alta del servicio; una visita de soporte no la toca. */
   readonly pideGpon = computed(() => this.ordenAccion()?.tipo === 'INSTALACION');
 
+  /**
+   * Pasos del cierre ya completados en este intento. Cerrar son varias llamadas
+   * encadenadas y no hay transacción que las envuelva: si el material se descuenta
+   * y luego falla el cierre, al reintentar hay que saltarse el consumo o saldría
+   * dos veces del inventario. Se vacía al abrir el modal.
+   */
+  private pasosHechos = new Set<PasoCierre>();
+
   /* ---------- Cerrar: material usado y equipo entregado ---------- */
   readonly recursosInvCargando = signal(false);
   /** Solo lo que hay EN LA FURGONETA: no tiene sentido ofrecer descontar de una
@@ -439,6 +456,7 @@ export class SoporteComponent {
     this.errorFoto.set(null);
     this.ordenYaCerrada.set(false);
     this.errorAccion.set(null);
+    this.pasosHechos.clear();
     this.limpiarGpon();
     this.accion.set('cerrar');
     this.cargarRecursosInventario();
@@ -597,14 +615,26 @@ export class SoporteComponent {
 
     of(null)
       .pipe(
-        switchMap(() => (consumos.length ? forkJoin(consumos) : of(null))),
-        switchMap(() => (asignaciones.length ? forkJoin(asignaciones) : of(null))),
+        // Cada paso se etiqueta con su nombre. Sin esto, un 422 de inventario
+        // («no hay bastante cable») se atribuía al cierre y salía como «la orden ya
+        // cambió de estado»: el técnico leía que el problema era la orden y no que
+        // le faltaba material, que es lo único que podía arreglar.
+        switchMap(() =>
+          consumos.length && !this.pasosHechos.has('material')
+            ? this.paso('material', forkJoin(consumos))
+            : of(null),
+        ),
+        switchMap(() =>
+          asignaciones.length && !this.pasosHechos.has('equipo')
+            ? this.paso('equipo', forkJoin(asignaciones))
+            : of(null),
+        ),
         // La ficha GPON va ANTES del cierre a propósito: es un upsert idempotente, así
         // que si algo falla aquí la orden sigue abierta y el técnico reintenta sin
         // haber perdido nada. Al revés —cerrar y luego guardar— dejaría instalaciones
         // cerradas sin su ficha técnica y nadie se enteraría.
-        switchMap(() => this.guardarGponSiCorresponde()),
-        switchMap(() => this.operativo.cerrar(o.id, res)),
+        switchMap(() => this.paso('gpon', this.guardarGponSiCorresponde())),
+        switchMap(() => this.paso('cerrar', this.operativo.cerrar(o.id, res))),
       )
       .subscribe({
         next: () => {
@@ -612,12 +642,12 @@ export class SoporteComponent {
           this.cargar();
           this.finalizarCierre(o);
         },
-        error: (e) => {
-          // Un backend lento puede hacer que un segundo clic (o un reintento tras
-          // recargar) llegue después de que el primero ya cerró la orden: el 409
-          // que responde el segundo no es un error real, es la orden ya resuelta.
-          // Sin este chequeo el modal se queda atascado repitiendo el mismo error.
-          if (e.status === 409 || e.status === 422) {
+        error: (fallo: { paso: PasoCierre; causa: RespuestaError }) => {
+          const e = fallo.causa;
+          // Solo el cierre puede haber fallado por «la orden ya cambió»: un backend
+          // lento puede hacer que un segundo clic llegue después de que el primero
+          // ya cerró, y ese 409 no es un error real sino la orden ya resuelta.
+          if (fallo.paso === 'cerrar' && (e.status === 409 || e.status === 422)) {
             this.operativo.porId(o.id).subscribe({
               next: (actual) => {
                 this.guardando.set(false);
@@ -636,9 +666,46 @@ export class SoporteComponent {
             return;
           }
           this.guardando.set(false);
-          this.errorAccion.set(this.mensajeAccion(e));
+          this.errorAccion.set(this.mensajePaso(fallo.paso, e));
         },
       });
+  }
+
+  /**
+   * Etiqueta el paso y recuerda que salió bien. Lo segundo importa al reintentar:
+   * el material ya descontado NO se vuelve a descontar, porque si el cierre falla
+   * después del consumo, darle otra vez a «Cerrar orden» sacaría dos veces el
+   * mismo cable del inventario.
+   */
+  private paso<T>(nombre: PasoCierre, origen: Observable<T>): Observable<T> {
+    return origen.pipe(
+      tap(() => this.pasosHechos.add(nombre)),
+      catchError((causa) => throwError(() => ({ paso: nombre, causa }))),
+    );
+  }
+
+  /** Mensaje del paso que falló de verdad, con el motivo que da el backend. */
+  private mensajePaso(paso: PasoCierre, e: RespuestaError): string {
+    const detalle = this.detalleError(e.error);
+    if (paso === 'material') {
+      return detalle
+        ? `No se pudo descontar el material: ${detalle}`
+        : 'No se pudo descontar el material de la furgoneta. Revisa las cantidades.';
+    }
+    if (paso === 'equipo') {
+      return detalle
+        ? `No se pudo entregar el equipo: ${detalle}`
+        : 'No se pudo entregar el equipo al cliente. Revisa que siga disponible.';
+    }
+    if (paso === 'gpon') {
+      if (e.status === -1) {
+        return 'No se pudo identificar el contrato de esta orden para guardar la ficha GPON. Recarga el tablero e inténtalo de nuevo.';
+      }
+      return detalle
+        ? `No se pudo guardar el registro GPON: ${detalle}`
+        : 'No se pudo guardar el registro GPON. La orden sigue abierta; inténtalo de nuevo.';
+    }
+    return this.mensajeAccion(e);
   }
 
   /**
@@ -821,10 +888,7 @@ export class SoporteComponent {
     });
   }
 
-  private mensajeAccion(e: { status?: number; error?: unknown }): string {
-    if (e.status === -1) {
-      return 'No se pudo identificar el contrato de esta orden para guardar la ficha GPON. Recarga el tablero e inténtalo de nuevo.';
-    }
+  private mensajeAccion(e: RespuestaError): string {
     if (e.status === 409 || e.status === 422) {
       return 'La orden ya cambió de estado; recarga e inténtalo de nuevo.';
     }
