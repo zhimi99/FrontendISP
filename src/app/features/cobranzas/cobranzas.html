@@ -255,7 +255,7 @@
             </div>
 
             <div class="field span2">
-              <label>Factura por cobrar *</label>
+              <label>Facturas por cobrar *</label>
               @if (facturasCargando()) {
                 <span class="hint">Cargando facturas…</span>
               } @else if (clienteSel() == null) {
@@ -263,61 +263,83 @@
               } @else if (facturasCliente().length === 0) {
                 <span class="hint">Este cliente no tiene facturas por cobrar.</span>
               } @else {
-                <select [ngModel]="facturaSel()" (ngModelChange)="onFacturaSel($event)">
-                  <option [ngValue]="null" disabled>Selecciona…</option>
+                <span class="hint">Marca una o varias. Las que dejes sin marcar quedan pendientes.</span>
+                <ul class="lista-facturas">
                   @for (f of facturasCliente(); track f.id) {
-                    <option [ngValue]="f.id">{{ f.numeroDocumento }} · saldo {{ moneda(f.saldoPendiente) }}</option>
+                    <li class="fila-factura" [class.marcada]="estaSeleccionada(f.id)">
+                      <label class="factura-check">
+                        <input type="checkbox" [checked]="estaSeleccionada(f.id)" (change)="alternarFactura(f)" />
+                        <span class="factura-num mono">{{ f.numeroDocumento }}</span>
+                        <span class="badge" [class]="estadoDoc(f).tono">{{ estadoDoc(f).texto }}</span>
+                        <span class="factura-saldo">saldo {{ moneda(f.saldoPendiente) }}</span>
+                      </label>
+
+                      @if (lineaDe(f.id); as linea) {
+                        <div class="factura-detalle">
+                          <div class="field">
+                            <label>Monto a aplicar</label>
+                            <input type="number" min="0" step="0.01" [max]="linea.saldoPendiente"
+                                   [ngModel]="linea.montoAplicado"
+                                   (ngModelChange)="cambiarMontoLinea(f.id, $event)" />
+                            <span class="hint">Menos que el saldo deja la factura en abono parcial.</span>
+                          </div>
+
+                          @if (esPreFactura(f)) {
+                            <div class="field">
+                              <label>Tipo de cobro</label>
+                              <div class="opciones-cobro compactas">
+                                <label class="opcion-cobro" [class.activa]="linea.opcion === 'FACTURA'">
+                                  <input type="radio" [name]="'opcionCobro-' + f.id"
+                                         [checked]="linea.opcion === 'FACTURA'"
+                                         (change)="cambiarOpcionLinea(f.id, 'FACTURA')" />
+                                  <span class="opcion-cobro-ico"><app-icon name="invoice" [size]="15" /></span>
+                                  <span class="opcion-cobro-titulo">Con factura</span>
+                                </label>
+                                <label class="opcion-cobro" [class.activa]="linea.opcion === 'RECIBO'">
+                                  <input type="radio" [name]="'opcionCobro-' + f.id"
+                                         [checked]="linea.opcion === 'RECIBO'"
+                                         (change)="cambiarOpcionLinea(f.id, 'RECIBO')" />
+                                  <span class="opcion-cobro-ico"><app-icon name="cash" [size]="15" /></span>
+                                  <span class="opcion-cobro-titulo">Sin factura</span>
+                                </label>
+                              </div>
+                            </div>
+                          } @else {
+                            <div class="field">
+                              <label>Tipo de cobro</label>
+                              <span class="hint">Ya está facturada: no hay nada que decidir.</span>
+                            </div>
+                          }
+                        </div>
+                      }
+                    </li>
                   }
-                </select>
+                </ul>
               }
             </div>
           </div>
         </section>
 
-        @if (facturaActual(); as fa) {
+        @if (lineasCobro().length) {
           <div class="resumen-cobro">
             <div class="resumen-cobro-info">
-              <span class="resumen-cobro-num mono">{{ fa.numeroDocumento }}</span>
-              <span class="badge" [class]="estadoDoc(fa).tono">{{ estadoDoc(fa).texto }}</span>
+              <span class="resumen-cobro-num mono">
+                {{ lineasCobro().length }} factura{{ lineasCobro().length === 1 ? '' : 's' }} seleccionada{{ lineasCobro().length === 1 ? '' : 's' }}
+              </span>
             </div>
             <div class="resumen-cobro-saldo">
-              <span class="resumen-cobro-label">Saldo pendiente</span>
-              <span class="resumen-cobro-monto">{{ moneda(fa.saldoPendiente) }}</span>
+              <span class="resumen-cobro-label">Total a cobrar</span>
+              <span class="resumen-cobro-monto">{{ moneda(totalACobrar()) }}</span>
             </div>
           </div>
-
-          @if (esPreFactura(fa)) {
-            <section class="pago-seccion">
-              <h4 class="pago-seccion-titulo"><app-icon name="invoice" [size]="15" /> Tipo de cobro</h4>
-              <div class="opciones-cobro">
-                <label class="opcion-cobro" [class.activa]="opcionCobro() === 'FACTURA'">
-                  <input type="radio" name="opcionCobro" value="FACTURA"
-                         [checked]="opcionCobro() === 'FACTURA'" (change)="opcionCobro.set('FACTURA')" />
-                  <span class="opcion-cobro-ico"><app-icon name="invoice" [size]="17" /></span>
-                  <span class="opcion-cobro-titulo">Cobrar y generar factura</span>
-                </label>
-                <label class="opcion-cobro" [class.activa]="opcionCobro() === 'RECIBO'">
-                  <input type="radio" name="opcionCobro" value="RECIBO"
-                         [checked]="opcionCobro() === 'RECIBO'" (change)="opcionCobro.set('RECIBO')" />
-                  <span class="opcion-cobro-ico"><app-icon name="cash" [size]="17" /></span>
-                  <span class="opcion-cobro-titulo">Cobrar solo (sin factura)</span>
-                </label>
-              </div>
-            </section>
-          }
         }
 
         <section class="pago-seccion">
           <h4 class="pago-seccion-titulo"><app-icon name="gear" [size]="15" /> Detalles del cobro</h4>
-          @if (!facturaActual()) {
-            <p class="pago-vacio">Elige un cliente y un comprobante para continuar.</p>
+          @if (!lineasCobro().length) {
+            <p class="pago-vacio">Elige un cliente y marca al menos una factura para continuar.</p>
           } @else {
             <div class="form-grid">
-              <div class="field">
-                <label>Monto *</label>
-                <input type="number" min="0" step="0.01"
-                       [ngModel]="montoPago()" (ngModelChange)="montoPago.set($event)" />
-              </div>
 
               <div class="field">
                 <label>Forma de pago *</label>
@@ -370,8 +392,8 @@
         <button type="button" class="btn btn-primary" (click)="guardarPago()" [disabled]="guardando()">
           @if (guardando()) {
             Registrando…
-          } @else if (montoPago(); as m) {
-            Registrar pago · {{ moneda(m) }}
+          } @else if (lineasCobro().length) {
+            Registrar pago · {{ moneda(totalACobrar()) }}
           } @else {
             Registrar pago
           }

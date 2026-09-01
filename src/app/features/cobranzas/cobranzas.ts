@@ -16,6 +16,20 @@ import { Venta } from '../../core/models/ventas.model';
 
 /** Las dos salidas posibles al cobrar un comprobante de cuenta por cobrar pendiente. */
 type OpcionCobro = 'FACTURA' | 'RECIBO';
+
+/**
+ * Una factura marcada dentro del pago que se está registrando. Guarda el saldo y el
+ * número junto al id para no volver a buscarlos en cada validación, y para que el
+ * mensaje de error pueda nombrar la factura concreta que está mal.
+ */
+interface LineaCobro {
+  facturaId: number;
+  facturaNumero: string;
+  saldoPendiente: number;
+  montoAplicado: number;
+  contratoId: number | null;
+  opcion: OpcionCobro;
+}
 import {
   CajaEstado,
   EstadoPago,
@@ -267,17 +281,27 @@ export class CobranzasComponent {
   readonly clienteSel = signal<number | null>(null);
   readonly facturasCliente = signal<FacturaVista[]>([]);
   readonly facturasCargando = signal(false);
-  readonly facturaSel = signal<number | null>(null);
-  readonly opcionCobro = signal<OpcionCobro>('FACTURA');
+  /**
+   * Las facturas marcadas para cobrar en ESTE pago, cada una con lo que se le
+   * aplica y si se factura legalmente. Un solo recibo puede saldar varias, que es
+   * lo normal cuando alguien se pone al día de dos o tres meses; y marcar solo una
+   * deja las demás pendientes, sin obligar a cobrarlo todo.
+   *
+   * La decisión factura/recibo es POR FACTURA y no del pago entero, porque cada
+   * comprobante tiene su propio estado ante el SRI: en el mismo cobro puede haber
+   * una pre-factura que el cliente quiere con factura y otra que no.
+   */
+  readonly lineasCobro = signal<LineaCobro[]>([]);
   readonly formaSel = signal<FormaPago>('EFECTIVO');
-  readonly montoPago = signal<number | null>(null);
   readonly referencia = signal('');
   readonly banco = signal('');
   readonly observacion = signal('');
 
   readonly esEfectivo = computed(() => this.formaSel() === 'EFECTIVO');
-  readonly facturaActual = computed(
-    () => this.facturasCliente().find((f) => f.id === this.facturaSel()) ?? null,
+
+  /** Lo que se cobra es la suma de lo aplicado: no hay un monto suelto que pueda descuadrar. */
+  readonly totalACobrar = computed(() =>
+    this.lineasCobro().reduce((s, l) => s + (l.montoAplicado ?? 0), 0),
   );
   /**
    * Computado, no capturado una sola vez al abrir el modal: si el modal se abre
@@ -292,10 +316,8 @@ export class CobranzasComponent {
     this.errorPago.set(null);
     this.clienteSel.set(null);
     this.facturasCliente.set([]);
-    this.facturaSel.set(null);
-    this.opcionCobro.set('FACTURA');
+    this.lineasCobro.set([]);
     this.formaSel.set('EFECTIVO');
-    this.montoPago.set(null);
     this.referencia.set('');
     this.banco.set('');
     this.observacion.set('');
@@ -309,8 +331,7 @@ export class CobranzasComponent {
 
   onClienteSel(id: number | null, facturaIdAPreseleccionar: number | null = null) {
     this.clienteSel.set(id);
-    this.facturaSel.set(null);
-    this.montoPago.set(null);
+    this.lineasCobro.set([]);
     this.facturasCliente.set([]);
     if (id == null) return;
     this.facturasCargando.set(true);
@@ -323,9 +344,10 @@ export class CobranzasComponent {
         );
         this.facturasCliente.set(pendientes);
         this.facturasCargando.set(false);
-        if (facturaIdAPreseleccionar != null && pendientes.some((f) => f.id === facturaIdAPreseleccionar)) {
-          this.onFacturaSel(facturaIdAPreseleccionar);
-        }
+        // Llegando desde el botón "Cobrar" de Facturación: esa factura viene marcada,
+        // pero el cajero puede sumar otras antes de confirmar.
+        const preseleccionada = pendientes.find((f) => f.id === facturaIdAPreseleccionar);
+        if (preseleccionada) this.alternarFactura(preseleccionada);
       },
       error: () => {
         this.facturasCliente.set([]);
@@ -334,10 +356,47 @@ export class CobranzasComponent {
     });
   }
 
-  onFacturaSel(id: number | null) {
-    this.facturaSel.set(id);
-    const f = this.facturasCliente().find((x) => x.id === id);
-    this.montoPago.set(f ? f.saldoPendiente : null);
+  estaSeleccionada(facturaId: number): boolean {
+    return this.lineasCobro().some((l) => l.facturaId === facturaId);
+  }
+
+  lineaDe(facturaId: number): LineaCobro | undefined {
+    return this.lineasCobro().find((l) => l.facturaId === facturaId);
+  }
+
+  /** Marca o desmarca una factura. Al marcarla se propone saldarla entera, que es el caso normal. */
+  alternarFactura(f: FacturaVista) {
+    this.errorPago.set(null);
+    this.lineasCobro.update((lineas) =>
+      lineas.some((l) => l.facturaId === f.id)
+        ? lineas.filter((l) => l.facturaId !== f.id)
+        : [
+            ...lineas,
+            {
+              facturaId: f.id,
+              facturaNumero: f.numeroDocumento,
+              saldoPendiente: f.saldoPendiente ?? 0,
+              montoAplicado: f.saldoPendiente ?? 0,
+              contratoId: f.contratoId ?? null,
+              // Solo decide algo en una pre-factura; sobre una ya autorizada el
+              // backend lo ignora porque ahí no queda nada que resolver.
+              opcion: 'FACTURA' as OpcionCobro,
+            },
+          ],
+    );
+  }
+
+  cambiarMontoLinea(facturaId: number, valor: number | null) {
+    this.errorPago.set(null);
+    this.lineasCobro.update((lineas) =>
+      lineas.map((l) => (l.facturaId === facturaId ? { ...l, montoAplicado: valor ?? 0 } : l)),
+    );
+  }
+
+  cambiarOpcionLinea(facturaId: number, opcion: OpcionCobro) {
+    this.lineasCobro.update((lineas) =>
+      lineas.map((l) => (l.facturaId === facturaId ? { ...l, opcion } : l)),
+    );
   }
 
   guardarPago() {
@@ -346,28 +405,29 @@ export class CobranzasComponent {
       this.errorPago.set(err);
       return;
     }
-    const f = this.facturaActual()!;
-    const monto = this.montoPago()!;
+    const lineas = this.lineasCobro();
+    // Un pago puede saldar facturas de varios contratos del mismo cliente; en ese
+    // caso no hay un contrato al que atribuir el recibo y va nulo (el backend lo
+    // admite justamente por esto).
+    const contratos = new Set(lineas.map((l) => l.contratoId));
     const req: RegistrarPagoRequest = {
       clienteId: this.clienteSel()!,
-      contratoId: f.contratoId ?? null,
-      monto,
+      contratoId: contratos.size === 1 ? (lineas[0].contratoId ?? null) : null,
+      monto: this.totalACobrar(),
       formaPago: this.formaSel(),
       referencia: this.referencia().trim() || null,
       banco: this.banco().trim() || null,
       sesionCajaId: this.esEfectivo() ? this.sesionSel() : null,
       observacion: this.observacion().trim() || null,
-      // Solo importa cuando la factura todavía es un comprobante sin decidir
-      // (esPreFactura): sobre una ya AUTORIZADA o ya resuelta como recibo, el
-      // backend ignora este valor porque ahí no hay decisión que tomar.
-      aplicaciones: [
-        {
-          facturaId: f.id,
-          facturaNumero: f.numeroDocumento,
-          montoAplicado: monto,
-          generarFacturaLegal: this.opcionCobro() === 'FACTURA',
-        },
-      ],
+      // `generarFacturaLegal` solo importa cuando la factura todavía es un
+      // comprobante sin decidir (esPreFactura): sobre una ya AUTORIZADA o ya
+      // resuelta como recibo, el backend ignora este valor.
+      aplicaciones: lineas.map((l) => ({
+        facturaId: l.facturaId,
+        facturaNumero: l.facturaNumero,
+        montoAplicado: l.montoAplicado,
+        generarFacturaLegal: l.opcion === 'FACTURA',
+      })),
     };
     this.guardando.set(true);
     this.errorPago.set(null);
@@ -386,12 +446,15 @@ export class CobranzasComponent {
 
   private validarPago(): string | null {
     if (this.clienteSel() == null) return 'Elige un cliente.';
-    const f = this.facturaActual();
-    if (!f) return 'Elige una factura por cobrar.';
-    const m = this.montoPago();
-    if (m == null || m <= 0) return 'El monto debe ser mayor que cero.';
-    if (m > (f.saldoPendiente ?? 0)) {
-      return `El monto no puede superar el saldo (${this.moneda(f.saldoPendiente)}).`;
+    const lineas = this.lineasCobro();
+    if (lineas.length === 0) return 'Marca al menos una factura por cobrar.';
+    for (const l of lineas) {
+      if (!l.montoAplicado || l.montoAplicado <= 0) {
+        return `El monto de ${l.facturaNumero} debe ser mayor que cero.`;
+      }
+      if (l.montoAplicado > l.saldoPendiente) {
+        return `En ${l.facturaNumero} no se puede aplicar más que su saldo (${this.moneda(l.saldoPendiente)}).`;
+      }
     }
     if (this.esEfectivo() && this.sesionSel() == null) {
       return 'El efectivo exige una sesión de caja abierta.';

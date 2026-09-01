@@ -1,5 +1,101 @@
 /* Estilos propios de Cobranzas/Caja; el resto se hereda de clientes.scss. */
 
+/* ============ Lista de facturas por cobrar (selección múltiple) ============
+ * Cada fila se despliega al marcarla: el monto y el tipo de cobro solo tienen
+ * sentido para lo que se va a cobrar, y mostrarlos siempre llenaría el modal de
+ * campos que no se van a usar. */
+.lista-facturas {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.fila-factura {
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  transition:
+    border-color 0.14s,
+    background 0.14s;
+}
+.fila-factura.marcada {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+.factura-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  flex-wrap: wrap;
+}
+.factura-check input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--brand);
+  cursor: pointer;
+  flex: none;
+}
+.factura-num {
+  font-weight: 650;
+  font-size: 13.5px;
+}
+.factura-saldo {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.factura-detalle {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 10px 14px;
+  padding: 0 12px 12px 38px;
+}
+.factura-detalle input[type='number'] {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+}
+.factura-detalle input[type='number']:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+/* Dentro de una fila el par de opciones va compacto: compite por el ancho con el
+ * monto, no con el modal entero. */
+.opciones-cobro.compactas {
+  gap: 8px;
+}
+.opciones-cobro.compactas .opcion-cobro {
+  padding: 7px 10px;
+  gap: 7px;
+}
+.opciones-cobro.compactas .opcion-cobro-ico {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+}
+.opciones-cobro.compactas .opcion-cobro-titulo {
+  font-size: 12.5px;
+}
+
+@media (max-width: 620px) {
+  .factura-detalle {
+    grid-template-columns: 1fr;
+    padding-left: 12px;
+  }
+}
+
 /* ============ Selector de las dos opciones de cobro ============ */
 .opciones-cobro {
   display: grid;
