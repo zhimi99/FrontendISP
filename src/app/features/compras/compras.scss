@@ -1,4 +1,4 @@
-/* Estilos propios de Proveedores; el resto se hereda de clientes.scss. */
+/* Estilos propios de Compras; el resto se hereda de clientes.scss. */
 
 .badge.neutral {
   background: var(--slate-soft);
@@ -7,6 +7,10 @@
 .badge.info {
   background: var(--info-soft);
   color: var(--info);
+}
+.badge.danger {
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .banner {
@@ -42,6 +46,15 @@
   padding: 5px 12px;
   font-size: 12px;
 }
+/* Anular saca mercadería del inventario: el botón no puede parecer uno más. */
+.btn.btn-peligro {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+.btn.btn-peligro:hover:not(:disabled) {
+  filter: brightness(0.94);
+}
 
 .card-head {
   padding: 14px 18px;
@@ -49,6 +62,132 @@
 }
 .card-head h3 {
   margin: 0;
+  font-size: 14px;
+}
+
+/* ============ Historial ============ */
+.filtros-compras {
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+.filtros-compras .field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.filtros-compras label {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--muted);
+}
+.filtros-compras input[type='date'],
+.filtros-compras select {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.resumen-compras {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 14px 16px;
+}
+.kpi-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--muted);
+}
+.kpi-valor {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Una compra anulada sigue en la lista —es constancia de que existió— pero
+   apagada, para que no se confunda con las que sí sostienen el stock. */
+.fila-anulada td:not(:last-child) {
+  opacity: 0.55;
+  text-decoration: line-through;
+  text-decoration-color: var(--border-2);
+}
+
+/* ============ Detalle de la compra ============ */
+.modal-ancho {
+  max-width: 860px;
+}
+.aviso-anulada {
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  border-radius: var(--radius-sm);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 13px;
+}
+.aviso-anulada .motivo {
+  display: block;
+  margin-top: 4px;
+  font-style: italic;
+}
+.totales-compra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  padding-bottom: 14px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.totales-compra > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.totales-compra .destacado span:last-child {
+  font-size: 18px;
+  font-weight: 700;
+}
+.obs {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.bloque-anular {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.bloque-anular label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.bloque-anular input {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
   font-size: 14px;
 }
 
@@ -76,6 +215,59 @@
 .carga-xml input[type='file'] {
   margin-top: 6px;
   font-size: 13px;
+}
+
+/* ============ Cabecera de la compra tecleada ============ */
+.cabecera-manual {
+  padding: 16px 18px;
+  margin-bottom: 12px;
+}
+.cm-titulo h3 {
+  margin: 0 0 2px;
+  font-size: 15px;
+}
+.cm-titulo .hint {
+  display: block;
+  max-width: 720px;
+  margin-bottom: 14px;
+}
+.cm-campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px 14px;
+}
+.cm-campos .field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.cm-campos .field.span2 {
+  grid-column: span 2;
+}
+.cm-campos label {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--muted);
+}
+.cm-campos input,
+.cm-campos select {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  width: 100%;
+}
+.cm-campos input:focus,
+.cm-campos select:focus {
+  outline: none;
+  border-color: var(--brand);
 }
 
 /* ============ Cabecera de la factura leída ============ */
@@ -161,7 +353,7 @@
   font-weight: 600;
 }
 
-/* ============ Las líneas de la factura ============ */
+/* ============ Las líneas ============ */
 .lineas-import {
   display: flex;
   flex-direction: column;
@@ -206,6 +398,103 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* Fila editable de la compra tecleada */
+.li-manual {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+.li-manual .li-desc {
+  flex: 1 1 240px;
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.li-num {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 118px;
+}
+.li-num label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--muted);
+}
+.li-num input {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+.li-manual input:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+
+.agregar-linea {
+  margin-top: 10px;
+  align-self: flex-start;
+}
+
+/* ============ Clasificador: a qué pestaña de Inventario va ============ */
+.clasificador {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+.va-a {
+  font-size: 12.5px;
+  color: var(--muted);
+  min-width: 0;
+}
+.va-a strong {
+  color: var(--text);
+}
+
+.reparto {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  padding: 0 2px;
+}
+.reparto-tit {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--muted);
+}
+.reparto-chip {
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: var(--brand-soft, var(--info-soft));
+  color: var(--brand-700, var(--info));
+  font-size: 12.5px;
+  font-weight: 600;
 }
 
 .li-cuerpo {
@@ -288,6 +577,14 @@
   border-radius: 999px;
   background: var(--bg);
 }
+/* Con tres opciones ya no cabe siempre en una línea en pantallas estrechas. */
+.segmento-3 {
+  flex-wrap: wrap;
+  border-radius: var(--radius-sm);
+}
+.segmento-3 .segmento-op {
+  border-radius: var(--radius-sm);
+}
 .segmento-op {
   display: inline-flex;
   align-items: center;
@@ -338,7 +635,7 @@
   font-weight: 600;
 }
 
-/* ============ Modal de proveedor ============ */
+/* ============ Modales ============ */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -363,6 +660,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   padding: 16px 18px;
   border-bottom: 1px solid var(--border);
 }
@@ -409,6 +707,7 @@
   color: var(--muted);
 }
 .form-grid input,
+.form-grid select,
 .form-grid textarea {
   width: 100%;
   padding: 9px 11px;
@@ -421,6 +720,7 @@
   resize: vertical;
 }
 .form-grid input:focus,
+.form-grid select:focus,
 .form-grid textarea:focus {
   outline: none;
   border-color: var(--brand);
@@ -435,5 +735,8 @@
   }
   .serie-fila {
     grid-template-columns: 1fr;
+  }
+  .cm-campos .field.span2 {
+    grid-column: span 1;
   }
 }

@@ -1,0 +1,705 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h2>Compras</h2>
+      <p class="sub">Qué se le compró a cada proveedor, cuándo y a qué precio. Lo que se registra aquí entra solo al inventario.</p>
+    </div>
+    <div class="head-actions">
+      @if (puedeEditar() && !modo()) {
+        <button class="btn" (click)="empezarManual()">
+          <app-icon name="pencil" [size]="15" /> Registrar a mano
+        </button>
+        <button class="btn btn-primary" (click)="empezarXml()">
+          <app-icon name="invoice" [size]="15" /> Subir factura XML
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (aviso(); as a) {
+    <div class="card banner">
+      <span>{{ a }}</span>
+      <button class="banner-x" (click)="aviso.set(null)" aria-label="Cerrar">✕</button>
+    </div>
+  }
+  @if (error(); as e) {
+    <div class="card banner error">
+      <span>{{ e }}</span>
+      <button class="banner-x" (click)="error.set(null)" aria-label="Cerrar">✕</button>
+    </div>
+  }
+
+  <!-- ================================================================
+       Registro de una compra. Ocupa la pantalla entera mientras dura:
+       es una tarea que se termina, no algo entre lo que se navega.
+       ================================================================ -->
+  @if (modo(); as m) {
+    @if (m === 'xml' && !previa()) {
+      <div class="card carga-xml">
+        <app-icon name="invoice" [size]="34" />
+        <h3>Sube el XML de la factura del proveedor</h3>
+        <p class="sub">
+          Vale tanto el archivo que descargas del SRI (el sobre de autorización) como la factura suelta
+          que te manda el proveedor. Se leen los productos con su precio y descripción; nada entra al
+          inventario hasta que lo confirmes.
+        </p>
+        <input type="file" accept=".xml,text/xml,application/xml" (change)="onArchivo($event)" [disabled]="leyendo()" />
+        @if (leyendo()) { <span class="hint">Leyendo la factura…</span> }
+        @if (errorFactura(); as e) { <div class="modal-error">{{ e }}</div> }
+        <button class="btn mini" (click)="cancelarRegistro()">Cancelar</button>
+      </div>
+    } @else {
+      <!-- Cabecera: la trae el XML, o la escribe quien mira el papel -->
+      @if (m === 'xml' && previa(); as p) {
+        <div class="card resumen-factura">
+          <div>
+            <span class="rf-num mono">{{ p.numeroDocumento }}</span>
+            <span class="rf-prov">{{ p.razonSocial }}</span>
+            <span class="hint">RUC {{ p.ruc }} · {{ fecha(p.fechaEmision) }}
+              @if (p.proveedorNuevo) { · <strong>proveedor nuevo, se creará</strong> }
+            </span>
+          </div>
+          <div class="rf-total">
+            <span class="hint">Total de la factura</span>
+            <span class="rf-monto">{{ moneda(p.total) }}</span>
+          </div>
+        </div>
+
+        @if (p.yaRegistrada; as ya) {
+          <div class="card banner error"><span>{{ ya }}</span></div>
+        }
+      } @else {
+        <div class="card cabecera-manual">
+          <div class="cm-titulo">
+            <h3>Compra sin comprobante electrónico</h3>
+            <span class="hint">
+              Para lo que llega con nota de venta o factura en papel. Se registra igual y suma al costo
+              real del inventario; queda marcada como tecleada, no como leída del SRI. En cada línea
+              escribe el <strong>costo que pagaste</strong>, ya con el descuento aplicado: de ahí sale
+              el costo del artículo y su margen.
+            </span>
+          </div>
+          <div class="cm-campos">
+            <div class="field">
+              <label>Proveedor *</label>
+              <select [ngModel]="mProveedorId()" (ngModelChange)="mProveedorId.set($event)">
+                <option [ngValue]="null">— Elige a quién se le compró —</option>
+                @for (p of proveedores(); track p.id) {
+                  <option [ngValue]="p.id">{{ p.razonSocial }} · {{ tipoProveedorEtq[p.tipo] }}</option>
+                }
+              </select>
+              <span class="hint">¿No está? Créalo en la pestaña Proveedores.</span>
+            </div>
+            <div class="field">
+              <label>N.º de documento *</label>
+              <input type="text" placeholder="001-001-000000123" [ngModel]="mNumero()" (ngModelChange)="mNumero.set($event)" />
+            </div>
+            <div class="field">
+              <label>Fecha *</label>
+              <input type="date" [ngModel]="mFecha()" (ngModelChange)="mFecha.set($event)" />
+            </div>
+            <div class="field">
+              <label>IVA</label>
+              <input type="number" min="0" step="0.01" [ngModel]="mIva()" (ngModelChange)="mIva.set($event)" />
+              <span class="hint">Cópialo del documento.</span>
+            </div>
+            <div class="field span2">
+              <label>Observación</label>
+              <input type="text" [ngModel]="mObservacion()" (ngModelChange)="mObservacion.set($event)" />
+            </div>
+          </div>
+        </div>
+      }
+
+      <div class="card barra-import">
+        <div class="field">
+          <label>Entra en</label>
+          <select [ngModel]="ubicacionSel()" (ngModelChange)="ubicacionSel.set($event)">
+            @for (u of ubicaciones(); track u.id) {
+              <option [ngValue]="u.id">{{ u.nombre }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label>Margen de ganancia</label>
+          <div class="margen-control">
+            <input type="number" min="0" step="1" [ngModel]="margen()" (ngModelChange)="margen.set($event)" />
+            <span class="pct">%</span>
+            <button class="btn mini" (click)="aplicarMargen()">Aplicar a todo</button>
+          </div>
+          <span class="hint">Sobre el costo real. Cada línea se puede retocar aparte.</span>
+        </div>
+        <div class="field resumen-import">
+          <span class="hint">{{ m === 'manual' ? 'Total que se registrará' : 'Costo de lo marcado' }}</span>
+          <span class="mono strong">
+            {{ moneda(m === 'manual' ? totalManual() : subtotalIncluido()) }}
+          </span>
+          @if (m === 'manual') {
+            <span class="hint">{{ moneda(subtotalIncluido()) }} + {{ moneda(mIva()) }} de IVA</span>
+          }
+          @if (seriesFaltantes() > 0) {
+            <span class="hint danger">Faltan {{ seriesFaltantes() }} serie(s) por escribir</span>
+          }
+        </div>
+      </div>
+
+      <!-- Dónde va a acabar todo, antes de confirmar. Es la comprobación que
+           evita descubrir una semana después que la cámara quedó archivada
+           como material de instalación y el mostrador no la encuentra. -->
+      @if (reparto().length > 0) {
+        <div class="reparto">
+          <span class="reparto-tit">Entrará en Inventario como</span>
+          @for (r of reparto(); track r.etiqueta) {
+            <span class="reparto-chip">
+              <strong>{{ r.cuantas }}</strong> en {{ r.etiqueta }}
+            </span>
+          }
+        </div>
+      }
+
+      <div class="lineas-import">
+        @for (l of lineas(); track $index; let iLinea = $index) {
+          <div class="card linea-import" [class.excluida]="!l.incluir">
+            <div class="li-cabecera">
+              @if (m === 'xml') {
+                <label class="li-check">
+                  <input type="checkbox" [checked]="l.incluir" (change)="actualizar(iLinea, { incluir: !l.incluir })" />
+                  <span class="li-original">{{ l.descripcionOriginal }}</span>
+                </label>
+                <span class="li-datos mono">
+                  {{ l.cantidad }} × {{ moneda(l.costoUnitario) }}
+                  @if (l.codigoProveedor) { <span class="muted"> · {{ l.codigoProveedor }}</span> }
+                  @if (l.compradoAntes) { <span class="badge info">Ya comprado antes</span> }
+                </span>
+              } @else {
+                <!-- A mano no hay nada que marcar ni descripción que respetar:
+                     la escribe el operador, y una línea que sobra se quita. -->
+                <div class="li-manual">
+                  <input class="li-desc" type="text" placeholder="Qué se compró"
+                         [ngModel]="l.descripcionOriginal"
+                         (ngModelChange)="actualizar(iLinea, { descripcionOriginal: $event, nombre: l.nombre || $event })" />
+                  <div class="li-num">
+                    <label>Cantidad</label>
+                    <input type="number" min="0" step="0.01" [ngModel]="l.cantidad"
+                           (ngModelChange)="cambiarCantidad(iLinea, $event)" />
+                  </div>
+                  <div class="li-num">
+                    <label>Costo unitario</label>
+                    <input type="number" min="0" step="0.01" [ngModel]="l.costoUnitario"
+                           (ngModelChange)="actualizar(iLinea, { costoUnitario: $event })" />
+                  </div>
+                  <button class="btn mini" (click)="quitarLinea(iLinea)" [disabled]="lineas().length === 1">Quitar</button>
+                </div>
+              }
+            </div>
+
+            @if (l.incluir) {
+              <!-- Dónde acabará dentro de Inventario. Son sus tres pestañas tal
+                   cual: quien recibe la mercadería piensa «esto va a productos»,
+                   no en un destino y una categoría por separado. -->
+              <div class="clasificador">
+                <div class="segmento segmento-3">
+                  @for (c of clasificaciones; track c.valor) {
+                    <label class="segmento-op" [class.activa]="clasificacionDe(l) === c.valor">
+                      <input type="radio" [name]="'clasif-' + iLinea"
+                             [checked]="clasificacionDe(l) === c.valor"
+                             (change)="cambiarClasificacion(iLinea, c.valor)" />
+                      <span>{{ c.etiqueta }}</span>
+                    </label>
+                  }
+                </div>
+                <span class="va-a">
+                  Irá a <strong>Inventario → {{ pestanaDe(l) }}</strong>. {{ ayudaDe(l) }}
+                </span>
+              </div>
+
+              <div class="li-cuerpo">
+                @if (l.destino === 'MATERIAL') {
+                  <div class="field">
+                    <label>Artículo existente</label>
+                    <select [ngModel]="l.materialId" (ngModelChange)="elegirMaterial(iLinea, $event)">
+                      <option [ngValue]="null">— Crear uno nuevo —</option>
+                      @for (mat of materialesPara(l); track mat.id) {
+                        <option [ngValue]="mat.id">{{ mat.codigo }} · {{ mat.nombre }}</option>
+                      }
+                    </select>
+                    <span class="hint">Solo los de esta pestaña. Si no está, se crea uno nuevo.</span>
+                  </div>
+
+                  @if (l.materialId == null) {
+                    <div class="field">
+                      <label>Nombre en nuestro catálogo</label>
+                      <input type="text" [ngModel]="l.nombre" (ngModelChange)="actualizar(iLinea, { nombre: $event })" />
+                    </div>
+                    <div class="field">
+                      <label>Unidad</label>
+                      <select [ngModel]="l.unidad" (ngModelChange)="actualizar(iLinea, { unidad: $event })">
+                        @for (u of unidades; track u) { <option [ngValue]="u">{{ u }}</option> }
+                      </select>
+                    </div>
+                  }
+                } @else {
+                  <div class="field">
+                    <label>Tipo</label>
+                    <select [ngModel]="l.tipoEquipo" (ngModelChange)="actualizar(iLinea, { tipoEquipo: $event })">
+                      @for (t of tiposEquipo; track t) { <option [ngValue]="t">{{ t }}</option> }
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label>Marca</label>
+                    <input type="text" [ngModel]="l.marca" (ngModelChange)="actualizar(iLinea, { marca: $event })" />
+                  </div>
+                  <div class="field">
+                    <label>Modelo</label>
+                    <input type="text" [ngModel]="l.modelo" (ngModelChange)="actualizar(iLinea, { modelo: $event })" />
+                  </div>
+                }
+
+                <div class="field">
+                  <label>Precio de venta</label>
+                  <input type="number" min="0" step="0.01" [ngModel]="l.precioVenta"
+                         (ngModelChange)="actualizar(iLinea, { precioVenta: $event })" />
+                  <span class="hint">Margen {{ margenDe(l) }}% sobre {{ moneda(l.costoUnitario) }}</span>
+                </div>
+              </div>
+
+              @if (l.destino === 'EQUIPO') {
+                <!-- Cada unidad necesita su serie: es lo que permite saber después
+                     en casa de qué cliente quedó este router en concreto. -->
+                <div class="li-series">
+                  <span class="hint">Series de las {{ l.cantidad }} unidades (la MAC es opcional)</span>
+                  <div class="series-grid">
+                    @for (s of l.series; track $index; let iSerie = $index) {
+                      <div class="serie-fila">
+                        <input type="text" placeholder="N.º de serie"
+                               [ngModel]="s.numeroSerie"
+                               (ngModelChange)="actualizarSerie(iLinea, iSerie, 'numeroSerie', $event)" />
+                        <input type="text" placeholder="MAC (opcional)"
+                               [ngModel]="s.macAddress"
+                               (ngModelChange)="actualizarSerie(iLinea, iSerie, 'macAddress', $event)" />
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            }
+          </div>
+        }
+      </div>
+
+      @if (m === 'manual') {
+        <button class="btn agregar-linea" (click)="agregarLinea()">
+          <app-icon name="plus" [size]="14" /> Añadir otro artículo
+        </button>
+      }
+
+      @if (errorFactura(); as e) { <div class="card modal-error">{{ e }}</div> }
+
+      <div class="acciones-import">
+        <button class="btn" (click)="cancelarRegistro()" [disabled]="registrando()">Cancelar</button>
+        <button class="btn btn-primary" (click)="registrarCompra()"
+                [disabled]="registrando() || !!previa()?.yaRegistrada">
+          {{ registrando() ? 'Ingresando…' : 'Ingresar al inventario' }}
+        </button>
+      </div>
+    }
+  } @else {
+    <!-- ================================================================
+         Modo normal: las tres vistas del módulo.
+         ================================================================ -->
+    <div class="tabs">
+      <button class="tab" [class.active]="tabActiva() === 0" (click)="setTab(0)">Compras</button>
+      <button class="tab" [class.active]="tabActiva() === 1" (click)="setTab(1)">Proveedores</button>
+      <button class="tab" [class.active]="tabActiva() === 2" (click)="setTab(2)">Qué me vende cada uno</button>
+    </div>
+
+    <!-- ============ Pestaña 0: historial de compras ============ -->
+    @if (tabActiva() === 0) {
+      <div class="filters card filtros-compras">
+        <div class="field">
+          <label>Desde</label>
+          <input type="date" [ngModel]="fDesde()" (ngModelChange)="fDesde.set($event)" (change)="cargarCompras()" />
+        </div>
+        <div class="field">
+          <label>Hasta</label>
+          <input type="date" [ngModel]="fHasta()" (ngModelChange)="fHasta.set($event)" (change)="cargarCompras()" />
+        </div>
+        <div class="field">
+          <label>Proveedor</label>
+          <select [ngModel]="fProveedor()" (ngModelChange)="fProveedor.set($event); cargarCompras()">
+            <option [ngValue]="null">Todos</option>
+            @for (p of proveedores(); track p.id) {
+              <option [ngValue]="p.id">{{ p.razonSocial }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label>Estado</label>
+          <select [ngModel]="fEstado()" (ngModelChange)="fEstado.set($event); cargarCompras()">
+            <option [ngValue]="null">Todas</option>
+            <option [ngValue]="'REGISTRADA'">Vigentes</option>
+            <option [ngValue]="'ANULADA'">Anuladas</option>
+          </select>
+        </div>
+        <div class="field grow">
+          <label>Buscar</label>
+          <div class="input-ico">
+            <app-icon name="search" [size]="15" />
+            <input type="text" placeholder="N.º de factura o proveedor…"
+                   [ngModel]="fTexto()" (ngModelChange)="fTexto.set($event)"
+                   (keyup.enter)="cargarCompras()" (blur)="cargarCompras()" />
+          </div>
+        </div>
+        <button class="btn mini" (click)="limpiarFiltros()">Limpiar</button>
+      </div>
+
+      @if (consulta(); as c) {
+        <div class="resumen-compras">
+          <div class="card kpi">
+            <span class="kpi-label">Compras</span>
+            <span class="kpi-valor">{{ c.cantidad }}</span>
+            @if (c.anuladas > 0) { <span class="hint">{{ c.anuladas }} anulada(s)</span> }
+          </div>
+          <div class="card kpi">
+            <span class="kpi-label">Invertido</span>
+            <span class="kpi-valor">{{ moneda(c.invertido) }}</span>
+            <span class="hint">Sin IVA, solo lo vigente</span>
+          </div>
+          <div class="card kpi">
+            <span class="kpi-label">IVA pagado</span>
+            <span class="kpi-valor">{{ moneda(c.iva) }}</span>
+          </div>
+        </div>
+      }
+
+      <div class="card table-card">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Documento</th>
+                <th>Proveedor</th>
+                <th>Fecha</th>
+                <th>Entró en</th>
+                <th class="right">Total</th>
+                <th>Estado</th>
+                <th class="w-acc"></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of compras(); track c.id) {
+                <tr [class.fila-anulada]="c.estado === 'ANULADA'">
+                  <td class="mono">
+                    {{ c.numeroDocumento }}
+                    @if (c.origen === 'MANUAL') { <span class="badge neutral">A mano</span> }
+                  </td>
+                  <td class="strong">
+                    {{ c.proveedorRazonSocial }}
+                    <span class="muted"> · {{ tipoProveedorEtq[c.proveedorTipo] }}</span>
+                  </td>
+                  <td class="muted">{{ fecha(c.fechaEmision) }}</td>
+                  <td class="muted">{{ c.ubicacionNombre }}</td>
+                  <td class="right mono strong">{{ moneda(c.total) }}</td>
+                  <td>
+                    <span class="badge" [class]="c.estado === 'ANULADA' ? 'danger' : 'ok'">
+                      {{ c.estado === 'ANULADA' ? 'Anulada' : 'Vigente' }}
+                    </span>
+                  </td>
+                  <td class="w-acc">
+                    <button class="btn mini" (click)="abrirDetalle(c)">Ver</button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="7" class="empty">
+                  {{ cargando() ? 'Cargando…' : 'No hay compras con estos filtros.' }}
+                </td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    <!-- ============ Pestaña 1: proveedores ============ -->
+    @if (tabActiva() === 1) {
+      <div class="filters card">
+        <div class="field grow">
+          <label>Buscar</label>
+          <div class="input-ico">
+            <app-icon name="search" [size]="15" />
+            <input type="text" placeholder="Razón social, RUC o tipo…" [ngModel]="q()" (ngModelChange)="q.set($event)" />
+          </div>
+        </div>
+        @if (puedeEditar()) {
+          <button class="btn btn-primary" (click)="abrirNuevo()">
+            <app-icon name="plus" [size]="15" /> Nuevo proveedor
+          </button>
+        }
+      </div>
+
+      <div class="card table-card">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>RUC</th>
+                <th>Razón social</th>
+                <th>Tipo</th>
+                <th>Contacto</th>
+                <th>Teléfono</th>
+                <th>Estado</th>
+                <th class="w-acc"></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (p of proveedoresFiltrados(); track p.id) {
+                <tr>
+                  <td class="mono muted">{{ p.ruc }}</td>
+                  <td class="strong">
+                    {{ p.razonSocial }}
+                    @if (p.nombreComercial) { <span class="muted"> · {{ p.nombreComercial }}</span> }
+                  </td>
+                  <td><span class="badge info">{{ tipoProveedorEtq[p.tipo] }}</span></td>
+                  <td class="muted">{{ p.contacto || '—' }}</td>
+                  <td class="muted">{{ p.telefono || '—' }}</td>
+                  <td><span class="badge" [class]="p.activo ? 'ok' : 'neutral'">{{ p.activo ? 'Activo' : 'Inactivo' }}</span></td>
+                  <td class="w-acc">
+                    <div class="acc">
+                      <button class="btn mini" (click)="verComprasDe(p)">Sus compras</button>
+                      @if (puedeEditar()) {
+                        <button class="btn mini" (click)="abrirEditar(p)">Editar</button>
+                        <button class="btn mini" (click)="alternarActivo(p)">{{ p.activo ? 'Desactivar' : 'Activar' }}</button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="7" class="empty">
+                  Todavía no hay proveedores. Créalos aquí o súbelos con su primera factura.
+                </td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    <!-- ============ Pestaña 2: catálogo ============ -->
+    @if (tabActiva() === 2) {
+      <div class="filters card">
+        <div class="field grow">
+          <label>Buscar</label>
+          <div class="input-ico">
+            <app-icon name="search" [size]="15" />
+            <input type="text" placeholder="Artículo, código o proveedor…" [ngModel]="q()" (ngModelChange)="q.set($event)" />
+          </div>
+        </div>
+      </div>
+
+      <div class="card table-card">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Proveedor</th>
+                <th>Código</th>
+                <th>Descripción</th>
+                <th class="right">Último costo</th>
+                <th class="right">Precio venta</th>
+                <th class="right">Margen</th>
+                <th>Última compra</th>
+                <th class="right">Veces</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (a of catalogoFiltrado(); track a.id) {
+                <tr>
+                  <td class="strong">{{ a.proveedorRazonSocial }}</td>
+                  <td class="mono muted">{{ a.codigoProveedor }}</td>
+                  <td>
+                    {{ a.descripcion }}
+                    @if (a.materialNombre) { <span class="muted"> → {{ a.materialNombre }}</span> }
+                  </td>
+                  <td class="right mono">{{ moneda(a.ultimoCosto) }}</td>
+                  <td class="right mono">{{ a.materialPrecioVenta != null ? moneda(a.materialPrecioVenta) : '—' }}</td>
+                  <td class="right mono muted">
+                    @if (a.materialPrecioVenta && a.ultimoCosto) {
+                      {{ (((a.materialPrecioVenta - a.ultimoCosto) / a.ultimoCosto) * 100).toFixed(0) }}%
+                    } @else { — }
+                  </td>
+                  <td class="muted">{{ fecha(a.ultimaCompra) }}</td>
+                  <td class="right mono muted">{{ a.vecesComprado }}</td>
+                </tr>
+              } @empty {
+                <tr><td colspan="8" class="empty">
+                  Todavía no se ha registrado ninguna compra. El catálogo se llena solo al registrarlas.
+                </td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+  }
+</div>
+
+<!-- ============ Detalle de una compra ============ -->
+@if (compraAbierta(); as c) {
+  <div class="modal-backdrop" (click)="cerrarDetalle()">
+    <div class="modal modal-ancho" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <div>
+          <h3>{{ c.numeroDocumento }}</h3>
+          <span class="hint">
+            {{ c.proveedorRazonSocial }} · RUC {{ c.proveedorRuc }} · {{ fecha(c.fechaEmision) }}
+            · {{ c.origen === 'MANUAL' ? 'registrada a mano' : 'leída del XML' }}
+          </span>
+        </div>
+        <button class="modal-x" (click)="cerrarDetalle()" aria-label="Cerrar">✕</button>
+      </div>
+
+      <div class="modal-body">
+        @if (c.estado === 'ANULADA') {
+          <div class="aviso-anulada">
+            <strong>Compra anulada</strong> el {{ fecha(c.anuladaEn) }}. Su mercadería salió del inventario.
+            <span class="motivo">«{{ c.motivoAnulacion }}»</span>
+          </div>
+        }
+
+        <div class="totales-compra">
+          <div><span class="hint">Subtotal</span><span class="mono">{{ moneda(c.subtotal) }}</span></div>
+          <div><span class="hint">Descuento</span><span class="mono">{{ moneda(c.descuento) }}</span></div>
+          <div><span class="hint">IVA</span><span class="mono">{{ moneda(c.valorIva) }}</span></div>
+          <div class="destacado"><span class="hint">Total</span><span class="mono">{{ moneda(c.total) }}</span></div>
+          <div><span class="hint">Entró en</span><span>{{ c.ubicacionNombre }}</span></div>
+        </div>
+
+        @if (c.observacion) { <p class="obs">{{ c.observacion }}</p> }
+
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th><th>Descripción</th><th>Entró como</th>
+                <th class="right">Cantidad</th><th class="right">Costo</th><th class="right">P. venta</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (l of c.lineas; track l.id) {
+                <tr>
+                  <td class="muted">{{ l.linea }}</td>
+                  <td>
+                    {{ l.descripcion }}
+                    @if (l.materialNombre) { <span class="muted"> → {{ l.materialNombre }}</span> }
+                  </td>
+                  <td><span class="badge neutral">{{ l.destino === 'EQUIPO' ? 'Equipo' : 'Material' }}</span></td>
+                  <td class="right mono">{{ l.cantidad }}</td>
+                  <td class="right mono">{{ moneda(l.costoUnitario) }}</td>
+                  <td class="right mono">{{ moneda(l.precioVenta) }}</td>
+                </tr>
+              } @empty {
+                <tr><td colspan="6" class="empty">{{ cargandoDetalle() ? 'Cargando el detalle…' : 'Sin líneas.' }}</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        @if (pidiendoAnular()) {
+          <div class="bloque-anular">
+            <label>¿Por qué se anula?</label>
+            <input type="text" placeholder="Ej.: se cargó dos veces la misma factura"
+                   [ngModel]="motivoAnulacion()" (ngModelChange)="motivoAnulacion.set($event)" />
+            <span class="hint">
+              Saldrá del inventario todo lo que esta compra metió. Solo funciona si la mercadería sigue
+              estando: si ya se instaló o se consumió, se te dirá qué falta.
+            </span>
+            @if (errorAnulacion(); as e) { <div class="modal-error">{{ e }}</div> }
+          </div>
+        }
+      </div>
+
+      <div class="modal-foot">
+        @if (puedeEditar() && c.estado === 'REGISTRADA') {
+          @if (pidiendoAnular()) {
+            <button class="btn" (click)="pidiendoAnular.set(false)" [disabled]="anulando()">Cancelar</button>
+            <button class="btn btn-peligro" (click)="confirmarAnular()" [disabled]="anulando()">
+              {{ anulando() ? 'Anulando…' : 'Confirmar anulación' }}
+            </button>
+          } @else {
+            <button class="btn btn-peligro" (click)="pedirAnular()">Anular compra</button>
+          }
+        }
+        @if (!pidiendoAnular()) {
+          <button class="btn" (click)="cerrarDetalle()">Cerrar</button>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ============ Modal: alta / edición de proveedor ============ -->
+@if (modalProveedor()) {
+  <div class="modal-backdrop" (click)="cerrarProveedor()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <h3>{{ editandoId() ? 'Editar proveedor' : 'Nuevo proveedor' }}</h3>
+        <button class="modal-x" (click)="cerrarProveedor()" [disabled]="guardando()" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="field">
+            <label>RUC *</label>
+            <input type="text" [ngModel]="fRuc()" (ngModelChange)="fRuc.set($event)" [disabled]="!!editandoId()" />
+            @if (editandoId()) {
+              <span class="hint">No se edita: es con lo que se reconoce al proveedor en sus facturas.</span>
+            }
+          </div>
+          <div class="field">
+            <label>Razón social *</label>
+            <input type="text" [ngModel]="fRazon()" (ngModelChange)="fRazon.set($event)" />
+          </div>
+          <div class="field">
+            <label>Nombre comercial</label>
+            <input type="text" [ngModel]="fComercial()" (ngModelChange)="fComercial.set($event)" />
+          </div>
+          <div class="field">
+            <label>Tipo</label>
+            <select [ngModel]="fTipo()" (ngModelChange)="fTipo.set($event)">
+              @for (t of tiposProveedor; track t) {
+                <option [ngValue]="t">{{ tipoProveedorEtq[t] }}</option>
+              }
+            </select>
+            <span class="hint">{{ tipoProveedorAyuda[fTipo()] }}</span>
+          </div>
+          <div class="field">
+            <label>Contacto</label>
+            <input type="text" [ngModel]="fContacto()" (ngModelChange)="fContacto.set($event)" />
+          </div>
+          <div class="field">
+            <label>Teléfono</label>
+            <input type="text" [ngModel]="fTelefono()" (ngModelChange)="fTelefono.set($event)" />
+          </div>
+          <div class="field">
+            <label>Email</label>
+            <input type="text" [ngModel]="fEmail()" (ngModelChange)="fEmail.set($event)" />
+          </div>
+          <div class="field span2">
+            <label>Dirección</label>
+            <input type="text" [ngModel]="fDireccion()" (ngModelChange)="fDireccion.set($event)" />
+          </div>
+          <div class="field span2">
+            <label>Observación</label>
+            <textarea rows="2" [ngModel]="fObservacion()" (ngModelChange)="fObservacion.set($event)"></textarea>
+          </div>
+        </div>
+        @if (error(); as e) { <div class="modal-error">{{ e }}</div> }
+      </div>
+      <div class="modal-foot">
+        <button class="btn" (click)="cerrarProveedor()" [disabled]="guardando()">Cancelar</button>
+        <button class="btn btn-primary" (click)="guardarProveedor()" [disabled]="guardando()">
+          {{ guardando() ? 'Guardando…' : 'Guardar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

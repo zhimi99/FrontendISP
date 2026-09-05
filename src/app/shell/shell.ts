@@ -39,7 +39,7 @@ export class Shell {
     { label: 'Soporte', icon: 'support', path: '/soporte' },
     { label: 'Red', icon: 'network', path: '/red' },
     { label: 'Inventario', icon: 'box', path: '/inventario' },
-    { label: 'Proveedores', icon: 'truck', path: '/proveedores' },
+    { label: 'Compras', icon: 'truck', path: '/compras' },
     { label: 'Reportes', icon: 'chart', path: '/reportes/cierres-caja' },
   ];
 

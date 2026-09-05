@@ -50,13 +50,16 @@ export const routes: Routes = [
       { path: 'red', component: RedComponent },
       { path: 'inventario', component: InventarioComponent },
       // Perezoso: solo lo abre ADMIN y de vez en cuando (al llegar mercadería), así
-      // que su pantalla de importación no tiene por qué viajar en el paquete inicial
+      // que sus pantallas de registro no tienen por qué viajar en el paquete inicial
       // que carga todo el mundo al entrar.
       {
-        path: 'proveedores',
-        loadComponent: () =>
-          import('./features/proveedores/proveedores').then((m) => m.ProveedoresComponent),
+        path: 'compras',
+        loadComponent: () => import('./features/compras/compras').then((m) => m.ComprasComponent),
       },
+      // El módulo se llamó «Proveedores» antes de que quedara claro que lo que se
+      // gestiona son las compras. Se conserva la redirección porque puede haber
+      // enlaces guardados o pestañas abiertas apuntando aquí.
+      { path: 'proveedores', pathMatch: 'full', redirectTo: 'compras' },
       { path: 'reportes', pathMatch: 'full', redirectTo: 'reportes/cierres-caja' },
       { path: 'reportes/cierres-caja', component: CierresCajaComponent },
       { path: 'reportes/ventas', component: VentasReporteComponent },
