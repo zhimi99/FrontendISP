@@ -93,7 +93,14 @@ export interface IdentidadRed {
   ultimaSyncRed?: string;
 }
 
-/** `GET /api/contratos/{codigo}/registro-gpon` — ficha técnica de la instalación GPON. */
+/**
+ * `GET /api/contratos/{codigo}/registro-gpon` — ficha técnica de la instalación.
+ *
+ * Es la parte física y comercial del alta: qué router se dejó, cuánto cable se
+ * tendió, dónde quedó conectado. Los recursos de la OLT (número de ONT,
+ * service-port, VLAN) NO viven aquí: los reparte MS-RED y se consultan por
+ * `GponService`. Ver `gpon.model.ts`.
+ */
 export interface RegistroGpon {
   id: number;
   contratoId: number;

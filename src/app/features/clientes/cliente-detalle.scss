@@ -868,6 +868,180 @@ tbody tr:hover {
   margin-top: 16px;
 }
 
+/* ============ Registro GPON · aprovisionamiento y comandos ============ */
+.gpon-subtitulo {
+  margin: 22px 18px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--faint);
+}
+.gpon-subtitulo.mb0 {
+  margin: 0;
+}
+
+/* El plan de VLAN casi nunca se toca: se pliega para no competir con lo que sí
+   se rellena en cada alta. */
+.gpon-avanzado {
+  margin: 18px 18px 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+.gpon-avanzado > summary {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  flex-wrap: wrap;
+  padding: 10px 13px;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  list-style: none;
+}
+.gpon-avanzado > summary::-webkit-details-marker {
+  display: none;
+}
+/* Triángulo propio: el nativo se oculta arriba para poder colocarlo alineado
+   con la línea base del texto. */
+.gpon-avanzado > summary::before {
+  content: '▸';
+  color: var(--faint);
+  transition: transform 0.14s;
+}
+.gpon-avanzado[open] > summary::before {
+  transform: rotate(90deg);
+}
+.gpon-avanzado .gpon-form {
+  padding-top: 4px;
+}
+
+/* Recursos que repartió el backend: se leen, no se editan. Presentarlos como
+   campos de formulario invitaría a cambiarlos a mano, que es justo lo que la
+   asignación automática vino a evitar. */
+.gpon-asignado {
+  margin: 0 18px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px 18px;
+}
+.gpon-asignado > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+.gpon-asignado dt {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--faint);
+}
+.gpon-asignado dd {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 650;
+}
+
+.head-acciones {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.gpon-script {
+  margin: 22px 18px 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.gpon-script-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+.gpon-script-head .sub {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.gpon-comandos {
+  margin: 0;
+  padding: 12px 14px 14px 34px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+.gpon-comandos li::marker {
+  color: var(--faint);
+  font-size: 12px;
+  font-weight: 700;
+}
+.gpon-cmd-titulo {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--muted);
+  margin-bottom: 3px;
+}
+/*
+ * Un comando es una sola línea y no debe partirse: leerlo cortado invita a
+ * copiar la mitad. Se desplaza en horizontal dentro de su propia caja, que
+ * además impide que la tarjeta entera se ensanche en pantallas chicas.
+ */
+.gpon-cmd {
+  display: block;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--side-bg);
+  color: #d7e6d2;
+  font-family: 'Consolas', 'Menlo', monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.gpon-faltantes {
+  padding: 13px 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.gpon-faltantes-titulo {
+  margin: 0 0 6px;
+  font-weight: 650;
+  color: var(--text);
+}
+.gpon-faltantes ul {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+@media (max-width: 640px) {
+  .gpon-subtitulo,
+  .gpon-avanzado,
+  .gpon-script {
+    margin-left: 12px;
+    margin-right: 12px;
+  }
+}
+
 /* ============ Modal: editar cliente ============ */
 .modal-backdrop {
   position: fixed;

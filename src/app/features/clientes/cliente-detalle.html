@@ -558,14 +558,15 @@
                   />
                 </div>
                 <div class="field">
-                  <label>Tarjeta</label>
+                  <label>Tarjeta (interfaz GPON)</label>
                   <input
                     type="text"
-                    placeholder="0/1/2"
+                    placeholder="0/1"
                     [ngModel]="gponTarjeta()"
                     (ngModelChange)="gponTarjeta.set($event)"
                     [disabled]="!puedeEditar()"
                   />
+                  <span class="hint">Sin el puerto: los comandos arman <code>gpon 0/1/0</code>.</span>
                 </div>
                 <div class="field">
                   <label>ONT</label>
@@ -590,16 +591,118 @@
                   />
                 </div>
                 <div class="field span2">
-                  <label>AMS</label>
+                  <label>Notas / comandos extra</label>
                   <textarea
-                    rows="4"
-                    placeholder="Comandos para la terminal del router (ej. interfaz gpon…). Se completa manualmente."
+                    rows="3"
+                    placeholder="Lo que haya que anotar a mano. Los siete comandos de alta se generan solos, más abajo."
                     [ngModel]="gponAms()"
                     (ngModelChange)="gponAms.set($event)"
                     [disabled]="!puedeEditar()"
                   ></textarea>
                 </div>
               </div>
+
+              <!-- ===== Aprovisionamiento en la OLT (MS-RED) =====
+                   El número de ONT, los service-port y las IP los reparte el
+                   backend: aquí solo se dice qué aparato se instala. -->
+              <h4 class="gpon-subtitulo">Aprovisionamiento en la OLT</h4>
+
+              @if (aprovisionamiento(); as a) {
+                <dl class="gpon-asignado">
+                  <div><dt>OLT</dt><dd>{{ a.oltCodigo }} · {{ a.oltNombre }}</dd></div>
+                  <div><dt>Puerto PON</dt><dd class="mono">{{ a.tarjeta }}/{{ a.puerto }}</dd></div>
+                  <div><dt>ONT</dt><dd class="mono">{{ a.ontId }}</dd></div>
+                  <div><dt>Serial</dt><dd class="mono">{{ a.serialOnt }}</dd></div>
+                  <div><dt>Service-port</dt><dd class="mono">{{ a.spGestion }} / {{ a.spServicio }}</dd></div>
+                  <div><dt>IP servicio</dt><dd class="mono">{{ a.ipServicio || '—' }}</dd></div>
+                  <div><dt>IP gestión</dt><dd class="mono">{{ a.ipGestion || '—' }}</dd></div>
+                  <div>
+                    <dt>Estado</dt>
+                    <dd>
+                      <span class="badge" [class]="a.estado === 'APLICADO' ? 'ok' : 'warn'">
+                        {{ a.estado === 'APLICADO' ? 'Aplicado en la OLT' : 'Reservado, falta aplicar' }}
+                      </span>
+                    </dd>
+                  </div>
+                </dl>
+              } @else if (aprovisionamientoCargando()) {
+                <div class="fact-estado"><app-icon name="refresh" [size]="20" /> Cargando aprovisionamiento…</div>
+              } @else {
+                <div class="gpon-form form-grid servicio-form-grid">
+                  <div class="field">
+                    <label>Serial de la ONT</label>
+                    <input
+                      type="text"
+                      placeholder="48575443217FDA9E"
+                      [ngModel]="gponSerialOnt()"
+                      (ngModelChange)="gponSerialOnt.set($event)"
+                      [disabled]="!puedeEditar()"
+                    />
+                    <span class="hint">Se normaliza sin espacios y en mayúsculas.</span>
+                  </div>
+                  <div class="field">
+                    <label>Puerto PON</label>
+                    <select
+                      [ngModel]="gponPuertoPonId()"
+                      (ngModelChange)="gponPuertoPonId.set($event)"
+                      [disabled]="!puedeEditar()"
+                    >
+                      <option [ngValue]="null">Que lo elija el sistema (el menos ocupado)</option>
+                      @for (p of puertosPon(); track p.id) {
+                        <option [ngValue]="p.id">
+                          {{ p.tarjeta }}/{{ p.puerto }} — {{ p.libres }} libres de {{ p.capacidadOnt }}
+                        </option>
+                      }
+                    </select>
+                    <span class="hint">El resto de recursos los asigna el backend.</span>
+                  </div>
+                </div>
+
+                @if (puedeEditar()) {
+                  <div class="gpon-acciones">
+                    <button
+                      type="button"
+                      class="btn btn-primary"
+                      (click)="aprovisionarGpon()"
+                      [disabled]="aprovisionando() || !gponSerialOnt().trim()"
+                    >
+                      {{ aprovisionando() ? 'Aprovisionando…' : 'Aprovisionar en la OLT' }}
+                    </button>
+                  </div>
+                }
+              }
+
+              <!-- ===== Comandos generados en el servidor ===== -->
+              @if (aprovisionamiento(); as a) {
+                <div class="gpon-script">
+                  <div class="gpon-script-head">
+                    <div>
+                      <h4 class="gpon-subtitulo mb0">Comandos para la OLT</h4>
+                      <p class="sub">Generados por MS-RED a partir de los recursos asignados.</p>
+                    </div>
+                    <div class="head-acciones">
+                      @if (a.estado !== 'APLICADO' && puedeEditar()) {
+                        <button type="button" class="btn btn-sm" (click)="confirmarGponAplicado()">
+                          Marcar como aplicado
+                        </button>
+                      }
+                      <button type="button" class="btn btn-primary btn-sm" (click)="copiarScriptGpon()">
+                        <app-icon name="contract" [size]="14" />
+                        {{ gponCopiado() ? '¡Copiado!' : 'Copiar script completo' }}
+                      </button>
+                    </div>
+                  </div>
+
+                  <ol class="gpon-comandos">
+                    @for (c of a.comandos; track c.titulo) {
+                      <li>
+                        <span class="gpon-cmd-titulo">{{ c.titulo }}</span>
+                        <code class="gpon-cmd">{{ c.comando }}</code>
+                      </li>
+                    }
+                  </ol>
+                </div>
+              }
 
               @if (errorGpon()) {
                 <div class="modal-error">{{ errorGpon() }}</div>

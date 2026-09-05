@@ -735,7 +735,7 @@ export class SoporteComponent {
     if (!this.pideGpon()) return of(null);
 
     const codigo = this.gponContratoCodigo();
-    const req = {
+    const visible = {
       ip: this.gponIp().trim() || null,
       router: this.gponRouter().trim() || null,
       metrajeCable: this.decimalGpon(this.gponMetraje()),
@@ -745,13 +745,15 @@ export class SoporteComponent {
       puertoServicio: this.enteroGpon(this.gponPuertoServicio()),
       ams: this.gponAms().trim() || null,
     };
-    if (Object.values(req).every((v) => v == null)) return of(null);
+    // Una ficha en blanco no se crea: si el técnico no escribió nada, no hay nada
+    // que guardar.
+    if (Object.values(visible).every((v) => v == null)) return of(null);
     if (!codigo) {
       // Se pidió guardar pero no se pudo resolver el contrato: mejor detenerse que
       // cerrar la instalación perdiendo la ficha que el técnico acaba de escribir.
       return throwError(() => ({ status: -1 }));
     }
-    return this.contratosService.guardarRegistroGpon(codigo, req);
+    return this.contratosService.guardarRegistroGpon(codigo, visible);
   }
 
   /** Acepta coma o punto decimal: el técnico teclea "121,5" tan a menudo como "121.5". */

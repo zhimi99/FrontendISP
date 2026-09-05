@@ -49,6 +49,12 @@ import {
 } from '../../core/models/inventario.model';
 import { EstadoCliente, ESTADOS } from './clientes.model';
 import { environment } from '../../../environments/environment';
+import { GponService } from '../../core/services/gpon.service';
+import {
+  AprovisionamientoGpon,
+  OltResumen,
+  PuertoPonResumen,
+} from '../../core/models/gpon.model';
 
 /** Estado de la carga perezosa de facturas para la pestaña de Facturación. */
 type EstadoFacturas = { estado: 'cargando' | 'ok' | 'error'; lista: FacturaVista[] };
@@ -76,6 +82,7 @@ export class ClienteDetalleComponent implements OnDestroy {
   private readonly sanitizer = inject(DomSanitizer);
   private readonly operativo = inject(OperativoService);
   private readonly inventario = inject(InventarioService);
+  private readonly gponService = inject(GponService);
   readonly estadosMap = ESTADOS;
 
   /** Solo soporte/ventas y administración editan al cliente (PUT /api/clientes). */
@@ -505,6 +512,123 @@ export class ClienteDetalleComponent implements OnDestroy {
     this.errorGpon.set(null);
   }
 
+  /* ---------- Aprovisionamiento en la OLT (MS-RED) ----------
+   *
+   * Aquí no se calcula ningún comando: se piden al backend, que es quien
+   * reparte los recursos de la OLT y arma las plantillas. El técnico solo
+   * aporta el serial del aparato que va a instalar; el número de ONT, los
+   * service-port y las IP los decide el servidor, que es lo que permite dar
+   * miles de altas sin que nadie lleve la cuenta a mano.
+   */
+  readonly gponSerialOnt = signal('');
+  /** Puerto PON elegido a mano; nulo = que el backend escoja el menos ocupado. */
+  readonly gponPuertoPonId = signal<number | null>(null);
+  readonly gponOltId = signal<number | null>(null);
+  readonly aprovisionando = signal(false);
+  readonly gponCopiado = signal(false);
+  private temporizadorCopiado?: ReturnType<typeof setTimeout>;
+
+  /** Aprovisionamiento vigente del contrato; null = todavía no tiene. */
+  readonly aprovisionamiento = signal<AprovisionamientoGpon | null>(null);
+  readonly aprovisionamientoCargando = signal(false);
+
+  /** Puertos PON con hueco, para poder elegir en vez de dejarlo al automático. */
+  readonly puertosPon = signal<PuertoPonResumen[]>([]);
+  readonly olts = signal<OltResumen[]>([]);
+
+  /**
+   * Reserva los recursos y trae los comandos.
+   *
+   * El backend es idempotente, así que repetir la llamada no consume otro
+   * número de ONT: un doble clic o un reintento tras un fallo de red son
+   * inofensivos.
+   */
+  aprovisionarGpon() {
+    const contrato = this.contratoGpon();
+    const cliente = this.detalle();
+    if (!contrato || !cliente || this.aprovisionando()) return;
+
+    this.aprovisionando.set(true);
+    this.errorGpon.set(null);
+    this.gponService
+      .aprovisionar({
+        contratoId: contrato.id,
+        contratoCodigo: contrato.codigo,
+        nombreCliente: cliente.nombre,
+        serialOnt: this.gponSerialOnt(),
+        puertoPonId: this.gponPuertoPonId(),
+        oltId: this.gponOltId(),
+      })
+      .subscribe({
+        next: (a) => {
+          this.aprovisionando.set(false);
+          this.aprovisionamiento.set(a);
+          this.avisoGpon.set({
+            texto: `Aprovisionado en ${a.oltCodigo} puerto ${a.tarjeta}/${a.puerto}, ONT ${a.ontId}.`,
+            error: false,
+          });
+        },
+        error: (e) => {
+          this.aprovisionando.set(false);
+          this.errorGpon.set(this.mensajeErrorGpon(e));
+        },
+      });
+  }
+
+  /**
+   * Copia el guion completo. `navigator.clipboard` necesita contexto seguro
+   * (HTTPS o localhost); si no lo hay, se avisa en vez de fallar en silencio y
+   * dejar al técnico creyendo que ya lo tiene copiado.
+   */
+  async copiarScriptGpon() {
+    const a = this.aprovisionamiento();
+    if (!a) return;
+    try {
+      await navigator.clipboard.writeText(a.scriptCompleto);
+      this.gponCopiado.set(true);
+      clearTimeout(this.temporizadorCopiado);
+      this.temporizadorCopiado = setTimeout(() => this.gponCopiado.set(false), 2000);
+    } catch {
+      this.avisoGpon.set({
+        texto: 'El navegador no dejó copiar automáticamente. Selecciona el texto y usa Ctrl+C.',
+        error: true,
+      });
+    }
+  }
+
+  /**
+   * Puertos con hueco para poder elegir a mano.
+   *
+   * Si la instalación falla por silencio de la red, el desplegable queda vacío y
+   * el alta sigue siendo posible: con puerto nulo el backend escoge el menos
+   * ocupado, que es el caso corriente.
+   */
+  private cargarPuertosPon() {
+    this.gponService.olts().subscribe({
+      next: (olts) => {
+        this.olts.set(olts);
+        const unica = olts.length === 1 ? olts[0] : null;
+        this.gponOltId.set(unica?.id ?? null);
+        if (!unica) return;
+        this.gponService.puertos(unica.id).subscribe({
+          next: (p) => this.puertosPon.set(p),
+          error: () => this.puertosPon.set([]),
+        });
+      },
+      error: () => this.olts.set([]),
+    });
+  }
+
+  /** Deja constancia de que los comandos ya se ejecutaron en la OLT. */
+  confirmarGponAplicado() {
+    const a = this.aprovisionamiento();
+    if (!a) return;
+    this.gponService.confirmarAplicado(a.contratoId).subscribe({
+      next: (actualizado) => this.aprovisionamiento.set(actualizado),
+      error: (e) => this.errorGpon.set(this.mensajeErrorGpon(e)),
+    });
+  }
+
   guardarGpon() {
     const codigo = this.contratoGponCodigo();
     if (!codigo || this.guardandoGpon()) return;
@@ -547,11 +671,15 @@ export class ClienteDetalleComponent implements OnDestroy {
     return n != null ? Math.trunc(n) : null;
   }
 
-  private mensajeErrorGpon(e: { status?: number }): string {
-    if (e.status === 403) return 'Tu rol no tiene permiso para editar el registro GPON.';
+  private mensajeErrorGpon(e: { status?: number; error?: { message?: string } }): string {
+    // 422 lo devuelve MS-RED cuando el aprovisionamiento choca con una regla que
+    // el operador puede corregir (puerto lleno, serial repetido, sin OLT): su
+    // mensaje explica el caso concreto mucho mejor que un texto genérico.
+    if (e.status === 422 && e.error?.message) return e.error.message;
+    if (e.status === 403) return 'Tu rol no tiene permiso para esta operación de red.';
     if (e.status === 404) return 'El contrato ya no existe; recarga la ficha.';
-    if (e.status === 0) return 'No se pudo contactar el gateway para guardar el registro GPON.';
-    return 'No se pudo guardar el registro GPON. Inténtalo de nuevo.';
+    if (e.status === 0) return 'No se pudo contactar el gateway. Revisa la conexión.';
+    return 'No se pudo completar la operación. Inténtalo de nuevo.';
   }
 
   setTab(i: number) {
@@ -840,6 +968,7 @@ export class ClienteDetalleComponent implements OnDestroy {
     this.cargaIdentificacion?.unsubscribe();
     this.cargaCatalogosServicio?.unsubscribe();
     this.altaServicio?.unsubscribe();
+    clearTimeout(this.temporizadorCopiado);
     this.liberarVistaIdentificacion();
   }
 
@@ -1001,6 +1130,34 @@ export class ClienteDetalleComponent implements OnDestroy {
       const resp = this.registroGponResp();
       if (resp.estado === 'cargando') return;
       this.cargarFormularioGpon(resp.dato);
+    });
+
+    // Trae el aprovisionamiento de MS-RED al cambiar de contrato. Va aparte del
+    // registro GPON porque son dos módulos distintos: la ficha de instalación es
+    // de MS-CONTRATOS y los recursos de la OLT son de MS-RED.
+    effect(() => {
+      const codigo = this.contratoGponCodigo();
+      this.aprovisionamiento.set(null);
+      this.gponSerialOnt.set('');
+      this.gponPuertoPonId.set(null);
+      if (!codigo) return;
+
+      this.aprovisionamientoCargando.set(true);
+      this.gponService.porContrato(codigo).subscribe({
+        next: (a) => {
+          this.aprovisionamientoCargando.set(false);
+          this.aprovisionamiento.set(a);
+          // El serial se precarga para que se vea cuál está puesto; no se puede
+          // cambiar reaprovisionando, eso exigiría liberar los recursos antes.
+          if (a) {
+            this.gponSerialOnt.set(a.serialOnt);
+          } else {
+            // Solo hace falta la lista de puertos si aún hay que aprovisionar.
+            this.cargarPuertosPon();
+          }
+        },
+        error: () => this.aprovisionamientoCargando.set(false),
+      });
     });
 
     // Cambiar de cliente reinicia el selector de servicio: el id que tenía elegido
