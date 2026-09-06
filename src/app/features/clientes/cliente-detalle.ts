@@ -70,7 +70,9 @@ type ModoDireccionServicio = 'EXISTENTE' | 'NUEVA';
   standalone: true,
   imports: [IconComponent, RouterLink, FormsModule, VisorContratoComponent],
   templateUrl: './cliente-detalle.html',
-  styleUrl: './cliente-detalle.scss',
+  // El aprovisionamiento GPON va en su propia hoja: el presupuesto de estilos de
+  // Angular se aplica por archivo y la ficha ya rozaba el límite.
+  styleUrls: ['./cliente-detalle.scss', './cliente-detalle-gpon.scss'],
 })
 export class ClienteDetalleComponent implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
