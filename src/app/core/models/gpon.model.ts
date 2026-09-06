@@ -80,3 +80,34 @@ export interface PuertoPonResumen {
   libres: number | null;
   descripcion: string | null;
 }
+
+/**
+ * Una fila del registro completo (`GET /api/red/gpon`): lo que hoy vive en la
+ * hoja de cálculo, sin los comandos — esos se piden aparte, por código, solo
+ * cuando el operador abre una fila para copiarlos.
+ */
+export interface AprovisionamientoResumen {
+  id: number;
+  contratoId: number | null;
+  contratoCodigo: string;
+  nombreCliente: string;
+  oltCodigo: string;
+  tarjeta: string;
+  puerto: number;
+  ontId: number;
+  serialOnt: string;
+  ipServicio: string | null;
+  ipGestion: string | null;
+  vlanServicio: number;
+  spGestion: number;
+  spServicio: number;
+  estado: 'PENDIENTE' | 'APLICADO' | 'ERROR';
+  fechaAplicado: string | null;
+}
+
+/** Filtros de `GET /api/red/gpon`; todos opcionales. */
+export interface FiltroGpon {
+  tarjeta?: string | null;
+  estado?: string | null;
+  q?: string | null;
+}

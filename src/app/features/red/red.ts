@@ -3,17 +3,24 @@ import { FormsModule } from '@angular/forms';
 
 import { IconComponent } from '../../shared/icon';
 import { RedService } from '../../core/services/red.service';
+import { GponService } from '../../core/services/gpon.service';
 import { AuthService } from '../../core/services/auth.service';
 import { AbonadoRed, AbonadoRedResumen, RESULTADO_RED_TONO } from '../../core/models/red.model';
+import { AprovisionamientoGpon, AprovisionamientoResumen } from '../../core/models/gpon.model';
 
 /**
- * Red: el estado de cada contrato en el RADIUS. Lo que importa de esta pantalla es la
- * columna "sincronizado": si el perfil aplicado no es el deseado, el cliente tiene un
- * servicio distinto del que le corresponde —cortado debiendo poco, o navegando sin
- * pagar— y hay que forzar la re-sincronización.
+ * Red: dos ventanas sobre el mismo territorio.
  *
- * MS-RED trabaja sobre todo por eventos (servicio.*); esta pantalla es la ventana para
- * ver por qué un abonado está como está y para reaplicar el perfil a mano.
+ * "Sincronización" es el estado de cada contrato en el RADIUS: si el perfil
+ * aplicado no es el deseado, el cliente tiene un servicio distinto del que le
+ * corresponde —cortado debiendo poco, o navegando sin pagar— y hay que forzar
+ * la re-sincronización.
+ *
+ * "Registro GPON" es la pantalla que reemplaza a la hoja de cálculo con la que
+ * se instalaba antes: todo el parque de abonados de la OLT, buscable, con los
+ * comandos de cada uno listos para copiar y pegar en la sesión de la OLT. Los
+ * comandos se generan en el servidor (ver GponService); aquí solo se muestran
+ * y se copian.
  */
 @Component({
   selector: 'app-red',
@@ -24,7 +31,14 @@ import { AbonadoRed, AbonadoRedResumen, RESULTADO_RED_TONO } from '../../core/mo
 })
 export class RedComponent {
   private readonly red = inject(RedService);
+  private readonly gpon = inject(GponService);
   private readonly auth = inject(AuthService);
+
+  readonly tabActiva = signal<0 | 1>(0);
+  setTab(i: 0 | 1) {
+    this.tabActiva.set(i);
+    if (i === 1 && this.registro().length === 0) this.cargarRegistro();
+  }
 
   /** Forzar la re-sincronización toca la red de verdad: operación reservada. */
   readonly puedeResincronizar = computed(() => this.auth.tieneRol('SOPORTE', 'ADMINISTRADOR'));
@@ -171,5 +185,130 @@ export class RedComponent {
     if (e.status === 404) return 'Ese contrato ya no tiene estado de red.';
     if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
     return 'No se pudo re-sincronizar el abonado.';
+  }
+
+  /* ================= Registro GPON: la pantalla que reemplaza al Excel ================= */
+
+  readonly registro = signal<AprovisionamientoResumen[]>([]);
+  readonly registroCargando = signal(false);
+  readonly registroError = signal<string | null>(null);
+
+  readonly qGpon = signal('');
+  readonly tarjetaGpon = signal('');
+  readonly estadoGpon = signal('');
+
+  cargarRegistro() {
+    this.registroCargando.set(true);
+    this.registroError.set(null);
+    this.gpon
+      .listar({ tarjeta: this.tarjetaGpon() || null, estado: this.estadoGpon() || null, q: this.qGpon() })
+      .subscribe({
+        next: (filas) => {
+          this.registro.set(filas);
+          this.registroCargando.set(false);
+        },
+        error: (e) => {
+          this.registroError.set(this.mensajeDeError(e));
+          this.registroCargando.set(false);
+        },
+      });
+  }
+
+  buscarGpon() {
+    this.cargarRegistro();
+  }
+
+  cambiarTarjetaGpon(v: string) {
+    this.tarjetaGpon.set(v);
+    this.cargarRegistro();
+  }
+
+  cambiarEstadoGpon(v: string) {
+    this.estadoGpon.set(v);
+    this.cargarRegistro();
+  }
+
+  limpiarFiltrosGpon() {
+    this.qGpon.set('');
+    this.tarjetaGpon.set('');
+    this.estadoGpon.set('');
+    this.cargarRegistro();
+  }
+
+  readonly totalGpon = computed(() => this.registro().length);
+  readonly pendientesGpon = computed(
+    () => this.registro().filter((a) => a.estado === 'PENDIENTE').length,
+  );
+
+  readonly mensajeTablaGpon = computed(() => {
+    if (this.registroCargando()) return 'Cargando el registro…';
+    if (this.registroError()) return this.registroError()!;
+    return 'No hay abonados con esos filtros.';
+  });
+
+  /* ---------- Comandos de una fila ---------- */
+
+  readonly comandosAbiertos = signal<AprovisionamientoGpon | null>(null);
+  readonly comandosCargando = signal(false);
+  readonly comandosError = signal<string | null>(null);
+  readonly copiado = signal(false);
+  readonly marcandoAplicado = signal(false);
+
+  verComandos(fila: AprovisionamientoResumen) {
+    this.comandosError.set(null);
+    this.copiado.set(false);
+    this.comandosCargando.set(true);
+    this.comandosAbiertos.set(null);
+    this.gpon.porContrato(fila.contratoCodigo).subscribe({
+      next: (a) => {
+        this.comandosCargando.set(false);
+        if (!a) {
+          this.comandosError.set('Este abonado ya no tiene aprovisionamiento GPON.');
+          return;
+        }
+        this.comandosAbiertos.set(a);
+      },
+      error: (e) => {
+        this.comandosCargando.set(false);
+        this.comandosError.set(this.mensajeDeError(e));
+      },
+    });
+  }
+
+  cerrarComandos() {
+    this.comandosAbiertos.set(null);
+  }
+
+  /** El "simple Ctrl+C" que se pide: todo el guion, listo para pegar en la OLT. */
+  copiarGuion() {
+    const a = this.comandosAbiertos();
+    if (!a) return;
+    navigator.clipboard.writeText(a.scriptCompleto).then(() => {
+      this.copiado.set(true);
+      setTimeout(() => this.copiado.set(false), 2500);
+    });
+  }
+
+  marcarAplicado() {
+    const a = this.comandosAbiertos();
+    if (!a || a.contratoId == null) return;
+    this.marcandoAplicado.set(true);
+    this.gpon.confirmarAplicado(a.contratoId).subscribe({
+      next: (actualizado) => {
+        this.marcandoAplicado.set(false);
+        this.comandosAbiertos.set(actualizado);
+        this.cargarRegistro();
+      },
+      error: (e) => {
+        this.marcandoAplicado.set(false);
+        this.comandosError.set(this.mensajeDeError(e));
+      },
+    });
+  }
+
+  fecha(iso: string | null): string {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('es-EC');
   }
 }

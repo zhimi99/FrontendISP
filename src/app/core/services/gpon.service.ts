@@ -1,11 +1,13 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import {
   AprovisionamientoGpon,
+  AprovisionamientoResumen,
   AprovisionarGponRequest,
+  FiltroGpon,
   OltResumen,
   PuertoPonResumen,
 } from '../models/gpon.model';
@@ -60,5 +62,18 @@ export class GponService {
     return this.http.get<PuertoPonResumen[]>(
       `${this.base}/olts/${oltId}/puertos?soloConHueco=${soloConHueco}`,
     );
+  }
+
+  /**
+   * El registro completo, en el orden físico de la red (tarjeta, puerto, ONT).
+   * Sin comandos por fila: se piden aparte con {@link porContrato} cuando el
+   * operador abre una fila en concreto.
+   */
+  listar(filtro: FiltroGpon = {}): Observable<AprovisionamientoResumen[]> {
+    let params = new HttpParams();
+    if (filtro.tarjeta) params = params.set('tarjeta', filtro.tarjeta);
+    if (filtro.estado) params = params.set('estado', filtro.estado);
+    if (filtro.q?.trim()) params = params.set('q', filtro.q.trim());
+    return this.http.get<AprovisionamientoResumen[]>(this.base, { params });
   }
 }
