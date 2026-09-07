@@ -261,8 +261,14 @@ export class RedComponent {
   readonly copiado = signal(false);
   readonly marcandoAplicado = signal(false);
 
+  // Refrescar es DISTINTO de abrir: si falla, no debe tapar el guion que ya se
+  // veía con la pantalla de error de apertura, así que llevan su propio estado.
+  readonly refrescandoComandos = signal(false);
+  readonly refrescoError = signal<string | null>(null);
+
   verComandos(fila: AprovisionamientoResumen) {
     this.comandosError.set(null);
+    this.refrescoError.set(null);
     this.copiado.set(false);
     this.comandosCargando.set(true);
     this.comandosAbiertos.set(null);
@@ -284,6 +290,35 @@ export class RedComponent {
 
   cerrarComandos() {
     this.comandosAbiertos.set(null);
+    this.refrescoError.set(null);
+  }
+
+  /**
+   * Vuelve a pedir el guion del mismo contrato sin cerrar el modal. Sirve para
+   * cuando el nombre del cliente se editó en Clientes mientras esta ventana
+   * seguía abierta: sin esto habría que cerrar y volver a abrir para verlo.
+   */
+  refrescarComandos() {
+    const actual = this.comandosAbiertos();
+    if (!actual || this.refrescandoComandos()) return;
+
+    this.refrescandoComandos.set(true);
+    this.refrescoError.set(null);
+    this.gpon.porContrato(actual.contratoCodigo).subscribe({
+      next: (a) => {
+        this.refrescandoComandos.set(false);
+        if (!a) {
+          this.refrescoError.set('Este abonado ya no tiene aprovisionamiento GPON.');
+          return;
+        }
+        this.comandosAbiertos.set(a);
+        this.copiado.set(false);
+      },
+      error: (e) => {
+        this.refrescandoComandos.set(false);
+        this.refrescoError.set(this.mensajeDeError(e));
+      },
+    });
   }
 
   /** El "simple Ctrl+C" que se pide: todo el guion, listo para pegar en la OLT. */

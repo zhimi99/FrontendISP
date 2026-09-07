@@ -205,6 +205,19 @@ tr.desync td {
   justify-content: space-between;
   margin-bottom: 8px;
 }
+.script-acciones {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.modal-error {
+  background: var(--danger-soft, #fdecec);
+  color: #b00020;
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 12.5px;
+  margin-bottom: 10px;
+}
 /* El bloque que de verdad se copia: una sola pieza de texto, sin nada más
    alrededor que pudiera colarse en un doble clic o un Ctrl+A. */
 .script-box {

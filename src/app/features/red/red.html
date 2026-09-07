@@ -333,10 +333,19 @@
 
           <div class="script-cabecera">
             <span class="hint">Los siete comandos, en el orden en que se pegan</span>
-            <button class="btn mini btn-primary" (click)="copiarGuion()">
-              {{ copiado() ? '✓ Copiado' : 'Copiar todo' }}
-            </button>
+            <div class="script-acciones">
+              <button class="btn mini" type="button" title="Volver a pedir el guion (por si el nombre cambió)"
+                      [disabled]="refrescandoComandos()" (click)="refrescarComandos()">
+                <app-icon name="refresh" [size]="14" />
+              </button>
+              <button class="btn mini btn-primary" (click)="copiarGuion()">
+                {{ copiado() ? '✓ Copiado' : 'Copiar todo' }}
+              </button>
+            </div>
           </div>
+          @if (refrescoError(); as re) {
+            <div class="modal-error">{{ re }}</div>
+          }
           <pre class="script-box">{{ a.scriptCompleto }}</pre>
 
           <div class="comandos-detalle">
