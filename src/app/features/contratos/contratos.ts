@@ -79,12 +79,9 @@ export class ContratosComponent implements OnDestroy {
   readonly precioAcordado = signal<number | null>(null);
   readonly observaciones = signal('');
 
-  // ---- Edición y baja -----------------------------------------------------------
-  readonly contratoEnEdicion = signal<ContratoListado | null>(null);
-  readonly edicionPrecio = signal<number | null>(null);
-  readonly edicionPlan = signal('');
-  readonly edicionObservaciones = signal('');
-
+  // ---- Baja -----------------------------------------------------------------
+  // Un contrato ya generado no se edita (ver ContratoEdicionService en el backend):
+  // la única transición que queda disponible desde la grilla es darlo de baja.
   readonly contratoEnBaja = signal<ContratoListado | null>(null);
   readonly motivoBaja = signal('');
   readonly fechaBaja = signal('');
@@ -399,62 +396,6 @@ export class ContratosComponent implements OnDestroy {
     this.direccionId.set(null);
     this.precioAcordado.set(null);
     this.observaciones.set('');
-    this.errorFormulario.set(null);
-  }
-
-  /* ---------- Edición ---------- */
-
-  abrirEditar(c: ContratoListado) {
-    this.errorFormulario.set(null);
-    this.edicionPrecio.set(c.planPrecio ?? null);
-    this.edicionPlan.set('');
-    this.edicionObservaciones.set('');
-    this.contratoEnEdicion.set(c);
-    this.cargarCatalogos();
-
-    // El precio real pactado vive en la ficha, no en la fila de la grilla.
-    this.suscripciones.push(
-      this.contratosService.detalle(c.codigo).subscribe({
-        next: (detalle) => {
-          this.edicionPrecio.set(detalle.precioAcordado);
-          this.edicionObservaciones.set(detalle.observaciones ?? '');
-        },
-        error: () => this.errorFormulario.set('No se pudo cargar la ficha del contrato.'),
-      }),
-    );
-  }
-
-  guardarEdicion() {
-    const contrato = this.contratoEnEdicion();
-    if (!contrato) return;
-
-    this.guardando.set(true);
-    this.errorFormulario.set(null);
-
-    this.suscripciones.push(
-      this.contratosService
-        .editar(contrato.codigo, {
-          planCodigo: this.edicionPlan() || null,
-          precioAcordado: this.edicionPrecio(),
-          direccionId: null,
-          observaciones: this.edicionObservaciones().trim(),
-        })
-        .subscribe({
-          next: () => {
-            this.guardando.set(false);
-            this.cerrarEditar();
-            this.cargarContratos();
-          },
-          error: (e) => {
-            this.guardando.set(false);
-            this.errorFormulario.set(this.mensajeDeGuardado(e));
-          },
-        }),
-    );
-  }
-
-  cerrarEditar() {
-    this.contratoEnEdicion.set(null);
     this.errorFormulario.set(null);
   }
 

@@ -9,7 +9,6 @@ import {
   ContratoListado,
   CrearContratoServicioRequest,
   CrearContratoServicioResponse,
-  EditarContratoRequest,
   GuardarRegistroGponRequest,
   HistorialEstado,
   OfertaServicioCatalogo,
@@ -171,22 +170,6 @@ describe('ContratosService', () => {
     peticion.flush(blob);
 
     expect(resultado).toEqual(blob);
-  });
-
-  it('editar() manda PUT /api/contratos/{codigo}', () => {
-    const request: EditarContratoRequest = {
-      planCodigo: 'PLAN-100',
-      precioAcordado: 30,
-      direccionId: null,
-      observaciones: 'Cambio de plan',
-    };
-
-    service.editar('CTR-0001', request).subscribe();
-
-    const peticion = http.expectOne(`${BASE}/CTR-0001`);
-    expect(peticion.request.method).toBe('PUT');
-    expect(peticion.request.body).toEqual(request);
-    peticion.flush(CONTRATO_DETALLE);
   });
 
   it('darDeBaja() manda POST /api/contratos/{codigo}/baja', () => {

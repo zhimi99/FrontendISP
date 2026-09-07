@@ -9,7 +9,6 @@ import {
   ContratoListado,
   CrearContratoServicioRequest,
   CrearContratoServicioResponse,
-  EditarContratoRequest,
   GuardarRegistroGponRequest,
   HistorialEstado,
   OfertaServicioCatalogo,
@@ -79,14 +78,6 @@ export class ContratosService {
       params: { descargar },
       responseType: 'blob',
     });
-  }
-
-  /** PUT /api/contratos/{codigo} — renegocia condiciones. Devuelve la ficha actualizada. */
-  editar(codigo: string, request: EditarContratoRequest): Observable<ContratoDetalle> {
-    return this.http.put<ContratoDetalle>(
-      `${this.base}/api/contratos/${codigo}`,
-      request,
-    );
   }
 
   /** POST /api/contratos/{codigo}/baja — deja el contrato RETIRADO. No borra nada. */

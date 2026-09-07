@@ -138,9 +138,9 @@
                     <app-icon name="eye" [size]="16" />
                   </a>
                   @if (puedeGestionar()) {
-                    <button class="acc-btn" type="button" title="Editar condiciones"
-                            [disabled]="c.estadoServicio === 'RETIRADO'"
-                            (click)="abrirEditar(c)">
+                    <button class="acc-btn" type="button"
+                            title="Un contrato ya generado no se puede editar"
+                            disabled>
                       <app-icon name="pencil" [size]="16" />
                     </button>
                     <button class="acc-btn" type="button" title="Dar de baja"
@@ -337,62 +337,6 @@
                 [disabled]="!puedeCrear() || guardando()"
                 (click)="crearContrato()">
           {{ guardando() ? 'Registrando…' : 'Registrar contrato' }}
-        </button>
-      </div>
-    </div>
-  </div>
-}
-
-<!-- ============ Editar condiciones ============ -->
-@if (contratoEnEdicion(); as ct) {
-  <div class="modal-backdrop" (click)="cerrarEditar()">
-    <div class="modal modal-form" (click)="$event.stopPropagation()">
-      <div class="modal-head">
-        <div>
-          <h3>Editar contrato {{ ct.codigo }}</h3>
-          <p class="modal-sub">{{ ct.clienteNombre }}</p>
-        </div>
-        <button class="modal-x" type="button" (click)="cerrarEditar()" aria-label="Cerrar">&times;</button>
-      </div>
-
-      <div class="modal-body">
-        <p class="aviso">
-          Cambiar estas condiciones no altera el contrato ya emitido: el PDF sigue
-          mostrando lo que se firmó.
-        </p>
-
-        <div class="form-grid">
-          <div class="form-row">
-            <label>Precio acordado (USD)</label>
-            <input type="number" min="0" step="0.01"
-                   [ngModel]="edicionPrecio()" (ngModelChange)="edicionPrecio.set($event)" />
-          </div>
-        </div>
-
-        <div class="form-row">
-          <label>Plan de Internet</label>
-          <select [ngModel]="edicionPlan()" (ngModelChange)="edicionPlan.set($event)">
-            <option value="">Sin cambio</option>
-            @for (p of planes(); track p.codigo) {
-              <option [value]="p.codigo">{{ p.nombre }} — {{ p.velocidad }}</option>
-            }
-          </select>
-        </div>
-
-        <div class="form-row">
-          <label>Observaciones</label>
-          <textarea rows="2" [ngModel]="edicionObservaciones()" (ngModelChange)="edicionObservaciones.set($event)"></textarea>
-        </div>
-
-        @if (errorFormulario()) {
-          <div class="modal-error">{{ errorFormulario() }}</div>
-        }
-      </div>
-
-      <div class="modal-foot">
-        <button type="button" class="btn" (click)="cerrarEditar()">Cancelar</button>
-        <button type="button" class="btn btn-primary" [disabled]="guardando()" (click)="guardarEdicion()">
-          {{ guardando() ? 'Guardando…' : 'Guardar cambios' }}
         </button>
       </div>
     </div>
