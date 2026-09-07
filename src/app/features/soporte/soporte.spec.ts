@@ -349,22 +349,36 @@ describe('SoporteComponent — cierre de orden', () => {
       http.expectOne((r) => r.url === `${CONTRATOS}/CTR-0001/registro-gpon`).flush(null);
 
       component.resultado.set('Instalación completada');
-      component.gponIp.set('10.0.0.5');
-      component.gponRouter.set('Huawei EG8145V5');
+      component.gponIpServicio.set('10.0.0.5');
+      component.gponNombreEquipo.set('Huawei EG8145V5');
 
       component.confirmarCerrar();
 
       const gpon = http.expectOne(`${CONTRATOS}/CTR-0001/registro-gpon`);
       expect(gpon.request.method).toBe('PUT');
       expect(gpon.request.body).toEqual({
-        ip: '10.0.0.5',
-        router: 'Huawei EG8145V5',
-        metrajeCable: null,
-        puerto: null,
-        tarjeta: null,
+        interfaceGpon: null,
+        puertoPon: null,
         ont: null,
-        puertoServicio: null,
-        ams: null,
+        vlanGestion: null,
+        vlanServicio: null,
+        ipServicio: '10.0.0.5',
+        mascaraServicio: null,
+        barraServicio: null,
+        ipGestion: null,
+        mascaraGestion: null,
+        barraGestion: null,
+        serialOnt: null,
+        codigoServicio: null,
+        nombreCliente: null,
+        servicePortGestion: null,
+        servicePortServicio: null,
+        gemportGestion: null,
+        gemportServicio: null,
+        tx: null,
+        rx: null,
+        nombreEquipo: 'Huawei EG8145V5',
+        metrajeCable: null,
       });
       gpon.flush({});
 

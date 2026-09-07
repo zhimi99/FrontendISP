@@ -458,10 +458,10 @@ export class ClienteDetalleComponent implements OnDestroy {
   }
 
   /**
-   * El router que un técnico dejó instalado (pestaña Red/Equipos) para este mismo
+   * El equipo que un técnico dejó instalado (pestaña Red/Equipos) para este mismo
    * contrato. Su marca, modelo, serie y MAC ya quedaron registrados al darlo de alta
    * en inventario y asignarlo — aquí solo se ofrece como atajo para no volver a
-   * teclearlo en el campo "Router" del registro GPON.
+   * teclearlo en el campo "Nombre del equipo" del registro GPON.
    */
   readonly routerAsignadoGpon = computed(() => {
     const contratoId = this.contratoGponId();
@@ -472,7 +472,7 @@ export class ClienteDetalleComponent implements OnDestroy {
   usarRouterAsignadoGpon() {
     const equipo = this.routerAsignadoGpon();
     if (!equipo) return;
-    this.gponRouter.set(`${equipo.marca} ${equipo.modelo} · S/N ${equipo.numeroSerie}`);
+    this.gponNombreEquipo.set(`${equipo.marca} ${equipo.modelo} · S/N ${equipo.numeroSerie}`);
   }
 
   private readonly registroGponResp = toSignal(
@@ -492,28 +492,63 @@ export class ClienteDetalleComponent implements OnDestroy {
   readonly gponCargando = computed(() => this.registroGponResp().estado === 'cargando');
   readonly gponError = computed(() => this.registroGponResp().estado === 'error');
 
-  /* ---------- Formulario del registro GPON ---------- */
-  readonly gponIp = signal('');
-  readonly gponRouter = signal('');
-  readonly gponMetraje = signal('');
-  readonly gponPuerto = signal('');
-  readonly gponTarjeta = signal('');
+  /**
+   * Formulario del registro GPON: columna a columna igual que la hoja de cálculo que
+   * reemplaza. "Serial ONT" y "ONT" van con sufijo/nombre propio porque el
+   * aprovisionamiento automático (más abajo) ya usa `gponSerialOnt`/`gponOnt` para su
+   * propio flujo contra la OLT real; esta es la ficha de referencia, de carga manual.
+   */
+  readonly gponInterface = signal('');
+  readonly gponPuertoPon = signal('');
   readonly gponOnt = signal('');
-  readonly gponPuertoServicio = signal('');
-  readonly gponAms = signal('');
+  readonly gponVlanGestion = signal('');
+  readonly gponVlanServicio = signal('');
+  readonly gponIpServicio = signal('');
+  readonly gponMascaraServicio = signal('');
+  readonly gponBarraServicio = signal('');
+  readonly gponIpGestion = signal('');
+  readonly gponMascaraGestion = signal('');
+  readonly gponBarraGestion = signal('');
+  readonly gponFichaSerialOnt = signal('');
+  readonly gponCodigoServicio = signal('');
+  readonly gponNombreCliente = signal('');
+  readonly gponServicePortGestion = signal('');
+  readonly gponServicePortServicio = signal('');
+  readonly gponGemportGestion = signal('');
+  readonly gponGemportServicio = signal('');
+  readonly gponTx = signal('');
+  readonly gponRx = signal('');
+  readonly gponNombreEquipo = signal('');
+  readonly gponMetraje = signal('');
   readonly guardandoGpon = signal(false);
   readonly errorGpon = signal<string | null>(null);
   readonly avisoGpon = signal<{ texto: string; error: boolean } | null>(null);
 
   private cargarFormularioGpon(dato: RegistroGpon | null) {
-    this.gponIp.set(dato?.ip ?? '');
-    this.gponRouter.set(dato?.router ?? '');
-    this.gponMetraje.set(dato?.metrajeCable != null ? String(dato.metrajeCable) : '');
-    this.gponPuerto.set(dato?.puerto != null ? String(dato.puerto) : '');
-    this.gponTarjeta.set(dato?.tarjeta ?? '');
-    this.gponOnt.set(dato?.ont != null ? String(dato.ont) : '');
-    this.gponPuertoServicio.set(dato?.puertoServicio != null ? String(dato.puertoServicio) : '');
-    this.gponAms.set(dato?.ams ?? '');
+    const texto = (v: string | null | undefined) => v ?? '';
+    const num = (v: number | null | undefined) => (v != null ? String(v) : '');
+    this.gponInterface.set(texto(dato?.interfaceGpon));
+    this.gponPuertoPon.set(num(dato?.puertoPon));
+    this.gponOnt.set(num(dato?.ont));
+    this.gponVlanGestion.set(num(dato?.vlanGestion));
+    this.gponVlanServicio.set(num(dato?.vlanServicio));
+    this.gponIpServicio.set(texto(dato?.ipServicio));
+    this.gponMascaraServicio.set(texto(dato?.mascaraServicio));
+    this.gponBarraServicio.set(texto(dato?.barraServicio));
+    this.gponIpGestion.set(texto(dato?.ipGestion));
+    this.gponMascaraGestion.set(texto(dato?.mascaraGestion));
+    this.gponBarraGestion.set(texto(dato?.barraGestion));
+    this.gponFichaSerialOnt.set(texto(dato?.serialOnt));
+    this.gponCodigoServicio.set(texto(dato?.codigoServicio));
+    this.gponNombreCliente.set(texto(dato?.nombreCliente));
+    this.gponServicePortGestion.set(num(dato?.servicePortGestion));
+    this.gponServicePortServicio.set(num(dato?.servicePortServicio));
+    this.gponGemportGestion.set(num(dato?.gemportGestion));
+    this.gponGemportServicio.set(num(dato?.gemportServicio));
+    this.gponTx.set(num(dato?.tx));
+    this.gponRx.set(num(dato?.rx));
+    this.gponNombreEquipo.set(texto(dato?.nombreEquipo));
+    this.gponMetraje.set(num(dato?.metrajeCable));
     this.errorGpon.set(null);
   }
 
@@ -639,14 +674,28 @@ export class ClienteDetalleComponent implements OnDestroy {
     if (!codigo || this.guardandoGpon()) return;
 
     const req: GuardarRegistroGponRequest = {
-      ip: this.gponIp().trim() || null,
-      router: this.gponRouter().trim() || null,
-      metrajeCable: this.numeroOpcionalGpon(this.gponMetraje()),
-      puerto: this.enteroOpcionalGpon(this.gponPuerto()),
-      tarjeta: this.gponTarjeta().trim() || null,
+      interfaceGpon: this.gponInterface().trim() || null,
+      puertoPon: this.enteroOpcionalGpon(this.gponPuertoPon()),
       ont: this.enteroOpcionalGpon(this.gponOnt()),
-      puertoServicio: this.enteroOpcionalGpon(this.gponPuertoServicio()),
-      ams: this.gponAms().trim() || null,
+      vlanGestion: this.enteroOpcionalGpon(this.gponVlanGestion()),
+      vlanServicio: this.enteroOpcionalGpon(this.gponVlanServicio()),
+      ipServicio: this.gponIpServicio().trim() || null,
+      mascaraServicio: this.gponMascaraServicio().trim() || null,
+      barraServicio: this.gponBarraServicio().trim() || null,
+      ipGestion: this.gponIpGestion().trim() || null,
+      mascaraGestion: this.gponMascaraGestion().trim() || null,
+      barraGestion: this.gponBarraGestion().trim() || null,
+      serialOnt: this.gponFichaSerialOnt().trim() || null,
+      codigoServicio: this.gponCodigoServicio().trim() || null,
+      nombreCliente: this.gponNombreCliente().trim() || null,
+      servicePortGestion: this.enteroOpcionalGpon(this.gponServicePortGestion()),
+      servicePortServicio: this.enteroOpcionalGpon(this.gponServicePortServicio()),
+      gemportGestion: this.enteroOpcionalGpon(this.gponGemportGestion()),
+      gemportServicio: this.enteroOpcionalGpon(this.gponGemportServicio()),
+      tx: this.numeroOpcionalGpon(this.gponTx()),
+      rx: this.numeroOpcionalGpon(this.gponRx()),
+      nombreEquipo: this.gponNombreEquipo().trim() || null,
+      metrajeCable: this.numeroOpcionalGpon(this.gponMetraje()),
     };
 
     this.guardandoGpon.set(true);

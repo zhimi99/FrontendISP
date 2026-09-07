@@ -10,7 +10,11 @@ import { UsuariosService } from '../../core/services/usuarios.service';
 import { InventarioService } from '../../core/services/inventario.service';
 import { AuthService } from '../../core/services/auth.service';
 import { UsuarioResumen } from '../../core/models/auth.model';
-import { ClienteListado, ContratoResumen } from '../../core/models/contratos.model';
+import {
+  ClienteListado,
+  ContratoResumen,
+  GuardarRegistroGponRequest,
+} from '../../core/models/contratos.model';
 import { Equipo, Existencia, Ubicacion, UNIDAD_ETIQUETA } from '../../core/models/inventario.model';
 import {
   EstadoOrden,
@@ -273,14 +277,28 @@ export class SoporteComponent {
    */
   readonly gponContratoCodigo = signal<string | null>(null);
   readonly gponCargando = signal(false);
-  readonly gponIp = signal('');
-  readonly gponRouter = signal('');
-  readonly gponMetraje = signal('');
-  readonly gponPuerto = signal('');
-  readonly gponTarjeta = signal('');
+  readonly gponInterface = signal('');
+  readonly gponPuertoPon = signal('');
   readonly gponOnt = signal('');
-  readonly gponPuertoServicio = signal('');
-  readonly gponAms = signal('');
+  readonly gponVlanGestion = signal('');
+  readonly gponVlanServicio = signal('');
+  readonly gponIpServicio = signal('');
+  readonly gponMascaraServicio = signal('');
+  readonly gponBarraServicio = signal('');
+  readonly gponIpGestion = signal('');
+  readonly gponMascaraGestion = signal('');
+  readonly gponBarraGestion = signal('');
+  readonly gponSerialOnt = signal('');
+  readonly gponCodigoServicio = signal('');
+  readonly gponNombreCliente = signal('');
+  readonly gponServicePortGestion = signal('');
+  readonly gponServicePortServicio = signal('');
+  readonly gponGemportGestion = signal('');
+  readonly gponGemportServicio = signal('');
+  readonly gponTx = signal('');
+  readonly gponRx = signal('');
+  readonly gponNombreEquipo = signal('');
+  readonly gponMetraje = signal('');
   /** La ficha GPON documenta el alta del servicio; una visita de soporte no la toca. */
   readonly pideGpon = computed(() => this.ordenAccion()?.tipo === 'INSTALACION');
 
@@ -479,14 +497,35 @@ export class SoporteComponent {
   private limpiarGpon() {
     this.gponContratoCodigo.set(null);
     this.gponCargando.set(false);
-    this.gponIp.set('');
-    this.gponRouter.set('');
-    this.gponMetraje.set('');
-    this.gponPuerto.set('');
-    this.gponTarjeta.set('');
-    this.gponOnt.set('');
-    this.gponPuertoServicio.set('');
-    this.gponAms.set('');
+    this.camposGpon().forEach((s) => s.set(''));
+  }
+
+  /** Los campos de texto de la ficha, para vaciarlos de una sin listarlos dos veces. */
+  private camposGpon() {
+    return [
+      this.gponInterface,
+      this.gponPuertoPon,
+      this.gponOnt,
+      this.gponVlanGestion,
+      this.gponVlanServicio,
+      this.gponIpServicio,
+      this.gponMascaraServicio,
+      this.gponBarraServicio,
+      this.gponIpGestion,
+      this.gponMascaraGestion,
+      this.gponBarraGestion,
+      this.gponSerialOnt,
+      this.gponCodigoServicio,
+      this.gponNombreCliente,
+      this.gponServicePortGestion,
+      this.gponServicePortServicio,
+      this.gponGemportGestion,
+      this.gponGemportServicio,
+      this.gponTx,
+      this.gponRx,
+      this.gponNombreEquipo,
+      this.gponMetraje,
+    ];
   }
 
   /**
@@ -515,16 +554,30 @@ export class SoporteComponent {
       .subscribe((gpon) => {
         this.gponCargando.set(false);
         if (!gpon) return;
-        this.gponIp.set(gpon.ip ?? '');
-        this.gponRouter.set(gpon.router ?? '');
-        this.gponMetraje.set(gpon.metrajeCable != null ? String(gpon.metrajeCable) : '');
-        this.gponPuerto.set(gpon.puerto != null ? String(gpon.puerto) : '');
-        this.gponTarjeta.set(gpon.tarjeta ?? '');
-        this.gponOnt.set(gpon.ont != null ? String(gpon.ont) : '');
-        this.gponPuertoServicio.set(
-          gpon.puertoServicio != null ? String(gpon.puertoServicio) : '',
-        );
-        this.gponAms.set(gpon.ams ?? '');
+        const texto = (v: string | null) => v ?? '';
+        const num = (v: number | null) => (v != null ? String(v) : '');
+        this.gponInterface.set(texto(gpon.interfaceGpon));
+        this.gponPuertoPon.set(num(gpon.puertoPon));
+        this.gponOnt.set(num(gpon.ont));
+        this.gponVlanGestion.set(num(gpon.vlanGestion));
+        this.gponVlanServicio.set(num(gpon.vlanServicio));
+        this.gponIpServicio.set(texto(gpon.ipServicio));
+        this.gponMascaraServicio.set(texto(gpon.mascaraServicio));
+        this.gponBarraServicio.set(texto(gpon.barraServicio));
+        this.gponIpGestion.set(texto(gpon.ipGestion));
+        this.gponMascaraGestion.set(texto(gpon.mascaraGestion));
+        this.gponBarraGestion.set(texto(gpon.barraGestion));
+        this.gponSerialOnt.set(texto(gpon.serialOnt));
+        this.gponCodigoServicio.set(texto(gpon.codigoServicio));
+        this.gponNombreCliente.set(texto(gpon.nombreCliente));
+        this.gponServicePortGestion.set(num(gpon.servicePortGestion));
+        this.gponServicePortServicio.set(num(gpon.servicePortServicio));
+        this.gponGemportGestion.set(num(gpon.gemportGestion));
+        this.gponGemportServicio.set(num(gpon.gemportServicio));
+        this.gponTx.set(num(gpon.tx));
+        this.gponRx.set(num(gpon.rx));
+        this.gponNombreEquipo.set(texto(gpon.nombreEquipo));
+        this.gponMetraje.set(num(gpon.metrajeCable));
       });
   }
 
@@ -730,15 +783,29 @@ export class SoporteComponent {
     if (!this.pideGpon()) return of(null);
 
     const codigo = this.gponContratoCodigo();
-    const visible = {
-      ip: this.gponIp().trim() || null,
-      router: this.gponRouter().trim() || null,
-      metrajeCable: this.decimalGpon(this.gponMetraje()),
-      puerto: this.enteroGpon(this.gponPuerto()),
-      tarjeta: this.gponTarjeta().trim() || null,
+    const visible: GuardarRegistroGponRequest = {
+      interfaceGpon: this.gponInterface().trim() || null,
+      puertoPon: this.enteroGpon(this.gponPuertoPon()),
       ont: this.enteroGpon(this.gponOnt()),
-      puertoServicio: this.enteroGpon(this.gponPuertoServicio()),
-      ams: this.gponAms().trim() || null,
+      vlanGestion: this.enteroGpon(this.gponVlanGestion()),
+      vlanServicio: this.enteroGpon(this.gponVlanServicio()),
+      ipServicio: this.gponIpServicio().trim() || null,
+      mascaraServicio: this.gponMascaraServicio().trim() || null,
+      barraServicio: this.gponBarraServicio().trim() || null,
+      ipGestion: this.gponIpGestion().trim() || null,
+      mascaraGestion: this.gponMascaraGestion().trim() || null,
+      barraGestion: this.gponBarraGestion().trim() || null,
+      serialOnt: this.gponSerialOnt().trim() || null,
+      codigoServicio: this.gponCodigoServicio().trim() || null,
+      nombreCliente: this.gponNombreCliente().trim() || null,
+      servicePortGestion: this.enteroGpon(this.gponServicePortGestion()),
+      servicePortServicio: this.enteroGpon(this.gponServicePortServicio()),
+      gemportGestion: this.enteroGpon(this.gponGemportGestion()),
+      gemportServicio: this.enteroGpon(this.gponGemportServicio()),
+      tx: this.decimalGpon(this.gponTx()),
+      rx: this.decimalGpon(this.gponRx()),
+      nombreEquipo: this.gponNombreEquipo().trim() || null,
+      metrajeCable: this.decimalGpon(this.gponMetraje()),
     };
     // Una ficha en blanco no se crea: si el técnico no escribió nada, no hay nada
     // que guardar.

@@ -139,14 +139,28 @@ describe('ContratosService', () => {
 
   it('guardarRegistroGpon() manda PUT /api/contratos/{codigo}/registro-gpon', () => {
     const request: GuardarRegistroGponRequest = {
-      ip: '10.0.0.5',
-      router: 'Huawei EG8145V5',
-      metrajeCable: 80,
-      puerto: 3,
-      tarjeta: '1',
+      interfaceGpon: '0/1',
+      puertoPon: 3,
       ont: 12,
-      puertoServicio: 4,
-      ams: null,
+      vlanGestion: 100,
+      vlanServicio: 200,
+      ipServicio: '10.0.0.5',
+      mascaraServicio: '255.255.255.0',
+      barraServicio: '/24',
+      ipGestion: '10.10.0.5',
+      mascaraGestion: '255.255.255.0',
+      barraGestion: '/24',
+      serialOnt: '48575443217FDA9E',
+      codigoServicio: 'FIB00002',
+      nombreCliente: 'Juan Pérez',
+      servicePortGestion: 10,
+      servicePortServicio: 11,
+      gemportGestion: 1,
+      gemportServicio: 2,
+      tx: 2.5,
+      rx: -21.3,
+      nombreEquipo: 'Huawei EG8145V5',
+      metrajeCable: 80,
     };
 
     service.guardarRegistroGpon('CTR-0001', request).subscribe();

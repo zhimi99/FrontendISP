@@ -29,30 +29,64 @@ export type MotivoCambio =
  * service-port, VLAN) NO viven aquí: los reparte MS-RED y se consultan por
  * `GponService`. Ver `gpon.model.ts`.
  */
+/**
+ * Ficha técnica GPON de un contrato, columna a columna igual que la hoja de cálculo
+ * que reemplaza (REGISTRO_CLIENTES_GPON_ISP_FIBRANET). Todo es texto de referencia
+ * sin reglas de negocio: lo completa un técnico a mano.
+ */
 export interface RegistroGpon {
   id: number;
   contratoId: number;
-  ip: string | null;
-  router: string | null;
-  metrajeCable: number | null;
-  puerto: number | null;
-  tarjeta: string | null;
+  interfaceGpon: string | null;
+  puertoPon: number | null;
   ont: number | null;
-  puertoServicio: number | null;
-  /** Comandos para la terminal del router (p. ej. interfaz gpon...); se completa a mano. */
-  ams: string | null;
+  vlanGestion: number | null;
+  vlanServicio: number | null;
+  ipServicio: string | null;
+  mascaraServicio: string | null;
+  barraServicio: string | null;
+  ipGestion: string | null;
+  mascaraGestion: string | null;
+  barraGestion: string | null;
+  serialOnt: string | null;
+  codigoServicio: string | null;
+  nombreCliente: string | null;
+  servicePortGestion: number | null;
+  servicePortServicio: number | null;
+  gemportGestion: number | null;
+  gemportServicio: number | null;
+  /** Potencia óptica (dBm), leída del equipo a mano. */
+  tx: number | null;
+  rx: number | null;
+  /** Antes "router": el equipo instalado no siempre lo es. */
+  nombreEquipo: string | null;
+  metrajeCable: number | null;
 }
 
 /** Cuerpo de `PUT /api/contratos/{codigo}/registro-gpon`: todos los campos son opcionales. */
 export interface GuardarRegistroGponRequest {
-  ip: string | null;
-  router: string | null;
-  metrajeCable: number | null;
-  puerto: number | null;
-  tarjeta: string | null;
+  interfaceGpon: string | null;
+  puertoPon: number | null;
   ont: number | null;
-  puertoServicio: number | null;
-  ams: string | null;
+  vlanGestion: number | null;
+  vlanServicio: number | null;
+  ipServicio: string | null;
+  mascaraServicio: string | null;
+  barraServicio: string | null;
+  ipGestion: string | null;
+  mascaraGestion: string | null;
+  barraGestion: string | null;
+  serialOnt: string | null;
+  codigoServicio: string | null;
+  nombreCliente: string | null;
+  servicePortGestion: number | null;
+  servicePortServicio: number | null;
+  gemportGestion: number | null;
+  gemportServicio: number | null;
+  tx: number | null;
+  rx: number | null;
+  nombreEquipo: string | null;
+  metrajeCable: number | null;
 }
 
 export interface HistorialEstado {
