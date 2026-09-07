@@ -6,6 +6,7 @@ import { IconComponent } from '../../shared/icon';
 import { CatalogosService, OpcionCatalogo } from '../../core/services/catalogos.service';
 import { InventarioService } from '../../core/services/inventario.service';
 import { AuthService } from '../../core/services/auth.service';
+import { mensajeError } from '../../core/http/errores';
 import {
   AltaEquipoRequest,
   Equipo,
@@ -287,11 +288,15 @@ export class InventarioComponent {
   }
 
   private mensajeProducto(e: { status?: number }): string {
-    if (e.status === 409 || e.status === 422) return 'Ya existe un producto con ese código.';
-    if (e.status === 400) return 'Revisa los datos: algún campo es inválido.';
-    if (e.status === 403) return 'Tu rol no tiene permiso para agregar productos.';
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    return 'No se pudo guardar el producto.';
+    return mensajeError(e, {
+      porEstado: {
+        409: 'Ya existe un producto con ese código.',
+        422: 'Ya existe un producto con ese código.',
+        400: 'Revisa los datos: algún campo es inválido.',
+        403: 'Tu rol no tiene permiso para agregar productos.',
+      },
+      generico: 'No se pudo guardar el producto.',
+    });
   }
 
   readonly mensajeEquipos = computed(() => {
@@ -366,19 +371,23 @@ export class InventarioComponent {
   }
 
   private mensajeAlta(e: { status?: number }): string {
-    // El backend devuelve 422 (regla de negocio) para serie/MAC duplicada; 409 por si acaso.
-    if (e.status === 409 || e.status === 422) return 'Ya existe un equipo con ese número de serie o esa MAC.';
-    if (e.status === 400) return 'Revisa los datos: algún campo es inválido (¿el formato de la MAC?).';
-    if (e.status === 403) return 'Tu rol no tiene permiso para dar de alta equipos.';
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    return 'No se pudo dar de alta el equipo.';
+    return mensajeError(e, {
+      porEstado: {
+        // El backend devuelve 422 (regla de negocio) para serie/MAC duplicada; 409 por si acaso.
+        409: 'Ya existe un equipo con ese número de serie o esa MAC.',
+        422: 'Ya existe un equipo con ese número de serie o esa MAC.',
+        400: 'Revisa los datos: algún campo es inválido (¿el formato de la MAC?).',
+        403: 'Tu rol no tiene permiso para dar de alta equipos.',
+      },
+      generico: 'No se pudo dar de alta el equipo.',
+    });
   }
 
   private mensajeDeError(e: { status?: number }): string {
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    if (e.status === 403) return 'Tu rol no tiene permiso para ver el inventario.';
-    if (e.status) return `El gateway respondió ${e.status} al cargar el inventario.`;
-    return 'Error inesperado cargando el inventario.';
+    return mensajeError(e, {
+      porEstado: { 403: 'Tu rol no tiene permiso para ver el inventario.' },
+      generico: () => (e.status ? `El gateway respondió ${e.status} al cargar el inventario.` : 'Error inesperado cargando el inventario.'),
+    });
   }
 
 
@@ -634,12 +643,15 @@ export class InventarioComponent {
   }
 
   private mensajeMovimiento(e: { status?: number }): string {
-    // 422 lo usa el backend tanto para stock insuficiente como para reglas de inventario.
-    if (e.status === 422) return 'No hay bastante stock en esa ubicación (o la cantidad no es válida).';
-    if (e.status === 400) return 'Revisa los datos del movimiento: hay algún campo inválido.';
-    if (e.status === 403) return 'Tu rol no tiene permiso para mover stock.';
-    if (e.status === 404) return 'El material o la ubicación ya no existen; recarga la página.';
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    return 'No se pudo registrar el movimiento.';
+    return mensajeError(e, {
+      porEstado: {
+        // 422 lo usa el backend tanto para stock insuficiente como para reglas de inventario.
+        422: 'No hay bastante stock en esa ubicación (o la cantidad no es válida).',
+        400: 'Revisa los datos del movimiento: hay algún campo inválido.',
+        403: 'Tu rol no tiene permiso para mover stock.',
+        404: 'El material o la ubicación ya no existen; recarga la página.',
+      },
+      generico: 'No se pudo registrar el movimiento.',
+    });
   }
 }

@@ -18,6 +18,7 @@ import { FacturacionService } from '../../core/services/facturacion.service';
 import { VentasService } from '../../core/services/ventas.service';
 import { ClienteListado } from '../../core/models/contratos.model';
 import { Emisor } from '../../core/models/facturacion.model';
+import { mensajeError } from '../../core/http/errores';
 import { FormaPago } from '../../core/models/finanzas.model';
 import {
   ArticuloVendible,
@@ -532,21 +533,14 @@ export class VentaMostradorComponent {
   }
 
   private mensajeDeError(e: { status?: number; error?: { message?: string } }): string {
-    if (e.status === 422) {
-      return (
-        e.error?.message ??
-        'La venta no cumple una regla: revisa cantidades, existencias o el estado de la caja.'
-      );
-    }
-    if (e.status === 503) {
-      return (
-        e.error?.message ??
-        'El mostrador no está disponible en este momento (falta inventario o facturación).'
-      );
-    }
-    if (e.status === 400) return 'Hay algún dato inválido en la venta.';
-    if (e.status === 403) return 'Tu rol no tiene permiso para vender.';
-    if (e.status === 0) return 'No se pudo contactar el backend.';
-    return 'No se pudo registrar la venta.';
+    return mensajeError(e, {
+      porEstado: {
+        422: () => e.error?.message ?? 'La venta no cumple una regla: revisa cantidades, existencias o el estado de la caja.',
+        503: () => e.error?.message ?? 'El mostrador no está disponible en este momento (falta inventario o facturación).',
+        400: 'Hay algún dato inválido en la venta.',
+        403: 'Tu rol no tiene permiso para vender.',
+      },
+      generico: 'No se pudo registrar la venta.',
+    });
   }
 }

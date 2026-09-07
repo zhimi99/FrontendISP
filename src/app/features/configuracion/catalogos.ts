@@ -6,6 +6,7 @@ import { IconComponent } from '../../shared/icon';
 import { InventarioService } from '../../core/services/inventario.service';
 import { UsuariosService } from '../../core/services/usuarios.service';
 import { UsuarioResumen } from '../../core/models/auth.model';
+import { mensajeError } from '../../core/http/errores';
 import {
   CATEGORIA_MATERIAL_ETIQUETA,
   CategoriaMaterial,
@@ -296,9 +297,10 @@ export class CatalogosComponent {
   /* ================== Errores ================== */
 
   private mensajeDeError(e: { status?: number }): string {
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    if (e.status === 403) return 'Solo un administrador puede mantener el catálogo.';
-    return `No se pudo cargar el catálogo (${e.status ?? 'error'}).`;
+    return mensajeError(e, {
+      porEstado: { 403: 'Solo un administrador puede mantener el catálogo.' },
+      generico: () => `No se pudo cargar el catálogo (${e.status ?? 'error'}).`,
+    });
   }
 
   /**
@@ -306,26 +308,28 @@ export class CatalogosComponent {
    * aquí se enumeran los motivos posibles en vez de un "no se pudo" que no orienta.
    */
   private mensajeMaterial(e: { status?: number }): string {
-    if (e.status === 422) {
-      return 'No se pudo: o el código ya existe, o el material todavía tiene existencia '
-        + 'en alguna ubicación, o tiene movimientos y por eso no se le puede cambiar la unidad.';
-    }
-    if (e.status === 400) return 'Revisa los datos: el código admite letras, dígitos y guiones, y el mínimo no puede ser negativo.';
-    if (e.status === 403) return 'Solo un administrador puede mantener el catálogo.';
-    if (e.status === 404) return 'Ese material ya no existe; recarga la página.';
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    return 'No se pudo guardar el material.';
+    return mensajeError(e, {
+      porEstado: {
+        422: 'No se pudo: o el código ya existe, o el material todavía tiene existencia '
+          + 'en alguna ubicación, o tiene movimientos y por eso no se le puede cambiar la unidad.',
+        400: 'Revisa los datos: el código admite letras, dígitos y guiones, y el mínimo no puede ser negativo.',
+        403: 'Solo un administrador puede mantener el catálogo.',
+        404: 'Ese material ya no existe; recarga la página.',
+      },
+      generico: 'No se pudo guardar el material.',
+    });
   }
 
   private mensajeUbicacion(e: { status?: number }): string {
-    if (e.status === 422) {
-      return 'No se pudo: o el código ya existe, o la ubicación todavía guarda material o '
-        + 'equipos, o ese técnico ya tiene otra furgoneta asignada.';
-    }
-    if (e.status === 400) return 'Revisa los datos: el código admite letras, dígitos y guiones.';
-    if (e.status === 403) return 'Solo un administrador puede mantener el catálogo.';
-    if (e.status === 404) return 'Esa ubicación ya no existe; recarga la página.';
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    return 'No se pudo guardar la ubicación.';
+    return mensajeError(e, {
+      porEstado: {
+        422: 'No se pudo: o el código ya existe, o la ubicación todavía guarda material o '
+          + 'equipos, o ese técnico ya tiene otra furgoneta asignada.',
+        400: 'Revisa los datos: el código admite letras, dígitos y guiones.',
+        403: 'Solo un administrador puede mantener el catálogo.',
+        404: 'Esa ubicación ya no existe; recarga la página.',
+      },
+      generico: 'No se pudo guardar la ubicación.',
+    });
   }
 }

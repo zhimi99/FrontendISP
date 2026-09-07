@@ -14,13 +14,14 @@ import {
 @Injectable({ providedIn: 'root' })
 export class UsuariosService {
   private readonly http = inject(HttpClient);
+  private readonly base = environment.apiBase;
 
   /**
    * GET /api/usuarios/{id} — resumen (nombre, cargo) para poner nombre a un usuario_id.
    * Disponible a SOPORTE/TECNICO/ADMIN/FINANZAS; la lista completa es solo de ADMIN.
    */
   resumen(id: number): Observable<UsuarioResumen> {
-    return this.http.get<UsuarioResumen>(`${environment.apiBase}/api/usuarios/${id}`);
+    return this.http.get<UsuarioResumen>(`${this.base}/api/usuarios/${id}`);
   }
 
   /**
@@ -30,14 +31,14 @@ export class UsuariosService {
   resumenes(soloActivos = true): Observable<UsuarioResumen[]> {
     let params = new HttpParams();
     if (soloActivos) params = params.set('activo', true);
-    return this.http.get<UsuarioResumen[]>(`${environment.apiBase}/api/usuarios/resumen`, { params });
+    return this.http.get<UsuarioResumen[]>(`${this.base}/api/usuarios/resumen`, { params });
   }
 
   /** GET /api/usuarios — la plantilla con ficha completa. Solo ADMIN. */
   listar(activo?: boolean): Observable<EmpleadoFicha[]> {
     let params = new HttpParams();
     if (activo != null) params = params.set('activo', activo);
-    return this.http.get<EmpleadoFicha[]>(`${environment.apiBase}/api/usuarios`, { params });
+    return this.http.get<EmpleadoFicha[]>(`${this.base}/api/usuarios`, { params });
   }
 
   /**
@@ -48,7 +49,7 @@ export class UsuariosService {
    * ya existen, y 502 si Keycloak no responde (en ese caso no se creó nada a medias).
    */
   crear(req: CrearEmpleadoRequest): Observable<EmpleadoFicha> {
-    return this.http.post<EmpleadoFicha>(`${environment.apiBase}/api/usuarios`, req);
+    return this.http.post<EmpleadoFicha>(`${this.base}/api/usuarios`, req);
   }
 
   /**
@@ -56,16 +57,16 @@ export class UsuariosService {
    * (usuario, cédula y el enlace con Keycloak) no se toca desde aquí.
    */
   editar(id: number, req: EditarEmpleadoRequest): Observable<EmpleadoFicha> {
-    return this.http.put<EmpleadoFicha>(`${environment.apiBase}/api/usuarios/${id}`, req);
+    return this.http.put<EmpleadoFicha>(`${this.base}/api/usuarios/${id}`, req);
   }
 
   /** POST .../desactivar — da de baja sin borrar (sus operaciones lo referencian). */
   desactivar(id: number): Observable<EmpleadoFicha> {
-    return this.http.post<EmpleadoFicha>(`${environment.apiBase}/api/usuarios/${id}/desactivar`, {});
+    return this.http.post<EmpleadoFicha>(`${this.base}/api/usuarios/${id}/desactivar`, {});
   }
 
   /** POST .../activar — reincorpora a un empleado dado de baja. */
   activar(id: number): Observable<EmpleadoFicha> {
-    return this.http.post<EmpleadoFicha>(`${environment.apiBase}/api/usuarios/${id}/activar`, {});
+    return this.http.post<EmpleadoFicha>(`${this.base}/api/usuarios/${id}/activar`, {});
   }
 }

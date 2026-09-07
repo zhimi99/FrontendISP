@@ -21,20 +21,21 @@ import {
 @Injectable({ providedIn: 'root' })
 export class ClientesService {
   private readonly http = inject(HttpClient);
+  private readonly base = environment.apiBase;
 
   /** GET /api/clientes — lista con el contrato principal de cada cliente resuelto. */
   listar(): Observable<ClienteListado[]> {
-    return this.http.get<ClienteListado[]>(`${environment.apiBase}/api/clientes`);
+    return this.http.get<ClienteListado[]>(`${this.base}/api/clientes`);
   }
 
   /** GET /api/clientes/{codigo} — ficha completa del cliente (404 si no existe). */
   detalle(codigo: string): Observable<ClienteDetalle> {
-    return this.http.get<ClienteDetalle>(`${environment.apiBase}/api/clientes/${codigo}`);
+    return this.http.get<ClienteDetalle>(`${this.base}/api/clientes/${codigo}`);
   }
 
   /** POST /api/clientes — alta de cliente y su primer contrato (queda PENDIENTE). */
   crear(request: AltaClienteRequest): Observable<AltaClienteResponse> {
-    return this.http.post<AltaClienteResponse>(`${environment.apiBase}/api/clientes`, request);
+    return this.http.post<AltaClienteResponse>(`${this.base}/api/clientes`, request);
   }
 
   /**
@@ -43,12 +44,12 @@ export class ClientesService {
   subirIdentificacion(codigo: string, archivo: File): Observable<void> {
     const cuerpo = new FormData();
     cuerpo.append('archivo', archivo, archivo.name);
-    return this.http.put<void>(`${environment.apiBase}/api/clientes/${codigo}/identificacion`, cuerpo);
+    return this.http.put<void>(`${this.base}/api/clientes/${codigo}/identificacion`, cuerpo);
   }
 
   /** Descarga autenticada; la vista lo presenta desde un Blob URL privado. */
   obtenerIdentificacion(codigo: string): Observable<Blob> {
-    return this.http.get(`${environment.apiBase}/api/clientes/${codigo}/identificacion`, {
+    return this.http.get(`${this.base}/api/clientes/${codigo}/identificacion`, {
       responseType: 'blob',
     });
   }
@@ -58,6 +59,6 @@ export class ClientesService {
    * ficha ya actualizada. 404 si no existe, 400 si falta el nombre según el tipo.
    */
   editar(codigo: string, request: EditarClienteRequest): Observable<ClienteDetalle> {
-    return this.http.put<ClienteDetalle>(`${environment.apiBase}/api/clientes/${codigo}`, request);
+    return this.http.put<ClienteDetalle>(`${this.base}/api/clientes/${codigo}`, request);
   }
 }

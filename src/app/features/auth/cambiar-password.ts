@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { AuthService } from '../../core/services/auth.service';
+import { mensajeError } from '../../core/http/errores';
 
 /**
  * Cambio de contraseña obligatorio tras entrar con una temporal.
@@ -68,9 +69,12 @@ export class CambiarPasswordComponent {
   }
 
   private mensajeDeError(e: { status?: number }): string {
-    if (e.status === 401) return 'La contraseña actual no es correcta.';
-    if (e.status === 400) return 'Revisa los datos: la contraseña nueva no cumple el mínimo exigido.';
-    if (e.status === 0) return 'No se pudo contactar el backend.';
-    return 'No se pudo cambiar la contraseña. Inténtalo de nuevo.';
+    return mensajeError(e, {
+      porEstado: {
+        401: 'La contraseña actual no es correcta.',
+        400: 'Revisa los datos: la contraseña nueva no cumple el mínimo exigido.',
+      },
+      generico: 'No se pudo cambiar la contraseña. Inténtalo de nuevo.',
+    });
   }
 }

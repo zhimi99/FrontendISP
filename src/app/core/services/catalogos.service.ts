@@ -26,6 +26,7 @@ export interface OpcionCatalogo {
 @Injectable({ providedIn: 'root' })
 export class CatalogosService {
   private readonly http = inject(HttpClient);
+  private readonly base = environment.apiBase;
   private readonly cache = new Map<string, Observable<OpcionCatalogo[]>>();
 
   /** Medios de recaudación admitidos al registrar un pago. */
@@ -47,7 +48,7 @@ export class CatalogosService {
     let peticion = this.cache.get(nombre);
     if (!peticion) {
       peticion = this.http
-        .get<OpcionCatalogo[]>(`${environment.apiBase}/api/catalogos/${nombre}`)
+        .get<OpcionCatalogo[]>(`${this.base}/api/catalogos/${nombre}`)
         .pipe(shareReplay({ bufferSize: 1, refCount: false }));
       this.cache.set(nombre, peticion);
     }

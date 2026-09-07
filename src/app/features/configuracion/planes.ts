@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../../shared/icon';
 import { PlanesService } from '../../core/services/planes.service';
 import { PlanCatalogo } from '../../core/models/contratos.model';
+import { mensajeError } from '../../core/http/errores';
 
 /** El detalle que Spring pone en el cuerpo de un 400 con include-binding-errors. */
 interface HttpError {
@@ -192,21 +193,23 @@ export class PlanesComponent {
   }
 
   private mensajeDeError(e: HttpError): string {
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    if (e.status === 403) return 'No tienes permiso para ver el catálogo de planes.';
-    return `No se pudo cargar el catálogo (${e.status ?? 'error'}).`;
+    return mensajeError(e, {
+      porEstado: { 403: 'No tienes permiso para ver el catálogo de planes.' },
+      generico: () => `No se pudo cargar el catálogo (${e.status ?? 'error'}).`,
+    });
   }
 
   private mensajeAccion(e: HttpError): string {
-    if (e.status === 409) return 'Ya existe un plan con ese código.';
-    if (e.status === 422) {
-      return 'No se pudo: o el plan todavía lo tienen contratos activos, o ya estaba en ese estado.';
-    }
-    if (e.status === 400) return this.mensajeValidacion(e);
-    if (e.status === 403) return 'Solo un administrador puede mantener el catálogo de planes.';
-    if (e.status === 404) return 'Ese plan ya no existe; recarga la página.';
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    return 'No se pudo guardar el plan.';
+    return mensajeError(e, {
+      porEstado: {
+        409: 'Ya existe un plan con ese código.',
+        422: 'No se pudo: o el plan todavía lo tienen contratos activos, o ya estaba en ese estado.',
+        400: () => this.mensajeValidacion(e),
+        403: 'Solo un administrador puede mantener el catálogo de planes.',
+        404: 'Ese plan ya no existe; recarga la página.',
+      },
+      generico: 'No se pudo guardar el plan.',
+    });
   }
 
   /**

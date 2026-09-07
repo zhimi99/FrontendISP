@@ -5,6 +5,7 @@ import { IconComponent } from '../../shared/icon';
 import { AuthService } from '../../core/services/auth.service';
 import { FacturacionService } from '../../core/services/facturacion.service';
 import { AmbienteSri, Emisor } from '../../core/models/facturacion.model';
+import { mensajeError } from '../../core/http/errores';
 
 /**
  * Los datos con los que el ISP se presenta ante el SRI.
@@ -129,21 +130,25 @@ export class EmisorComponent {
   }
 
   private mensajeDeError(e: { status?: number }): string {
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    if (e.status === 403) return 'No tienes permiso para ver los datos del emisor.';
-    if (e.status === 404) return 'No hay ningún emisor configurado: sin él no se puede facturar.';
-    return `No se pudieron cargar los datos del emisor (${e.status ?? 'error'}).`;
+    return mensajeError(e, {
+      porEstado: {
+        403: 'No tienes permiso para ver los datos del emisor.',
+        404: 'No hay ningún emisor configurado: sin él no se puede facturar.',
+      },
+      generico: () => `No se pudieron cargar los datos del emisor (${e.status ?? 'error'}).`,
+    });
   }
 
   private mensajeAccion(e: { status?: number }): string {
-    if (e.status === 422) {
-      return 'No se pudo guardar: o intentas cambiar el RUC teniendo comprobantes emitidos, '
-        + 'o pasar a PRODUCCIÓN sin certificado de firma, o volver a PRUEBAS con facturas '
-        + 'ya autorizadas por el SRI.';
-    }
-    if (e.status === 400) return 'Revisa los datos: el RUC son 13 dígitos y la razón social y la dirección son obligatorias.';
-    if (e.status === 403) return 'Solo un administrador puede cambiar los datos del emisor.';
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    return 'No se pudieron guardar los datos del emisor.';
+    return mensajeError(e, {
+      porEstado: {
+        422: 'No se pudo guardar: o intentas cambiar el RUC teniendo comprobantes emitidos, '
+          + 'o pasar a PRODUCCIÓN sin certificado de firma, o volver a PRUEBAS con facturas '
+          + 'ya autorizadas por el SRI.',
+        400: 'Revisa los datos: el RUC son 13 dígitos y la razón social y la dirección son obligatorias.',
+        403: 'Solo un administrador puede cambiar los datos del emisor.',
+      },
+      generico: 'No se pudieron guardar los datos del emisor.',
+    });
   }
 }

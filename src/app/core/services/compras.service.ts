@@ -18,8 +18,7 @@ import {
 @Injectable({ providedIn: 'root' })
 export class ComprasService {
   private readonly http = inject(HttpClient);
-  private readonly base = `${environment.apiBase}/api/compras`;
-  private readonly baseProveedores = `${environment.apiBase}/api/proveedores`;
+  private readonly base = environment.apiBase;
 
   /* ================= Compras ================= */
 
@@ -31,11 +30,11 @@ export class ComprasService {
     if (filtro.hasta) params = params.set('hasta', filtro.hasta);
     if (filtro.estado) params = params.set('estado', filtro.estado);
     if (filtro.q?.trim()) params = params.set('q', filtro.q.trim());
-    return this.http.get<ConsultaCompras>(this.base, { params });
+    return this.http.get<ConsultaCompras>(`${this.base}/api/compras`, { params });
   }
 
   detalle(id: number): Observable<Compra> {
-    return this.http.get<Compra>(`${this.base}/${id}`);
+    return this.http.get<Compra>(`${this.base}/api/compras/${id}`);
   }
 
   /**
@@ -45,12 +44,12 @@ export class ComprasService {
   previsualizarFactura(archivo: File): Observable<PreviaCompra> {
     const cuerpo = new FormData();
     cuerpo.append('archivo', archivo, archivo.name);
-    return this.http.post<PreviaCompra>(`${this.base}/previa`, cuerpo);
+    return this.http.post<PreviaCompra>(`${this.base}/api/compras/previa`, cuerpo);
   }
 
   /** Ahora sí ingresa al inventario, con lo que el operador confirmó. */
   registrar(request: RegistrarCompraRequest): Observable<Compra> {
-    return this.http.post<Compra>(this.base, request);
+    return this.http.post<Compra>(`${this.base}/api/compras`, request);
   }
 
   /**
@@ -58,40 +57,31 @@ export class ComprasService {
    * consumió o se instaló, el backend responde qué falta en vez de descuadrar.
    */
   anular(id: number, motivo: string): Observable<Compra> {
-    return this.http.post<Compra>(`${this.base}/${id}/anular`, { motivo });
+    return this.http.post<Compra>(`${this.base}/api/compras/${id}/anular`, { motivo });
   }
 
   /* ================= Proveedores ================= */
 
   proveedores(soloActivos = false): Observable<Proveedor[]> {
     const params = new HttpParams().set('soloActivos', soloActivos);
-    return this.http.get<Proveedor[]>(this.baseProveedores, { params });
-  }
-
-  proveedor(id: number): Observable<Proveedor> {
-    return this.http.get<Proveedor>(`${this.baseProveedores}/${id}`);
-  }
-
-  /** Qué vende este proveedor y a qué precio; el backend lo mantiene solo. */
-  catalogo(id: number): Observable<ProveedorArticulo[]> {
-    return this.http.get<ProveedorArticulo[]>(`${this.baseProveedores}/${id}/articulos`);
+    return this.http.get<Proveedor[]>(`${this.base}/api/proveedores`, { params });
   }
 
   /** Todo el catálogo junto, para comparar a quién comprarle lo mismo. */
   catalogoCompleto(): Observable<ProveedorArticulo[]> {
-    return this.http.get<ProveedorArticulo[]>(`${this.baseProveedores}/articulos`);
+    return this.http.get<ProveedorArticulo[]>(`${this.base}/api/proveedores/articulos`);
   }
 
   crearProveedor(request: GuardarProveedorRequest): Observable<Proveedor> {
-    return this.http.post<Proveedor>(this.baseProveedores, request);
+    return this.http.post<Proveedor>(`${this.base}/api/proveedores`, request);
   }
 
   editarProveedor(id: number, request: GuardarProveedorRequest): Observable<Proveedor> {
-    return this.http.put<Proveedor>(`${this.baseProveedores}/${id}`, request);
+    return this.http.put<Proveedor>(`${this.base}/api/proveedores/${id}`, request);
   }
 
   cambiarActivo(id: number, activo: boolean): Observable<Proveedor> {
     const accion = activo ? 'activar' : 'desactivar';
-    return this.http.post<Proveedor>(`${this.baseProveedores}/${id}/${accion}`, {});
+    return this.http.post<Proveedor>(`${this.base}/api/proveedores/${id}/${accion}`, {});
   }
 }

@@ -9,6 +9,7 @@ import { ArticuloVendible, RegistrarVentaRequest, Venta, VentasReporte } from '.
 @Injectable({ providedIn: 'root' })
 export class VentasService {
   private readonly http = inject(HttpClient);
+  private readonly base = environment.apiBase;
 
   /**
    * GET /api/ventas/articulos?codigo= — coincidencia EXACTA por código o número de
@@ -16,7 +17,7 @@ export class VentasService {
    */
   porCodigo(codigo: string): Observable<ArticuloVendible[]> {
     const params = new HttpParams().set('codigo', codigo);
-    return this.http.get<ArticuloVendible[]>(`${environment.apiBase}/api/ventas/articulos`, {
+    return this.http.get<ArticuloVendible[]>(`${this.base}/api/ventas/articulos`, {
       params,
     });
   }
@@ -24,7 +25,7 @@ export class VentasService {
   /** GET /api/ventas/articulos?q= — búsqueda por texto para elegir a mano. */
   buscarArticulos(q: string): Observable<ArticuloVendible[]> {
     const params = new HttpParams().set('q', q);
-    return this.http.get<ArticuloVendible[]>(`${environment.apiBase}/api/ventas/articulos`, {
+    return this.http.get<ArticuloVendible[]>(`${this.base}/api/ventas/articulos`, {
       params,
     });
   }
@@ -35,19 +36,7 @@ export class VentasService {
    * que se imprime, sin un segundo viaje.
    */
   registrar(req: RegistrarVentaRequest): Observable<Venta> {
-    return this.http.post<Venta>(`${environment.apiBase}/api/ventas`, req);
-  }
-
-  /** GET /api/ventas — ventas más recientes primero. */
-  listar(clienteId?: number): Observable<Venta[]> {
-    let params = new HttpParams();
-    if (clienteId != null) params = params.set('clienteId', clienteId);
-    return this.http.get<Venta[]>(`${environment.apiBase}/api/ventas`, { params });
-  }
-
-  /** GET /api/ventas/{id} — una venta concreta, para reimprimir su recibo. */
-  detalle(id: number): Observable<Venta> {
-    return this.http.get<Venta>(`${environment.apiBase}/api/ventas/${id}`);
+    return this.http.post<Venta>(`${this.base}/api/ventas`, req);
   }
 
   /**
@@ -57,6 +46,6 @@ export class VentasService {
    */
   reporte(desde: string, hasta: string): Observable<VentasReporte> {
     const params = new HttpParams().set('desde', desde).set('hasta', hasta);
-    return this.http.get<VentasReporte>(`${environment.apiBase}/api/ventas/reporte`, { params });
+    return this.http.get<VentasReporte>(`${this.base}/api/ventas/reporte`, { params });
   }
 }

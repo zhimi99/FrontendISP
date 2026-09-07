@@ -6,7 +6,6 @@
 
 export type TipoCliente = 'PERSONA' | 'EMPRESA';
 export type TipoIdentificacion = 'CEDULA' | 'RUC' | 'PASAPORTE';
-export type TipoConexion = 'PPPOE' | 'HOTSPOT';
 export type OrigenCambio = 'SISTEMA' | 'USUARIO';
 /** Forma en que se cobra una oferta de servicio. */
 export type ModalidadCobro = 'RECURRENTE' | 'UNICO';
@@ -21,77 +20,6 @@ export type MotivoCambio =
   | 'PAGO_REACTIVACION'
   | 'BAJA'
   | 'MANUAL';
-
-export interface Plan {
-  id: number;
-  codigo: string;
-  nombre: string;
-  velocidadBajadaKbps: number;
-  velocidadSubidaKbps: number;
-  /** Derivado en la BD: "subidak/bajadak" para el atributo Mikrotik-Rate-Limit */
-  rateLimitMikrotik: string;
-  precioMensual: number;
-  activo: boolean;
-}
-
-export interface Cliente {
-  id: number;
-  codigo: string;
-  tipoCliente: TipoCliente;
-  tipoIdentificacion: TipoIdentificacion;
-  identificacion: string;
-  nombres?: string;
-  apellidos?: string;
-  razonSocial?: string;
-  email?: string;
-  telefono?: string;
-  whatsapp?: string;
-  createdAt: string;
-}
-
-export interface Direccion {
-  id: number;
-  clienteId: number;
-  etiqueta?: string;
-  direccionTexto: string;
-  referencia?: string;
-  latitud?: number;
-  longitud?: number;
-  esPrincipal: boolean;
-}
-
-export interface Contrato {
-  id: number;
-  codigo: string;
-  clienteId: number;
-  planId: number;
-  direccionId?: number;
-  estadoServicio: EstadoServicio;
-  /** Día del mes en que se emite la factura (1..28) */
-  diaCorte: number;
-  /** Política de mora; por defecto la regla 3/6 días */
-  diasGraciaSuspension: number;
-  diasGraciaCorte: number;
-  fechaAlta: string;
-  fechaInstalacion?: string;
-  fechaBaja?: string;
-}
-
-export interface IdentidadRed {
-  id: number;
-  contratoId: number;
-  tipoConexion: TipoConexion;
-  pppoeUsuario?: string;
-  nasIdentificador?: string;
-  nasIp?: string;
-  ipAsignada?: string;
-  macAddress?: string;
-  vlan?: number;
-  /** plan-normal | suspendido | cortado — lo que MS-RED debe reflejar en RADIUS */
-  perfilRadiusActual: string;
-  sincronizadoRed: boolean;
-  ultimaSyncRed?: string;
-}
 
 /**
  * `GET /api/contratos/{codigo}/registro-gpon` — ficha técnica de la instalación.
@@ -139,16 +67,6 @@ export interface HistorialEstado {
   diasVencido?: number;
   aplicadoEnRed: boolean;
   fecha: string;
-}
-
-/** Fila de la grilla de contratos: contrato + datos ya resueltos del cliente y el plan. */
-export interface ContratoVista extends Contrato {
-  clienteNombre: string;
-  clienteIdentificacion: string;
-  planNombre: string;
-  planPrecio: number;
-  direccionTexto?: string;
-  pppoeUsuario?: string;
 }
 
 /**

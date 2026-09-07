@@ -9,6 +9,7 @@ import { IconComponent } from '../../shared/icon';
 import { VisorContratoComponent } from '../../shared/visor-contrato';
 import { ClientesService } from '../../core/services/clientes.service';
 import { ContratosService } from '../../core/services/contratos.service';
+import { mensajeError } from '../../core/http/errores';
 import { FacturacionService } from '../../core/services/facturacion.service';
 import { PlanesService } from '../../core/services/planes.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -674,14 +675,18 @@ export class ClienteDetalleComponent implements OnDestroy {
   }
 
   private mensajeErrorGpon(e: { status?: number; error?: { message?: string } }): string {
-    // 422 lo devuelve MS-RED cuando el aprovisionamiento choca con una regla que
-    // el operador puede corregir (puerto lleno, serial repetido, sin OLT): su
-    // mensaje explica el caso concreto mucho mejor que un texto genérico.
-    if (e.status === 422 && e.error?.message) return e.error.message;
-    if (e.status === 403) return 'Tu rol no tiene permiso para esta operación de red.';
-    if (e.status === 404) return 'El contrato ya no existe; recarga la ficha.';
-    if (e.status === 0) return 'No se pudo contactar el gateway. Revisa la conexión.';
-    return 'No se pudo completar la operación. Inténtalo de nuevo.';
+    return mensajeError(e, {
+      porEstado: {
+        // 422 lo devuelve MS-RED cuando el aprovisionamiento choca con una regla que
+        // el operador puede corregir (puerto lleno, serial repetido, sin OLT): su
+        // mensaje explica el caso concreto mucho mejor que un texto genérico.
+        422: () => e.error?.message,
+        403: 'Tu rol no tiene permiso para esta operación de red.',
+        404: 'El contrato ya no existe; recarga la ficha.',
+        0: 'No se pudo contactar el gateway. Revisa la conexión.',
+      },
+      generico: 'No se pudo completar la operación. Inténtalo de nuevo.',
+    });
   }
 
   setTab(i: number) {
@@ -914,22 +919,30 @@ export class ClienteDetalleComponent implements OnDestroy {
   }
 
   private mensajeErrorCatalogosServicio(e: { status?: number }): string {
-    if (e.status === 403) return 'Tu rol no tiene permiso para consultar las ofertas de servicio.';
-    if (e.status === 0) return 'No se pudo contactar el gateway para cargar las ofertas.';
-    return 'No se pudieron cargar las ofertas y planes disponibles. Inténtalo nuevamente.';
+    return mensajeError(e, {
+      porEstado: {
+        403: 'Tu rol no tiene permiso para consultar las ofertas de servicio.',
+        0: 'No se pudo contactar el gateway para cargar las ofertas.',
+      },
+      generico: 'No se pudieron cargar las ofertas y planes disponibles. Inténtalo nuevamente.',
+    });
   }
 
   private mensajeErrorServicio(e: {
     status?: number;
     error?: { detail?: string; detalle?: string; mensaje?: string };
   }): string {
-    if (e.status === 400 || e.status === 422) {
-      return e.error?.detail ?? e.error?.detalle ?? e.error?.mensaje ?? 'Revisa los datos del servicio.';
-    }
-    if (e.status === 403) return 'Tu rol no tiene permiso para agregar servicios.';
-    if (e.status === 404) return 'El cliente, la oferta o el plan ya no existen. Recarga la ficha.';
-    if (e.status === 0) return 'No se pudo contactar el gateway para registrar el servicio.';
-    return 'No se pudo registrar el servicio. Inténtalo nuevamente.';
+    const detalle = () => e.error?.detail ?? e.error?.detalle ?? e.error?.mensaje ?? 'Revisa los datos del servicio.';
+    return mensajeError(e, {
+      porEstado: {
+        400: detalle,
+        422: detalle,
+        403: 'Tu rol no tiene permiso para agregar servicios.',
+        404: 'El cliente, la oferta o el plan ya no existen. Recarga la ficha.',
+        0: 'No se pudo contactar el gateway para registrar el servicio.',
+      },
+      generico: 'No se pudo registrar el servicio. Inténtalo nuevamente.',
+    });
   }
 
   abrirIdentificacion() {
@@ -982,10 +995,14 @@ export class ClienteDetalleComponent implements OnDestroy {
   }
 
   private mensajeErrorIdentificacion(e: { status?: number }): string {
-    if (e.status === 404) return 'Este cliente aún no tiene una identificación adjunta.';
-    if (e.status === 403) return 'Tu rol no tiene permiso para ver la identificación.';
-    if (e.status === 0) return 'No se pudo contactar el gateway para recuperar la identificación.';
-    return 'No se pudo cargar la identificación. Inténtalo de nuevo.';
+    return mensajeError(e, {
+      porEstado: {
+        404: 'Este cliente aún no tiene una identificación adjunta.',
+        403: 'Tu rol no tiene permiso para ver la identificación.',
+        0: 'No se pudo contactar el gateway para recuperar la identificación.',
+      },
+      generico: 'No se pudo cargar la identificación. Inténtalo de nuevo.',
+    });
   }
 
   moneda(n: number): string {
@@ -1006,7 +1023,6 @@ export class ClienteDetalleComponent implements OnDestroy {
   private armarVista(det: ClienteDetalle) {
     const principal = this.contratoPrincipal();
     const estado = (principal?.estadoServicio ?? 'PENDIENTE') as EstadoCliente;
-    const red = principal?.red ?? null;
 
     const servicios = det.contratos.map((c) => ({
       id: c.codigo,
@@ -1049,8 +1065,6 @@ export class ClienteDetalleComponent implements OnDestroy {
       // Datos de red reales (identidad_red); lo que no tenemos queda en "—".
       // Tecnología, IP y estado de conexión ya no salen de aquí: dependen del
       // servicio elegido en el selector, no del principal (ver `tarjetaServicio`).
-      perfilRed: red?.perfilRadiusActual ?? '—',
-      sincronizado: red?.sincronizadoRed ?? false,
       olt: '—',
       puertoOnu: '—',
       uptime: '—',
@@ -1232,10 +1246,13 @@ export class ClienteDetalleComponent implements OnDestroy {
   }
 
   private mensajeEditar(e: { status?: number; error?: { mensaje?: string } }): string {
-    if (e.status === 400) return e.error?.mensaje ?? 'Revisa los datos: hay algún campo inválido.';
-    if (e.status === 404) return 'El cliente ya no existe; recarga la página.';
-    if (e.status === 403) return 'Tu rol no tiene permiso para editar clientes.';
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    return 'No se pudo guardar la edición. Inténtalo de nuevo.';
+    return mensajeError(e, {
+      porEstado: {
+        400: () => e.error?.mensaje ?? 'Revisa los datos: hay algún campo inválido.',
+        404: 'El cliente ya no existe; recarga la página.',
+        403: 'Tu rol no tiene permiso para editar clientes.',
+      },
+      generico: 'No se pudo guardar la edición. Inténtalo de nuevo.',
+    });
   }
 }

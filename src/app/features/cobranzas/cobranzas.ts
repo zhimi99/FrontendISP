@@ -13,6 +13,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ClienteListado } from '../../core/models/contratos.model';
 import { esPreFactura, estadoDocumento, FacturaVista } from '../../core/models/facturacion.model';
 import { Venta } from '../../core/models/ventas.model';
+import { mensajeError } from '../../core/http/errores';
 
 /** Las dos salidas posibles al cobrar un comprobante de cuenta por cobrar pendiente. */
 type OpcionCobro = 'FACTURA' | 'RECIBO';
@@ -267,10 +268,10 @@ export class CobranzasComponent {
   }
 
   private mensajeDeError(e: { status?: number }): string {
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    if (e.status === 403) return 'Tu rol no tiene permiso para ver cobranzas.';
-    if (e.status) return `El gateway respondió ${e.status} al cargar cobranzas.`;
-    return 'Error inesperado cargando las cobranzas.';
+    return mensajeError(e, {
+      porEstado: { 403: 'Tu rol no tiene permiso para ver cobranzas.' },
+      generico: () => (e.status ? `El gateway respondió ${e.status} al cargar cobranzas.` : 'Error inesperado cargando las cobranzas.'),
+    });
   }
 
   /* ---------- Registrar pago (modal) ---------- */
@@ -463,11 +464,14 @@ export class CobranzasComponent {
   }
 
   private mensajePago(e: { status?: number }): string {
-    if (e.status === 422) return 'La operación no cumple una regla de negocio (revisa el monto o la caja).';
-    if (e.status === 400) return 'Revisa los datos del pago: hay algún campo inválido.';
-    if (e.status === 403) return 'Tu rol no tiene permiso para registrar pagos.';
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    return 'No se pudo registrar el pago.';
+    return mensajeError(e, {
+      porEstado: {
+        422: 'La operación no cumple una regla de negocio (revisa el monto o la caja).',
+        400: 'Revisa los datos del pago: hay algún campo inválido.',
+        403: 'Tu rol no tiene permiso para registrar pagos.',
+      },
+      generico: 'No se pudo registrar el pago.',
+    });
   }
 
   /* ---------- Venta en mostrador (modal) ---------- */
@@ -630,28 +634,31 @@ export class CobranzasComponent {
   }
 
   private mensajeAnular(e: { status?: number; error?: { message?: string } }): string {
-    if (e.status === 422) {
-      // Spring no manda el detalle del 422 en el cuerpo por defecto, así que el texto
-      // de reserva nombra las dos causas posibles en lugar de un "no se pudo" seco.
-      return (
-        e.error?.message ||
-        'No se puede anular: el pago ya estaba anulado, o entró en efectivo por una ' +
-          'jornada de caja ya cerrada y arqueada.'
-      );
-    }
-    if (e.status === 400) return 'El motivo de la anulación es obligatorio.';
-    if (e.status === 403) return 'Solo un administrador puede anular un pago.';
-    if (e.status === 404) return 'El pago ya no existe; recarga la página.';
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    return 'No se pudo anular el pago.';
+    return mensajeError(e, {
+      porEstado: {
+        // Spring no manda el detalle del 422 en el cuerpo por defecto, así que el texto
+        // de reserva nombra las dos causas posibles en lugar de un "no se pudo" seco.
+        422: () =>
+          e.error?.message ||
+          'No se puede anular: el pago ya estaba anulado, o entró en efectivo por una ' +
+            'jornada de caja ya cerrada y arqueada.',
+        400: 'El motivo de la anulación es obligatorio.',
+        403: 'Solo un administrador puede anular un pago.',
+        404: 'El pago ya no existe; recarga la página.',
+      },
+      generico: 'No se pudo anular el pago.',
+    });
   }
 
   private mensajeCaja(e: { status?: number }): string {
-    if (e.status === 422) return 'No se pudo operar la caja: revisa su estado (¿ya estaba abierta o cerrada?).';
-    if (e.status === 400) return 'Revisa el monto: hay algún valor inválido.';
-    if (e.status === 403) return 'Tu rol no tiene permiso para abrir o cerrar la caja.';
-    if (e.status === 404) return 'La caja no existe; recarga la página.';
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    return 'No se pudo completar la operación de caja.';
+    return mensajeError(e, {
+      porEstado: {
+        422: 'No se pudo operar la caja: revisa su estado (¿ya estaba abierta o cerrada?).',
+        400: 'Revisa el monto: hay algún valor inválido.',
+        403: 'Tu rol no tiene permiso para abrir o cerrar la caja.',
+        404: 'La caja no existe; recarga la página.',
+      },
+      generico: 'No se pudo completar la operación de caja.',
+    });
   }
 }

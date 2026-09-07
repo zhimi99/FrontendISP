@@ -7,6 +7,7 @@ import { IconComponent } from '../../shared/icon';
 import { VentasService } from '../../core/services/ventas.service';
 import { UsuariosService } from '../../core/services/usuarios.service';
 import { Venta, VentasReporte } from '../../core/models/ventas.model';
+import { mensajeError } from '../../core/http/errores';
 
 type Periodo = 'HOY' | 'AYER' | 'SEMANA' | 'MES' | 'PERSONALIZADO';
 
@@ -206,9 +207,9 @@ export class VentasReporteComponent {
   }
 
   private mensajeDeError(e: { status?: number }): string {
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    if (e.status === 403) return 'Tu rol no tiene permiso para ver el reporte de ventas.';
-    if (e.status) return `El gateway respondió ${e.status} al cargar el reporte.`;
-    return 'Error inesperado cargando el reporte.';
+    return mensajeError(e, {
+      porEstado: { 403: 'Tu rol no tiene permiso para ver el reporte de ventas.' },
+      generico: () => (e.status ? `El gateway respondió ${e.status} al cargar el reporte.` : 'Error inesperado cargando el reporte.'),
+    });
   }
 }

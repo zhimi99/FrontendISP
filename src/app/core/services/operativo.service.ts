@@ -9,6 +9,7 @@ import { CrearOrdenRequest, EstadoOrden, Orden } from '../models/operativo.model
 @Injectable({ providedIn: 'root' })
 export class OperativoService {
   private readonly http = inject(HttpClient);
+  private readonly base = environment.apiBase;
 
   /**
    * GET /api/ordenes — listado por criterio. El backend exige uno: sin filtros
@@ -25,27 +26,24 @@ export class OperativoService {
     if (filtro?.tecnicoUsuarioId != null) {
       params = params.set('tecnicoUsuarioId', filtro.tecnicoUsuarioId);
     }
-    return this.http.get<Orden[]>(`${environment.apiBase}/api/ordenes`, { params });
+    return this.http.get<Orden[]>(`${this.base}/api/ordenes`, { params });
   }
 
-  /**
-   * POST /api/ordenes — genera un ticket nuevo (queda PENDIENTE, listo para asignar).
-   * Contrato propuesto: ver CrearOrdenRequest; el backend aún no expone esta ruta.
-   */
+  /** POST /api/ordenes — genera un ticket nuevo (queda PENDIENTE, listo para asignar). */
   crear(req: CrearOrdenRequest): Observable<Orden> {
-    return this.http.post<Orden>(`${environment.apiBase}/api/ordenes`, req);
+    return this.http.post<Orden>(`${this.base}/api/ordenes`, req);
   }
 
   /** POST /api/ordenes/{id}/asignar — asigna la orden a un técnico (PENDIENTE → ASIGNADA). */
   asignar(id: number, tecnicoUsuarioId: number): Observable<Orden> {
-    return this.http.post<Orden>(`${environment.apiBase}/api/ordenes/${id}/asignar`, {
+    return this.http.post<Orden>(`${this.base}/api/ordenes/${id}/asignar`, {
       tecnicoUsuarioId,
     });
   }
 
   /** POST /api/ordenes/{id}/iniciar — el técnico empieza el trabajo (ASIGNADA → EN_PROCESO). */
   iniciar(id: number): Observable<Orden> {
-    return this.http.post<Orden>(`${environment.apiBase}/api/ordenes/${id}/iniciar`, {});
+    return this.http.post<Orden>(`${this.base}/api/ordenes/${id}/iniciar`, {});
   }
 
   /**
@@ -54,17 +52,17 @@ export class OperativoService {
    * técnico sale del token en el backend, no viaja nada en el cuerpo.
    */
   aceptar(id: number): Observable<Orden> {
-    return this.http.post<Orden>(`${environment.apiBase}/api/ordenes/${id}/aceptar`, {});
+    return this.http.post<Orden>(`${this.base}/api/ordenes/${id}/aceptar`, {});
   }
 
   /** GET /api/ordenes/{id} — el estado real de una orden, para reconciliar tras un conflicto. */
   porId(id: number): Observable<Orden> {
-    return this.http.get<Orden>(`${environment.apiBase}/api/ordenes/${id}`);
+    return this.http.get<Orden>(`${this.base}/api/ordenes/${id}`);
   }
 
   /** POST /api/ordenes/{id}/cerrar — cierra con resultado (EN_PROCESO → CERRADA). */
   cerrar(id: number, resultado: string): Observable<Orden> {
-    return this.http.post<Orden>(`${environment.apiBase}/api/ordenes/${id}/cerrar`, { resultado });
+    return this.http.post<Orden>(`${this.base}/api/ordenes/${id}/cerrar`, { resultado });
   }
 
   /**
@@ -74,7 +72,7 @@ export class OperativoService {
   subirFoto(id: number, archivo: File): Observable<void> {
     const cuerpo = new FormData();
     cuerpo.append('archivo', archivo, archivo.name);
-    return this.http.post<void>(`${environment.apiBase}/api/ordenes/${id}/foto`, cuerpo);
+    return this.http.post<void>(`${this.base}/api/ordenes/${id}/foto`, cuerpo);
   }
 
   /**
@@ -82,6 +80,6 @@ export class OperativoService {
    * estado no terminal → CANCELADA). Cancelar una ya cerrada/cancelada devuelve 409.
    */
   cancelar(id: number, motivo: string): Observable<Orden> {
-    return this.http.post<Orden>(`${environment.apiBase}/api/ordenes/${id}/cancelar`, { motivo });
+    return this.http.post<Orden>(`${this.base}/api/ordenes/${id}/cancelar`, { motivo });
   }
 }

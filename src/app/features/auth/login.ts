@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { AuthService } from '../../core/services/auth.service';
+import { mensajeError } from '../../core/http/errores';
 
 /**
  * Puerta de entrada del sistema: usuario y contraseña contra
@@ -54,8 +55,9 @@ export class LoginComponent {
   }
 
   private mensajeDeError(e: { status?: number }): string {
-    if (e.status === 401) return 'Usuario o contraseña incorrectos.';
-    if (e.status === 0) return 'No se pudo contactar el backend.';
-    return 'No se pudo iniciar sesión. Inténtalo de nuevo.';
+    return mensajeError(e, {
+      porEstado: { 401: 'Usuario o contraseña incorrectos.' },
+      generico: 'No se pudo iniciar sesión. Inténtalo de nuevo.',
+    });
   }
 }

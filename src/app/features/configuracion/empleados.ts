@@ -10,6 +10,7 @@ import {
   ROL_BACKEND_ETIQUETA,
   RolBackend,
 } from '../../core/models/auth.model';
+import { mensajeError } from '../../core/http/errores';
 
 /**
  * Plantilla de empleados: alta, ficha y quién sigue trabajando.
@@ -288,10 +289,10 @@ export class EmpleadosComponent {
   }
 
   private mensajeDeError(e: { status?: number }): string {
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    if (e.status === 403) return 'Solo un administrador puede ver la plantilla.';
-    if (e.status) return `El gateway respondió ${e.status} al cargar la plantilla.`;
-    return 'Error inesperado cargando la plantilla.';
+    return mensajeError(e, {
+      porEstado: { 403: 'Solo un administrador puede ver la plantilla.' },
+      generico: () => (e.status ? `El gateway respondió ${e.status} al cargar la plantilla.` : 'Error inesperado cargando la plantilla.'),
+    });
   }
 
   /**
@@ -299,21 +300,27 @@ export class EmpleadosComponent {
    * importante que hay que decirle a quien está delante es que NO se creó nada a medias.
    */
   private mensajeAlta(e: { status?: number }): string {
-    if (e.status === 409) return 'Ese usuario o esa cédula ya están registrados.';
-    if (e.status === 400) return 'Revisa los datos: usuario en minúsculas, cédula de 10 a 13 dígitos, correo válido y contraseña de 8 caracteres o más.';
-    if (e.status === 403) return 'Solo un administrador puede dar de alta a un empleado.';
-    if (e.status === 502) return 'No se pudo crear la cuenta de acceso, así que no se creó ni la cuenta ni la ficha. Inténtalo de nuevo en un momento.';
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    return 'No se pudo dar de alta al empleado.';
+    return mensajeError(e, {
+      porEstado: {
+        409: 'Ese usuario o esa cédula ya están registrados.',
+        400: 'Revisa los datos: usuario en minúsculas, cédula de 10 a 13 dígitos, correo válido y contraseña de 8 caracteres o más.',
+        403: 'Solo un administrador puede dar de alta a un empleado.',
+        502: 'No se pudo crear la cuenta de acceso, así que no se creó ni la cuenta ni la ficha. Inténtalo de nuevo en un momento.',
+      },
+      generico: 'No se pudo dar de alta al empleado.',
+    });
   }
 
   private mensajeAccion(e: { status?: number }): string {
-    if (e.status === 422) return 'El empleado ya estaba en ese estado; recarga la página.';
-    if (e.status === 400) return 'Revisa los datos: hay algún campo inválido (¿el correo?).';
-    if (e.status === 403) return 'Solo un administrador puede mantener la plantilla.';
-    if (e.status === 404) return 'Ese empleado ya no existe; recarga la página.';
-    if (e.status === 502) return 'No se pudo aplicar el cambio en la cuenta de acceso, así que tampoco se guardó aquí.';
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    return 'No se pudo completar la operación.';
+    return mensajeError(e, {
+      porEstado: {
+        422: 'El empleado ya estaba en ese estado; recarga la página.',
+        400: 'Revisa los datos: hay algún campo inválido (¿el correo?).',
+        403: 'Solo un administrador puede mantener la plantilla.',
+        404: 'Ese empleado ya no existe; recarga la página.',
+        502: 'No se pudo aplicar el cambio en la cuenta de acceso, así que tampoco se guardó aquí.',
+      },
+      generico: 'No se pudo completar la operación.',
+    });
   }
 }

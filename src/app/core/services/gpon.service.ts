@@ -21,7 +21,7 @@ import {
 @Injectable({ providedIn: 'root' })
 export class GponService {
   private readonly http = inject(HttpClient);
-  private readonly base = `${environment.apiBase}/api/red/gpon`;
+  private readonly base = environment.apiBase;
 
   /**
    * Reserva los recursos del contrato y devuelve sus comandos.
@@ -31,7 +31,7 @@ export class GponService {
    * que reintentar tras un fallo de red es seguro.
    */
   aprovisionar(peticion: AprovisionarGponRequest): Observable<AprovisionamientoGpon> {
-    return this.http.post<AprovisionamientoGpon>(`${this.base}/aprovisionar`, peticion);
+    return this.http.post<AprovisionamientoGpon>(`${this.base}/api/red/gpon/aprovisionar`, peticion);
   }
 
   /**
@@ -40,27 +40,27 @@ export class GponService {
    */
   porContrato(contratoCodigo: string): Observable<AprovisionamientoGpon | null> {
     return this.http.get<AprovisionamientoGpon | null>(
-      `${this.base}/contratos/${encodeURIComponent(contratoCodigo)}`,
+      `${this.base}/api/red/gpon/contratos/${encodeURIComponent(contratoCodigo)}`,
     );
   }
 
   /** Deja constancia de que los comandos ya se ejecutaron en la OLT. */
   confirmarAplicado(contratoId: number): Observable<AprovisionamientoGpon> {
     return this.http.post<AprovisionamientoGpon>(
-      `${this.base}/contratos/${contratoId}/aplicado`,
+      `${this.base}/api/red/gpon/contratos/${contratoId}/aplicado`,
       {},
     );
   }
 
   /** OLT activas, para elegir cuando hay más de una. */
   olts(): Observable<OltResumen[]> {
-    return this.http.get<OltResumen[]>(`${this.base}/olts`);
+    return this.http.get<OltResumen[]>(`${this.base}/api/red/gpon/olts`);
   }
 
   /** Puertos PON de una OLT, del más libre al más lleno. */
   puertos(oltId: number, soloConHueco = true): Observable<PuertoPonResumen[]> {
     return this.http.get<PuertoPonResumen[]>(
-      `${this.base}/olts/${oltId}/puertos?soloConHueco=${soloConHueco}`,
+      `${this.base}/api/red/gpon/olts/${oltId}/puertos?soloConHueco=${soloConHueco}`,
     );
   }
 
@@ -74,6 +74,6 @@ export class GponService {
     if (filtro.tarjeta) params = params.set('tarjeta', filtro.tarjeta);
     if (filtro.estado) params = params.set('estado', filtro.estado);
     if (filtro.q?.trim()) params = params.set('q', filtro.q.trim());
-    return this.http.get<AprovisionamientoResumen[]>(this.base, { params });
+    return this.http.get<AprovisionamientoResumen[]>(`${this.base}/api/red/gpon`, { params });
   }
 }

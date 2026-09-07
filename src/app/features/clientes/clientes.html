@@ -9,9 +9,6 @@
       <a class="btn btn-primary" routerLink="/clientes/nuevo">
         <app-icon name="plus" [size]="16" /> Nuevo Cliente
       </a>
-      <button class="btn">
-        <app-icon name="download" [size]="16" /> Exportar
-      </button>
     </div>
   </div>
 
@@ -52,7 +49,6 @@
     </div>
 
     <div class="filter-btns">
-      <button class="btn btn-dark"><app-icon name="filter" [size]="15" /> Filtros</button>
       <button class="btn" (click)="limpiar()"><app-icon name="refresh" [size]="15" /> Limpiar</button>
     </div>
   </div>
@@ -96,11 +92,10 @@
   <!-- ============ Tabla ============ -->
   <div class="card table-card">
     <div class="table-scroll">
-      <!-- La clase activa el reparto fijo de columnas, calibrado para ESTAS once. -->
+      <!-- La clase activa el reparto fijo de columnas, calibrado para ESTAS nueve. -->
       <table class="tabla-clientes">
         <thead>
           <tr>
-            <th class="w-check"><input type="checkbox" /></th>
             <th>ID Cliente</th>
             <th>Nombre</th>
             <th>Cédula / RUC</th>
@@ -115,7 +110,6 @@
         <tbody>
           @for (c of pagados(); track c.codigo) {
             <tr>
-              <td class="w-check"><input type="checkbox" /></td>
               <td class="mono muted">{{ c.codigo }}</td>
               <td>
                 <div class="name-cell">
@@ -180,7 +174,7 @@
             </tr>
           } @empty {
             <tr>
-              <td colspan="10" class="empty">
+              <td colspan="9" class="empty">
                 {{ mensajeTabla() }}
               </td>
             </tr>

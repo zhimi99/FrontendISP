@@ -18,6 +18,7 @@ import {
   Factura,
   FacturaVista,
 } from '../../core/models/facturacion.model';
+import { mensajeError } from '../../core/http/errores';
 
 /**
  * Grilla de facturación sobre datos reales (GET /api/facturas). Reutiliza la hoja
@@ -179,10 +180,10 @@ export class FacturacionComponent {
   }
 
   private mensajeDeError(e: { status?: number }): string {
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    if (e.status === 403) return 'Tu rol no tiene permiso para ver la facturación.';
-    if (e.status) return `El gateway respondió ${e.status} al listar facturas.`;
-    return 'Error inesperado cargando las facturas.';
+    return mensajeError(e, {
+      porEstado: { 403: 'Tu rol no tiene permiso para ver la facturación.' },
+      generico: () => (e.status ? `El gateway respondió ${e.status} al listar facturas.` : 'Error inesperado cargando las facturas.'),
+    });
   }
 
   /* ---------- Ver detalle (conceptos, valores, totales) ---------- */

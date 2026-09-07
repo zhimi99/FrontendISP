@@ -8,6 +8,7 @@ import { MapaSelectorComponent } from '../../shared/mapa-selector';
 import { ClientesService } from '../../core/services/clientes.service';
 import { LatLngLiteral } from '../../core/services/google-maps-loader.service';
 import { AltaClienteRequest } from '../../core/models/contratos.model';
+import { mensajeError } from '../../core/http/errores';
 
 type TipoCliente = 'PERSONA' | 'EMPRESA';
 type TipoId = 'CEDULA' | 'RUC' | 'PASAPORTE';
@@ -361,25 +362,30 @@ export class ClienteNuevoComponent {
   }
 
   private mensajeDeError(e: { status?: number; error?: { mensaje?: string } }): string {
-    if (e.status === 409) return 'Ya existe un cliente con esa identificación.';
-    if (e.status === 400) return e.error?.mensaje ?? 'Revisa los datos del formulario.';
-    if (e.status === 403) return 'Tu rol no tiene permiso para dar de alta clientes.';
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    return 'No se pudo registrar el cliente. Inténtalo de nuevo.';
+    return mensajeError(e, {
+      porEstado: {
+        409: 'Ya existe un cliente con esa identificación.',
+        400: () => e.error?.mensaje ?? 'Revisa los datos del formulario.',
+        403: 'Tu rol no tiene permiso para dar de alta clientes.',
+      },
+      generico: 'No se pudo registrar el cliente. Inténtalo de nuevo.',
+    });
   }
 
   private mensajeErrorIdentificacion(e: {
     status?: number;
     error?: { mensaje?: string; detail?: string };
   }): string {
-    if (e.status === 400) {
-      return e.error?.detail ?? e.error?.mensaje ?? 'El archivo de identificación no es válido.';
-    }
-    if (e.status === 403) return 'Tu rol no tiene permiso para adjuntar la identificación.';
-    if (e.status === 413) return 'El archivo supera el tamaño máximo permitido de 10 MB.';
-    if (e.status === 503) return 'El almacenamiento de identificaciones no está disponible. Reintenta.';
-    if (e.status === 0) return 'No se pudo contactar el gateway para subir la identificación.';
-    return 'El cliente fue creado, pero no se pudo adjuntar su identificación. Reintenta la carga.';
+    return mensajeError(e, {
+      porEstado: {
+        400: () => e.error?.detail ?? e.error?.mensaje ?? 'El archivo de identificación no es válido.',
+        403: 'Tu rol no tiene permiso para adjuntar la identificación.',
+        413: 'El archivo supera el tamaño máximo permitido de 10 MB.',
+        503: 'El almacenamiento de identificaciones no está disponible. Reintenta.',
+        0: 'No se pudo contactar el gateway para subir la identificación.',
+      },
+      generico: 'El cliente fue creado, pero no se pudo adjuntar su identificación. Reintenta la carga.',
+    });
   }
 
   crearOtro() {

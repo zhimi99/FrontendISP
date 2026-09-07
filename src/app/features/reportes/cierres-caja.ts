@@ -7,6 +7,7 @@ import { IconComponent } from '../../shared/icon';
 import { FinanzasService } from '../../core/services/finanzas.service';
 import { UsuariosService } from '../../core/services/usuarios.service';
 import { CierreCaja, CierresReporte } from '../../core/models/finanzas.model';
+import { mensajeError } from '../../core/http/errores';
 
 type Periodo = 'DIARIO' | 'MENSUAL' | 'TRIMESTRAL' | 'ANUAL';
 
@@ -194,9 +195,9 @@ export class CierresCajaComponent {
   }
 
   private mensajeDeError(e: { status?: number }): string {
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    if (e.status === 403) return 'Tu rol no tiene permiso para ver los cierres de caja.';
-    if (e.status) return `El gateway respondió ${e.status} al cargar el reporte.`;
-    return 'Error inesperado cargando el reporte.';
+    return mensajeError(e, {
+      porEstado: { 403: 'Tu rol no tiene permiso para ver los cierres de caja.' },
+      generico: () => (e.status ? `El gateway respondió ${e.status} al cargar el reporte.` : 'Error inesperado cargando el reporte.'),
+    });
   }
 }

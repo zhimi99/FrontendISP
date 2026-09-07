@@ -22,18 +22,13 @@ import {
   PRIORIDAD_TONO,
   TIPO_ORDEN_ETIQUETA,
 } from '../../core/models/operativo.model';
+import { RespuestaError, detalleErrorBackend, mensajeError } from '../../core/http/errores';
 
 /** Rango de prioridad para ordenar el tablero (lo urgente arriba). */
 const RANGO_PRIORIDAD: Record<PrioridadOrden, number> = { URGENTE: 0, ALTA: 1, NORMAL: 2, BAJA: 3 };
 
 /** Los pasos en que se descompone cerrar una orden, en orden de ejecución. */
 type PasoCierre = 'material' | 'equipo' | 'gpon' | 'cerrar';
-
-/** Lo mínimo que se lee de un error HTTP; `status: -1` marca un fallo propio del cliente. */
-interface RespuestaError {
-  status?: number;
-  error?: unknown;
-}
 
 /** Una línea del material que el técnico gastó, antes de confirmarla. */
 interface LineaMaterialUsado {
@@ -240,10 +235,10 @@ export class SoporteComponent {
   }
 
   private mensajeDeError(e: { status?: number }): string {
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    if (e.status === 403) return 'Tu rol no tiene permiso para ver las órdenes.';
-    if (e.status) return `El gateway respondió ${e.status} al cargar las órdenes.`;
-    return 'Error inesperado cargando las órdenes.';
+    return mensajeError(e, {
+      porEstado: { 403: 'Tu rol no tiene permiso para ver las órdenes.' },
+      generico: () => (e.status ? `El gateway respondió ${e.status} al cargar las órdenes.` : 'Error inesperado cargando las órdenes.'),
+    });
   }
 
   /* ---------- Acciones: asignar / iniciar / cerrar / cancelar ---------- */
@@ -704,7 +699,7 @@ export class SoporteComponent {
 
   /** Mensaje del paso que falló de verdad, con el motivo que da el backend. */
   private mensajePaso(paso: PasoCierre, e: RespuestaError): string {
-    const detalle = this.detalleError(e.error);
+    const detalle = detalleErrorBackend(e.error);
     if (paso === 'material') {
       return detalle
         ? `No se pudo descontar el material: ${detalle}`
@@ -842,10 +837,14 @@ export class SoporteComponent {
   }
 
   private mensajeErrorFoto(e: { status?: number }): string {
-    if (e.status === 400) return 'La orden quedó cerrada, pero la foto no tiene un formato válido.';
-    if (e.status === 413) return 'La orden quedó cerrada, pero la foto supera el tamaño máximo de 8 MB.';
-    if (e.status === 0) return 'La orden quedó cerrada, pero no se pudo contactar el gateway para subir la foto.';
-    return 'La orden quedó cerrada, pero no se pudo subir la foto. Puedes reintentarlo.';
+    return mensajeError(e, {
+      porEstado: {
+        400: 'La orden quedó cerrada, pero la foto no tiene un formato válido.',
+        413: 'La orden quedó cerrada, pero la foto supera el tamaño máximo de 8 MB.',
+        0: 'La orden quedó cerrada, pero no se pudo contactar el gateway para subir la foto.',
+      },
+      generico: 'La orden quedó cerrada, pero no se pudo subir la foto. Puedes reintentarlo.',
+    });
   }
 
   confirmarCancelar() {
@@ -909,34 +908,18 @@ export class SoporteComponent {
   }
 
   private mensajeAccion(e: RespuestaError): string {
-    if (e.status === 409 || e.status === 422) {
-      return 'La orden ya cambió de estado; recarga e inténtalo de nuevo.';
-    }
-    if (e.status === 400) {
-      // eslint-disable-next-line no-console
-      console.error('Cuerpo del error 400 de /api/ordenes (o similar):', e.error);
-      const detalle = this.detalleError(e.error);
-      return detalle ? `Datos inválidos: ${detalle}` : 'Datos inválidos para la operación.';
-    }
-    if (e.status === 403) return 'Tu rol no tiene permiso para esta acción.';
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    return 'No se pudo completar la operación.';
-  }
-
-  /** Extrae el mensaje que manda el backend en el cuerpo del error (formato Spring típico). */
-  private detalleError(body: unknown): string | null {
-    if (!body) return null;
-    if (typeof body === 'string') return body;
-    if (typeof body !== 'object') return null;
-    const b = body as Record<string, unknown>;
-    if (typeof b['message'] === 'string') return b['message'];
-    if (typeof b['mensaje'] === 'string') return b['mensaje'];
-    if (Array.isArray(b['errors'])) {
-      return b['errors']
-        .map((x) => (typeof x === 'string' ? x : (x as Record<string, unknown>)?.['defaultMessage'] ?? JSON.stringify(x)))
-        .join('; ');
-    }
-    return null;
+    return mensajeError(e, {
+      porEstado: {
+        409: 'La orden ya cambió de estado; recarga e inténtalo de nuevo.',
+        422: 'La orden ya cambió de estado; recarga e inténtalo de nuevo.',
+        400: () => {
+          const detalle = detalleErrorBackend(e.error);
+          return detalle ? `Datos inválidos: ${detalle}` : 'Datos inválidos para la operación.';
+        },
+        403: 'Tu rol no tiene permiso para esta acción.',
+      },
+      generico: 'No se pudo completar la operación.',
+    });
   }
 
   /* ---------- Generar soporte (solo SOPORTE/ADMIN) ---------- */

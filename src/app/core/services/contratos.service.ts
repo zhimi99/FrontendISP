@@ -20,15 +20,16 @@ import {
 @Injectable({ providedIn: 'root' })
 export class ContratosService {
   private readonly http = inject(HttpClient);
+  private readonly base = environment.apiBase;
 
   /** GET /api/contratos — contratos con cliente, plan, dirección y PPPoE resueltos. */
   listar(): Observable<ContratoListado[]> {
-    return this.http.get<ContratoListado[]>(`${environment.apiBase}/api/contratos`);
+    return this.http.get<ContratoListado[]>(`${this.base}/api/contratos`);
   }
 
   /** Ofertas activas del catálogo extensible (Internet, TV, cámaras, soporte, etc.). */
   listarOfertasServicio(): Observable<OfertaServicioCatalogo[]> {
-    return this.http.get<OfertaServicioCatalogo[]>(`${environment.apiBase}/api/catalogo-servicios`);
+    return this.http.get<OfertaServicioCatalogo[]>(`${this.base}/api/catalogo-servicios`);
   }
 
   /** Registra otro contrato/servicio para un cliente ya existente. */
@@ -37,32 +38,32 @@ export class ContratosService {
     request: CrearContratoServicioRequest,
   ): Observable<CrearContratoServicioResponse> {
     return this.http.post<CrearContratoServicioResponse>(
-      `${environment.apiBase}/api/clientes/${clienteCodigo}/contratos`,
+      `${this.base}/api/clientes/${clienteCodigo}/contratos`,
       request,
     );
   }
 
   /** GET /api/contratos/{codigo} — ficha del contrato. 404 si no existe. */
   detalle(codigo: string): Observable<ContratoDetalle> {
-    return this.http.get<ContratoDetalle>(`${environment.apiBase}/api/contratos/${codigo}`);
+    return this.http.get<ContratoDetalle>(`${this.base}/api/contratos/${codigo}`);
   }
 
   /** GET /api/contratos/{codigo}/historial — transiciones de estado, más reciente primero. */
   historial(codigo: string): Observable<HistorialEstado[]> {
-    return this.http.get<HistorialEstado[]>(`${environment.apiBase}/api/contratos/${codigo}/historial`);
+    return this.http.get<HistorialEstado[]>(`${this.base}/api/contratos/${codigo}/historial`);
   }
 
   /** GET /api/contratos/{codigo}/registro-gpon — ficha técnica GPON. null si aún no existe (204). */
   registroGpon(codigo: string): Observable<RegistroGpon | null> {
     return this.http.get<RegistroGpon | null>(
-      `${environment.apiBase}/api/contratos/${codigo}/registro-gpon`,
+      `${this.base}/api/contratos/${codigo}/registro-gpon`,
     );
   }
 
   /** PUT /api/contratos/{codigo}/registro-gpon — crea o actualiza la ficha técnica GPON. */
   guardarRegistroGpon(codigo: string, request: GuardarRegistroGponRequest): Observable<RegistroGpon> {
     return this.http.put<RegistroGpon>(
-      `${environment.apiBase}/api/contratos/${codigo}/registro-gpon`,
+      `${this.base}/api/contratos/${codigo}/registro-gpon`,
       request,
     );
   }
@@ -74,7 +75,7 @@ export class ContratosService {
    * ruta nunca se expone como enlace público porque exige el token.
    */
   obtenerDocumento(codigo: string, descargar = false): Observable<Blob> {
-    return this.http.get(`${environment.apiBase}/api/contratos/${codigo}/documento`, {
+    return this.http.get(`${this.base}/api/contratos/${codigo}/documento`, {
       params: { descargar },
       responseType: 'blob',
     });
@@ -83,7 +84,7 @@ export class ContratosService {
   /** PUT /api/contratos/{codigo} — renegocia condiciones. Devuelve la ficha actualizada. */
   editar(codigo: string, request: EditarContratoRequest): Observable<ContratoDetalle> {
     return this.http.put<ContratoDetalle>(
-      `${environment.apiBase}/api/contratos/${codigo}`,
+      `${this.base}/api/contratos/${codigo}`,
       request,
     );
   }
@@ -91,7 +92,7 @@ export class ContratosService {
   /** POST /api/contratos/{codigo}/baja — deja el contrato RETIRADO. No borra nada. */
   darDeBaja(codigo: string, request: BajaContratoRequest): Observable<ContratoDetalle> {
     return this.http.post<ContratoDetalle>(
-      `${environment.apiBase}/api/contratos/${codigo}/baja`,
+      `${this.base}/api/contratos/${codigo}/baja`,
       request,
     );
   }

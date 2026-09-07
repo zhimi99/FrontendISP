@@ -17,6 +17,7 @@ import {
   PlanCatalogo,
 } from '../../core/models/contratos.model';
 import { EstadoCliente, ESTADOS } from '../clientes/clientes.model';
+import { detalleErrorBackend, mensajeError } from '../../core/http/errores';
 
 /**
  * Gestión de contratos sobre datos reales.
@@ -501,20 +502,25 @@ export class ContratosComponent implements OnDestroy {
   /* ---------- Errores ---------- */
 
   private mensajeDeError(e: { status?: number }): string {
-    if (e.status === 0) return 'No se pudo contactar el backend (¿está arriba en :8089?).';
-    if (e.status === 403) return 'Tu rol no tiene permiso para ver los contratos.';
-    if (e.status) return `El backend respondió ${e.status} al listar contratos.`;
-    return 'Error inesperado cargando los contratos.';
+    return mensajeError(e, {
+      porEstado: { 403: 'Tu rol no tiene permiso para ver los contratos.' },
+      generico: () => (e.status ? `El gateway respondió ${e.status} al listar contratos.` : 'Error inesperado cargando los contratos.'),
+    });
   }
 
   /** El backend explica en el cuerpo por qué rechaza; se muestra tal cual. */
   private mensajeDeGuardado(e: { status?: number; error?: { message?: string } }): string {
-    const detalle = e.error?.message;
-    if (detalle) return detalle;
-    if (e.status === 403) return 'Tu rol no permite esta operación.';
-    if (e.status === 404) return 'El contrato ya no existe.';
-    if (e.status === 422) return 'La operación no es válida para este contrato.';
-    return 'No se pudo completar la operación.';
+    return (
+      detalleErrorBackend(e.error) ??
+      mensajeError(e, {
+        porEstado: {
+          403: 'Tu rol no permite esta operación.',
+          404: 'El contrato ya no existe.',
+          422: 'La operación no es válida para este contrato.',
+        },
+        generico: 'No se pudo completar la operación.',
+      })
+    );
   }
 
   ngOnDestroy() {

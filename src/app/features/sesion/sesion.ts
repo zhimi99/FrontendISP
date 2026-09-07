@@ -4,6 +4,7 @@ import { IconComponent } from '../../shared/icon';
 import { UsuarioFicha } from '../../core/models/auth.model';
 import { AuthService } from '../../core/services/auth.service';
 import { PerfilService } from '../../core/services/perfil.service';
+import { mensajeError } from '../../core/http/errores';
 
 /**
  * Prueba de extremo a extremo de la autenticación.
@@ -48,18 +49,14 @@ export class SesionComponent {
   }
 
   private mensajeDeError(e: { status?: number; statusText?: string }): string {
-    if (e.status === 0) {
-      return 'No se pudo contactar el gateway (¿está arriba en :8089? ¿CORS?).';
-    }
-    if (e.status === 401) {
-      return 'El gateway rechazó el token (401). La sesión pudo expirar.';
-    }
-    if (e.status === 404) {
-      return 'El token es válido, pero no hay un empleado con esta identidad en MS-USUARIOS (404).';
-    }
-    if (e.status) {
-      return `El gateway respondió ${e.status} ${e.statusText ?? ''}.`;
-    }
-    return 'Error inesperado consultando /api/usuarios/yo.';
+    return mensajeError(e, {
+      porEstado: {
+        // Pantalla de diagnóstico: aquí sí vale la pena mencionar CORS explícitamente.
+        0: 'No se pudo contactar el gateway (¿está arriba en :8089? ¿CORS?).',
+        401: 'El gateway rechazó el token (401). La sesión pudo expirar.',
+        404: 'El token es válido, pero no hay un empleado con esta identidad en MS-USUARIOS (404).',
+      },
+      generico: () => (e.status ? `El gateway respondió ${e.status} ${e.statusText ?? ''}.` : 'Error inesperado consultando /api/usuarios/yo.'),
+    });
   }
 }

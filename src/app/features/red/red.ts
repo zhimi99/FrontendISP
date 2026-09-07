@@ -7,6 +7,7 @@ import { GponService } from '../../core/services/gpon.service';
 import { AuthService } from '../../core/services/auth.service';
 import { AbonadoRed, AbonadoRedResumen, RESULTADO_RED_TONO } from '../../core/models/red.model';
 import { AprovisionamientoGpon, AprovisionamientoResumen } from '../../core/models/gpon.model';
+import { mensajeError } from '../../core/http/errores';
 
 /**
  * Red: dos ventanas sobre el mismo territorio.
@@ -174,17 +175,20 @@ export class RedComponent {
   }
 
   private mensajeDeError(e: { status?: number }): string {
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    if (e.status === 403) return 'Tu rol no tiene permiso para ver el estado de red.';
-    if (e.status) return `El gateway respondió ${e.status} al cargar la red.`;
-    return 'Error inesperado cargando el estado de red.';
+    return mensajeError(e, {
+      porEstado: { 403: 'Tu rol no tiene permiso para ver el estado de red.' },
+      generico: () => (e.status ? `El gateway respondió ${e.status} al cargar la red.` : 'Error inesperado cargando el estado de red.'),
+    });
   }
 
   private mensajeAccion(e: { status?: number }): string {
-    if (e.status === 403) return 'Tu rol no tiene permiso para re-sincronizar.';
-    if (e.status === 404) return 'Ese contrato ya no tiene estado de red.';
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    return 'No se pudo re-sincronizar el abonado.';
+    return mensajeError(e, {
+      porEstado: {
+        403: 'Tu rol no tiene permiso para re-sincronizar.',
+        404: 'Ese contrato ya no tiene estado de red.',
+      },
+      generico: 'No se pudo re-sincronizar el abonado.',
+    });
   }
 
   /* ================= Registro GPON: la pantalla que reemplaza al Excel ================= */

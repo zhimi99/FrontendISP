@@ -5,6 +5,7 @@ import { IconComponent } from '../../shared/icon';
 import { AuthService } from '../../core/services/auth.service';
 import { InventarioService } from '../../core/services/inventario.service';
 import { ComprasService } from '../../core/services/compras.service';
+import { mensajeError } from '../../core/http/errores';
 import {
   CategoriaMaterial,
   Material,
@@ -862,10 +863,14 @@ export class ComprasComponent {
     error?: { mensaje?: string; message?: string; detail?: string };
   }): string {
     const detalle = e.error?.mensaje ?? e.error?.message ?? e.error?.detail;
-    if (e.status === 0) return 'No se pudo contactar el backend.';
-    if (e.status === 403) return 'Tu rol no tiene permiso para gestionar compras y proveedores.';
-    if (e.status === 400 || e.status === 422) return detalle ?? 'Revisa los datos enviados.';
-    if (e.status === 404) return detalle ?? 'No se encontró el recurso.';
-    return detalle ?? 'No se pudo completar la operación.';
+    return mensajeError(e, {
+      porEstado: {
+        403: 'Tu rol no tiene permiso para gestionar compras y proveedores.',
+        400: () => detalle ?? 'Revisa los datos enviados.',
+        422: () => detalle ?? 'Revisa los datos enviados.',
+        404: () => detalle ?? 'No se encontró el recurso.',
+      },
+      generico: () => detalle ?? 'No se pudo completar la operación.',
+    });
   }
 }

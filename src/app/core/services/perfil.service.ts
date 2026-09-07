@@ -14,9 +14,10 @@ import { UsuarioFicha } from '../models/auth.model';
 @Injectable({ providedIn: 'root' })
 export class PerfilService {
   private readonly http = inject(HttpClient);
+  private readonly base = environment.apiBase;
 
   /** GET /api/usuarios/yo — la ficha del empleado que hay detrás del token. */
   yo(): Observable<UsuarioFicha> {
-    return this.http.get<UsuarioFicha>(`${environment.apiBase}/api/usuarios/yo`);
+    return this.http.get<UsuarioFicha>(`${this.base}/api/usuarios/yo`);
   }
 }

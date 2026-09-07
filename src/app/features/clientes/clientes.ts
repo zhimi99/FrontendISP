@@ -7,6 +7,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ClientesService } from '../../core/services/clientes.service';
 import { ClienteListado } from '../../core/models/contratos.model';
 import { ClienteFila, EstadoCliente, ESTADOS } from './clientes.model';
+import { mensajeError } from '../../core/http/errores';
 
 @Component({
   selector: 'app-clientes',
@@ -186,9 +187,9 @@ export class ClientesComponent {
   }
 
   private mensajeDeError(e: { status?: number }): string {
-    if (e.status === 0) return 'No se pudo contactar el gateway (¿está arriba en :8089?).';
-    if (e.status === 403) return 'Tu rol no tiene permiso para ver la lista de clientes.';
-    if (e.status) return `El gateway respondió ${e.status} al listar clientes.`;
-    return 'Error inesperado cargando la lista de clientes.';
+    return mensajeError(e, {
+      porEstado: { 403: 'Tu rol no tiene permiso para ver la lista de clientes.' },
+      generico: () => (e.status ? `El gateway respondió ${e.status} al listar clientes.` : 'Error inesperado cargando la lista de clientes.'),
+    });
   }
 }

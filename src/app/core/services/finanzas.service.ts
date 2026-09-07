@@ -19,6 +19,7 @@ import {
 @Injectable({ providedIn: 'root' })
 export class FinanzasService {
   private readonly http = inject(HttpClient);
+  private readonly base = environment.apiBase;
 
   /** GET /api/pagos — recaudaciones, más recientes primero, con filtros opcionales. */
   listarPagos(filtro?: {
@@ -30,32 +31,27 @@ export class FinanzasService {
     if (filtro?.clienteId != null) params = params.set('clienteId', filtro.clienteId);
     if (filtro?.contratoId != null) params = params.set('contratoId', filtro.contratoId);
     if (filtro?.estado) params = params.set('estado', filtro.estado);
-    return this.http.get<PagoCobranza[]>(`${environment.apiBase}/api/pagos`, { params });
-  }
-
-  /** GET /api/pagos/{id} — un pago con su reparto a facturas (404 si no existe). */
-  detallePago(id: number): Observable<PagoCobranza> {
-    return this.http.get<PagoCobranza>(`${environment.apiBase}/api/pagos/${id}`);
+    return this.http.get<PagoCobranza[]>(`${this.base}/api/pagos`, { params });
   }
 
   /** GET /api/cajas — cajas con el estado de su jornada abierta. */
   listarCajas(): Observable<CajaEstado[]> {
-    return this.http.get<CajaEstado[]>(`${environment.apiBase}/api/cajas`);
+    return this.http.get<CajaEstado[]>(`${this.base}/api/cajas`);
   }
 
   /** POST /api/pagos — registra una recaudación y la aplica a facturas. */
   registrarPago(req: RegistrarPagoRequest): Observable<PagoRegistrado> {
-    return this.http.post<PagoRegistrado>(`${environment.apiBase}/api/pagos`, req);
+    return this.http.post<PagoRegistrado>(`${this.base}/api/pagos`, req);
   }
 
   /** POST /api/cajas/{cajaId}/abrir — abre la jornada; devuelve la caja con su sesión. */
   abrirCaja(cajaId: number, req: AbrirCajaRequest): Observable<CajaEstado> {
-    return this.http.post<CajaEstado>(`${environment.apiBase}/api/cajas/${cajaId}/abrir`, req);
+    return this.http.post<CajaEstado>(`${this.base}/api/cajas/${cajaId}/abrir`, req);
   }
 
   /** POST /api/cajas/{cajaId}/cerrar — cierra la jornada; devuelve el arqueo (diferencia). */
   cerrarCaja(cajaId: number, req: CerrarCajaRequest): Observable<CierreCaja> {
-    return this.http.post<CierreCaja>(`${environment.apiBase}/api/cajas/${cajaId}/cerrar`, req);
+    return this.http.post<CierreCaja>(`${this.base}/api/cajas/${cajaId}/cerrar`, req);
   }
 
   /**
@@ -64,12 +60,12 @@ export class FinanzasService {
    * jornada de caja ya cerrada.
    */
   anularPago(id: number, motivo: string): Observable<PagoCobranza> {
-    return this.http.post<PagoCobranza>(`${environment.apiBase}/api/pagos/${id}/anular`, { motivo });
+    return this.http.post<PagoCobranza>(`${this.base}/api/pagos/${id}/anular`, { motivo });
   }
 
   /** GET /api/cajas/cierres — reporte de cierres entre dos fechas (yyyy-MM-dd, inclusive). */
   reporteCierres(desde: string, hasta: string): Observable<CierresReporte> {
     const params = new HttpParams().set('desde', desde).set('hasta', hasta);
-    return this.http.get<CierresReporte>(`${environment.apiBase}/api/cajas/cierres`, { params });
+    return this.http.get<CierresReporte>(`${this.base}/api/cajas/cierres`, { params });
   }
 }

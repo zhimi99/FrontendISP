@@ -19,7 +19,6 @@ import { CajaEstado, PagoCobranza } from '../../core/models/finanzas.model';
 import { Equipo, MaterialBajoStock } from '../../core/models/inventario.model';
 import {
   Orden,
-  ESTADO_ORDEN_ETIQUETA,
   TIPO_ORDEN_ETIQUETA,
   PRIORIDAD_ETIQUETA,
   PRIORIDAD_TONO,
@@ -47,7 +46,6 @@ export class DashboardComponent {
   private readonly catalogos = inject(CatalogosService);
 
   readonly tipoOrdenEtq = TIPO_ORDEN_ETIQUETA;
-  readonly estadoOrdenEtq = ESTADO_ORDEN_ETIQUETA;
   readonly prioridadEtq = PRIORIDAD_ETIQUETA;
   readonly prioridadTono = PRIORIDAD_TONO;
 
