@@ -360,6 +360,78 @@ tr.inactivo td {
   font-weight: 600;
 }
 
+/* ============ Certificado de firma SRI ============ */
+
+/* Lo primero de la pantalla: con qué se firma AHORA. El color codifica el estado
+   porque es lo que hay que leer de un vistazo antes de ir a cobrar. */
+.estado-firma {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 18px;
+  margin-bottom: 18px;
+  border-left: 3px solid var(--muted);
+}
+.estado-firma > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 13px;
+}
+.estado-firma span {
+  color: var(--muted);
+}
+.estado-firma.ok {
+  border-left-color: var(--ok);
+  color: var(--ok);
+}
+.estado-firma.aviso {
+  border-left-color: var(--warn);
+  color: var(--warn);
+}
+.estado-firma.error {
+  border-left-color: var(--danger);
+  color: var(--danger);
+}
+
+/* Datos del certificado ya cargado: se leen, no se editan. */
+.ficha-emisor .dato {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ficha-emisor .dato.mono {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 13px;
+}
+.ficha-emisor .dato-alerta {
+  color: var(--danger);
+  font-weight: 600;
+}
+.ficha-emisor .sub-titulo {
+  margin: 0 0 3px;
+  font-size: 14px;
+}
+.ficha-emisor > .sub {
+  margin: 0 0 18px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.ficha-emisor input[type='file'],
+.ficha-emisor input[type='password'] {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+
 @media (max-width: 520px) {
   .form-grid {
     grid-template-columns: 1fr;

@@ -1,0 +1,142 @@
+<div class="tab-head">
+  <div>
+    <h3>Certificado de firma electrónica</h3>
+    <p class="sub">El archivo .p12 de tu entidad certificadora. Es lo único que falta para que los comprobantes tengan validez legal ante el SRI.</p>
+  </div>
+  <div class="tab-acc">
+    <button class="btn" (click)="cargar()"><app-icon name="refresh" [size]="15" /> Recargar</button>
+  </div>
+</div>
+
+@if (banner(); as b) {
+  <div class="card banner" [class.error]="b.error">
+    <span>{{ b.texto }}</span>
+    <button class="banner-x" (click)="banner.set(null)" aria-label="Cerrar">✕</button>
+  </div>
+}
+
+@if (cargando()) {
+  <div class="card tab-empty"><p>Consultando el certificado…</p></div>
+} @else if (error()) {
+  <div class="card tab-empty"><p>{{ error() }}</p></div>
+} @else {
+
+  <!-- Lo primero: con qué se está firmando AHORA. No basta con que haya un archivo. -->
+  @if (estadoFirma(); as f) {
+    <div class="card estado-firma" [class.ok]="f.tono === 'ok'"
+         [class.aviso]="f.tono === 'aviso'" [class.error]="f.tono === 'error'">
+      <app-icon [name]="f.tono === 'ok' ? 'contract' : 'bell'" [size]="20" />
+      <div>
+        <strong>{{ f.titulo }}</strong>
+        <span>{{ f.detalle }}</span>
+      </div>
+    </div>
+  }
+
+  @if (certificado(); as c) {
+    @if (c.presente) {
+      <div class="card ficha-emisor">
+        <div class="form-grid">
+          <div class="field span2">
+            <label>Titular del certificado</label>
+            <p class="dato">{{ c.sujeto }}</p>
+          </div>
+          <div class="field span2">
+            <label>Emitido por</label>
+            <p class="dato">{{ c.emisorCertificado }}</p>
+          </div>
+          <div class="field">
+            <label>Alias</label>
+            <p class="dato">{{ c.alias }}</p>
+          </div>
+          <div class="field">
+            <label>Número de serie</label>
+            <p class="dato mono">{{ c.numeroSerie }}</p>
+          </div>
+          <div class="field">
+            <label>Vigente desde</label>
+            <p class="dato">{{ c.validoDesde | date: 'dd/MM/yyyy' }}</p>
+          </div>
+          <div class="field">
+            <label>Vence</label>
+            <p class="dato" [class.dato-alerta]="c.vencido || porVencer()">
+              {{ c.validoHasta | date: 'dd/MM/yyyy' }}
+              @if (c.vencido) {
+                <span class="badge danger">Vencido</span>
+              } @else {
+                <span class="hint">faltan {{ c.diasParaVencer }} día(s)</span>
+              }
+            </p>
+          </div>
+        </div>
+
+        @if (porVencer() && !c.vencido) {
+          <div class="aviso-produccion">
+            <app-icon name="bell" [size]="18" />
+            <div>
+              <strong>El certificado caduca pronto.</strong>
+              <span>
+                Pide el renovado a tu entidad certificadora y súbelo aquí antes de la fecha.
+                Un certificado vencido no avisa: simplemente deja de poder firmar, y eso se
+                descubre al intentar cobrar.
+              </span>
+            </div>
+          </div>
+        }
+
+        <div class="ficha-foot">
+          <span class="hint">
+            Cargado el {{ c.creadoEn | date: 'dd/MM/yyyy HH:mm' }}
+            @if (c.subidoPor) { por {{ c.subidoPor }} }
+          </span>
+        </div>
+      </div>
+    }
+  }
+
+  <!-- ============ Cargar / reemplazar ============ -->
+  <div class="card ficha-emisor">
+    <h4 class="sub-titulo">
+      {{ certificado()?.presente ? 'Reemplazar el certificado' : 'Cargar el certificado' }}
+    </h4>
+    <p class="sub">
+      El archivo se comprueba antes de guardarlo: se abre con la contraseña que escribas
+      aquí. Si algo no cuadra, se rechaza y el certificado anterior sigue en uso.
+    </p>
+
+    <div class="form-grid">
+      <div class="field span2">
+        <label>Archivo .p12 o .pfx *</label>
+        <input type="file" accept=".p12,.pfx,application/x-pkcs12" (change)="elegirArchivo($event)" />
+        @if (archivo(); as a) {
+          <span class="hint">{{ a.name }} · {{ (a.size / 1024).toFixed(1) }} KB</span>
+        } @else {
+          <span class="hint">Selecciona el archivo que te entregó la entidad certificadora.</span>
+        }
+      </div>
+
+      <div class="field">
+        <label>Contraseña del certificado *</label>
+        <input type="password" autocomplete="off"
+               [ngModel]="clave()" (ngModelChange)="clave.set($event)" />
+        <span class="hint">La que protege el archivo, no la de tu usuario del sistema.</span>
+      </div>
+
+      <div class="field">
+        <label>Alias</label>
+        <input type="text" [ngModel]="alias()" (ngModelChange)="alias.set($event)"
+               placeholder="opcional" />
+        <span class="hint">Déjalo vacío salvo que el archivo contenga varias claves.</span>
+      </div>
+    </div>
+
+    <div class="ficha-foot">
+      <span class="hint">
+        Ni el archivo ni su contraseña se muestran nunca después de guardarlos.
+      </span>
+      <button class="btn btn-primary" (click)="subir()" [disabled]="!puedeSubir() || subiendo()">
+        {{ subiendo() ? 'Comprobando…' : (certificado()?.presente ? 'Reemplazar certificado' : 'Cargar certificado') }}
+      </button>
+    </div>
+  </div>
+}

@@ -3,11 +3,12 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { IconComponent } from '../../shared/icon';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogosComponent } from './catalogos';
+import { CertificadoComponent } from './certificado';
 import { EmisorComponent } from './emisor';
 import { EmpleadosComponent } from './empleados';
 import { PlanesComponent } from './planes';
 
-export type Pestana = 'empleados' | 'catalogos' | 'planes' | 'emisor';
+export type Pestana = 'empleados' | 'catalogos' | 'planes' | 'emisor' | 'certificado';
 
 /**
  * Configuración: los maestros del sistema.
@@ -26,7 +27,14 @@ export type Pestana = 'empleados' | 'catalogos' | 'planes' | 'emisor';
 @Component({
   selector: 'app-configuracion',
   standalone: true,
-  imports: [IconComponent, EmpleadosComponent, CatalogosComponent, PlanesComponent, EmisorComponent],
+  imports: [
+    IconComponent,
+    EmpleadosComponent,
+    CatalogosComponent,
+    PlanesComponent,
+    EmisorComponent,
+    CertificadoComponent,
+  ],
   templateUrl: './configuracion.html',
   styleUrls: ['../clientes/clientes.scss', './configuracion.scss'],
 })
@@ -44,6 +52,9 @@ export class ConfiguracionComponent {
         { id: 'catalogos', texto: 'Materiales y bodegas', icono: 'box' },
         { id: 'planes', texto: 'Planes', icono: 'network' },
         { id: 'emisor', texto: 'Emisor SRI', icono: 'invoice' },
+        // Solo ADMIN, y ni siquiera FINANZAS: la clave privada de este archivo firma
+        // comprobantes con validez fiscal. El backend lo exige igual.
+        { id: 'certificado', texto: 'Certificado de firma', icono: 'contract' },
       ];
     }
     // Facturación consulta el emisor porque sale impreso en cada RIDE.

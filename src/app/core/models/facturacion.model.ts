@@ -44,6 +44,38 @@ export interface Emisor {
   rucEditable: boolean;
 }
 
+/**
+ * Con qué se firmaría un comprobante emitido AHORA MISMO.
+ *
+ * - `XADES_BES`: firma real, validez legal ante el SRI.
+ * - `FIRMA_SIMULADA`: ensayo. El RIDE sale impreso con «SIN VALIDEZ LEGAL».
+ * - `SIN_FIRMA`: el emisor está en PRODUCCIÓN y no hay certificado; la emisión se
+ *   detiene a propósito en vez de generar algo sin validez que parezca bueno.
+ */
+export type TecnicaFirma = 'XADES_BES' | 'FIRMA_SIMULADA' | 'SIN_FIRMA';
+
+/**
+ * `GET /api/facturacion/certificado` — el certificado de firma electrónica vigente.
+ *
+ * Nunca lleva el .p12 ni su contraseña: solo los datos con los que se identifica y
+ * su vigencia.
+ */
+export interface CertificadoFirma {
+  presente: boolean;
+  alias: string | null;
+  sujeto: string | null;
+  emisorCertificado: string | null;
+  numeroSerie: string | null;
+  validoDesde: string | null;
+  validoHasta: string | null;
+  /** Negativo si ya venció. */
+  diasParaVencer: number;
+  vencido: boolean;
+  subidoPor: string | null;
+  creadoEn: string | null;
+  tecnicaFirma: TecnicaFirma;
+}
+
 /** Cuerpo de `PUT /api/emisor` (solo ADMIN). */
 export interface EditarEmisorRequest {
   ruc: string;

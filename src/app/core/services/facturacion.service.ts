@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import {
+  CertificadoFirma,
   EditarEmisorRequest,
   Emisor,
   Factura,
@@ -58,5 +59,26 @@ export class FacturacionService {
    */
   guardarEmisor(req: EditarEmisorRequest): Observable<Emisor> {
     return this.http.put<Emisor>(`${this.base}/api/emisor`, req);
+  }
+
+  /** GET /api/facturacion/certificado — el certificado de firma vigente (solo ADMIN). */
+  certificado(): Observable<CertificadoFirma> {
+    return this.http.get<CertificadoFirma>(`${this.base}/api/facturacion/certificado`);
+  }
+
+  /**
+   * POST /api/facturacion/certificado — sube el .p12 (solo ADMIN).
+   *
+   * El backend lo abre de verdad con la contraseña antes de guardarlo: responde 400 si
+   * la clave es incorrecta o el archivo no es un PKCS12 válido, y 422 si el certificado
+   * ya venció. En cuanto queda activo, el mismo proceso empieza a firmar con él —sin
+   * reiniciar ni volver a desplegar—.
+   */
+  subirCertificado(archivo: File, clave: string, alias?: string): Observable<CertificadoFirma> {
+    const cuerpo = new FormData();
+    cuerpo.append('archivo', archivo);
+    cuerpo.append('clave', clave);
+    if (alias) cuerpo.append('alias', alias);
+    return this.http.post<CertificadoFirma>(`${this.base}/api/facturacion/certificado`, cuerpo);
   }
 }
