@@ -27,7 +27,9 @@ import {
   OfertaServicioCatalogo,
   PlanCatalogo,
   RegistroGpon,
+  TipoIdentificacion,
 } from '../../core/models/contratos.model';
+import { identificacionValida, patronIdentificacion } from '../../shared/validadores-identificacion';
 import {
   ESTADO_PAGO_ETIQUETA,
   ESTADO_PAGO_TONO,
@@ -1101,15 +1103,37 @@ export class ClienteDetalleComponent implements OnDestroy {
   readonly modalEditar = signal(false);
   readonly guardandoEditar = signal(false);
   readonly errorEditar = signal<string | null>(null);
-  /** El tipo no se edita aquí: decide qué campos de nombre se piden. */
+  /** El tipo de CLIENTE (persona/empresa) no se edita aquí: decide qué campos de nombre se piden. */
   readonly editEsEmpresa = computed(() => this.detalle()?.tipoCliente === 'EMPRESA');
 
+  readonly edTipoId = signal<TipoIdentificacion>('CEDULA');
+  readonly edIdentificacion = signal('');
   readonly edNombres = signal('');
   readonly edApellidos = signal('');
   readonly edRazonSocial = signal('');
   readonly edEmail = signal('');
   readonly edTelefono = signal('');
   readonly edWhatsapp = signal('');
+
+  readonly edIdLabel = computed(() =>
+    this.edTipoId() === 'RUC' ? 'RUC' : this.edTipoId() === 'PASAPORTE' ? 'Pasaporte' : 'Cédula',
+  );
+  readonly edIdHelp = computed(() => {
+    switch (this.edTipoId()) {
+      case 'RUC':
+        return '13 dígitos';
+      case 'PASAPORTE':
+        return '5 a 20 caracteres';
+      default:
+        return '10 dígitos';
+    }
+  });
+  /** Solo avisa cuando hay formato completo y no cuadra; no molesta mientras se escribe. */
+  readonly edIdInvalida = computed(() => {
+    const valor = this.edIdentificacion().trim();
+    if (!patronIdentificacion(this.edTipoId()).test(valor)) return false;
+    return !identificacionValida(this.edTipoId(), valor);
+  });
 
   /**
    * Edición pedida desde la lista de clientes, que llega como `?editar=1`.
@@ -1193,6 +1217,8 @@ export class ClienteDetalleComponent implements OnDestroy {
     const det = this.detalle();
     if (!det) return;
     this.errorEditar.set(null);
+    this.edTipoId.set(det.tipoIdentificacion);
+    this.edIdentificacion.set(det.identificacion);
     this.edNombres.set(det.nombres ?? '');
     this.edApellidos.set(det.apellidos ?? '');
     this.edRazonSocial.set(det.razonSocial ?? '');
@@ -1211,6 +1237,22 @@ export class ClienteDetalleComponent implements OnDestroy {
     const det = this.detalle();
     if (!det) return;
 
+    const identificacion = this.edIdentificacion().trim();
+    if (!identificacion) {
+      this.errorEditar.set('La identificación es obligatoria.');
+      return;
+    }
+    if (!patronIdentificacion(this.edTipoId()).test(identificacion)) {
+      this.errorEditar.set(`Verifica el formato de ${this.edIdLabel().toLowerCase()}: ${this.edIdHelp()}.`);
+      return;
+    }
+    if (!identificacionValida(this.edTipoId(), identificacion)) {
+      this.errorEditar.set(
+        this.edTipoId() === 'RUC' ? 'El RUC ingresado no es válido.' : 'La cédula ingresada no es válida.',
+      );
+      return;
+    }
+
     if (this.editEsEmpresa()) {
       if (!this.edRazonSocial().trim()) {
         this.errorEditar.set('La razón social es obligatoria para una empresa.');
@@ -1222,6 +1264,8 @@ export class ClienteDetalleComponent implements OnDestroy {
     }
 
     const req: EditarClienteRequest = {
+      tipoIdentificacion: this.edTipoId(),
+      identificacion,
       nombres: this.editEsEmpresa() ? null : this.edNombres().trim() || null,
       apellidos: this.editEsEmpresa() ? null : this.edApellidos().trim() || null,
       razonSocial: this.editEsEmpresa() ? this.edRazonSocial().trim() || null : null,
@@ -1251,6 +1295,7 @@ export class ClienteDetalleComponent implements OnDestroy {
         400: () => e.error?.mensaje ?? 'Revisa los datos: hay algún campo inválido.',
         404: 'El cliente ya no existe; recarga la página.',
         403: 'Tu rol no tiene permiso para editar clientes.',
+        409: 'Ya existe otro cliente con esa identificación.',
       },
       generico: 'No se pudo guardar la edición. Inténtalo de nuevo.',
     });

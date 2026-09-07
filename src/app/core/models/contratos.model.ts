@@ -179,11 +179,13 @@ export interface ClienteDetalle {
 }
 
 /**
- * Cuerpo de la edición de un cliente (`PUT /api/clientes/{codigo}`): solo su nombre
- * (según el tipo) y su contacto. Identidad (tipo/identificación) y dirección no se
- * editan aquí.
+ * Cuerpo de la edición de un cliente (`PUT /api/clientes/{codigo}`): su identidad
+ * (tipo/identificación), su nombre (según el tipo) y su contacto. La dirección se
+ * sigue editando aparte.
  */
 export interface EditarClienteRequest {
+  tipoIdentificacion: TipoIdentificacion;
+  identificacion: string;
   nombres: string | null;
   apellidos: string | null;
   razonSocial: string | null;

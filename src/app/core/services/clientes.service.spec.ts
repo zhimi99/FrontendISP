@@ -119,8 +119,10 @@ describe('ClientesService', () => {
     expect(resultado).toEqual(respuesta);
   });
 
-  it('editar() manda PUT /api/clientes/{codigo} con nombre y contacto', () => {
+  it('editar() manda PUT /api/clientes/{codigo} con identidad, nombre y contacto', () => {
     const request: EditarClienteRequest = {
+      tipoIdentificacion: 'CEDULA',
+      identificacion: '1710034065',
       nombres: 'Ana',
       apellidos: 'Pérez Gómez',
       razonSocial: null,

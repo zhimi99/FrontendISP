@@ -1026,6 +1026,11 @@ tbody tr:hover {
   line-height: 1.35;
 }
 
+.modal .hint.warn {
+  color: var(--danger);
+  font-weight: 600;
+}
+
 .servicio-oferta {
   display: grid;
   grid-template-columns: 1fr auto;

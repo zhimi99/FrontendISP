@@ -9,33 +9,14 @@ import { ClientesService } from '../../core/services/clientes.service';
 import { LatLngLiteral } from '../../core/services/google-maps-loader.service';
 import { AltaClienteRequest } from '../../core/models/contratos.model';
 import { mensajeError } from '../../core/http/errores';
+import { cedulaValidaChecksum, rucValidoChecksum } from '../../shared/validadores-identificacion';
 
 type TipoCliente = 'PERSONA' | 'EMPRESA';
 type TipoId = 'CEDULA' | 'RUC' | 'PASAPORTE';
 
-/** El checksum módulo 10 puro (sin el chequeo de formato, que ya cubre Validators.pattern). */
-function cedulaValidaChecksum(cedula: string): boolean {
-  const provincia = Number(cedula.slice(0, 2));
-  if (provincia < 1 || provincia > 24) return false;
-  if (Number(cedula[2]) > 5) return false;
-
-  let suma = 0;
-  for (let i = 0; i < 9; i++) {
-    let digito = Number(cedula[i]);
-    if (i % 2 === 0) {
-      digito *= 2;
-      if (digito > 9) digito -= 9;
-    }
-    suma += digito;
-  }
-  const verificador = (10 - (suma % 10)) % 10;
-  return verificador === Number(cedula[9]);
-}
-
 /**
- * Cédula ecuatoriana: 10 dígitos, provincia 01-24, tercer dígito 0-5 (persona
- * natural) y dígito verificador módulo 10 (algoritmo del Registro Civil). Se
- * asume formato válido (ya cubierto por Validators.pattern) para no duplicar
+ * Cédula ecuatoriana: dígito verificador módulo 10 (algoritmo del Registro Civil).
+ * Se asume formato válido (ya cubierto por Validators.pattern) para no duplicar
  * ese error.
  */
 function cedulaEcuatorianaValida(control: AbstractControl): ValidationErrors | null {
@@ -44,46 +25,11 @@ function cedulaEcuatorianaValida(control: AbstractControl): ValidationErrors | n
   return cedulaValidaChecksum(valor) ? null : { cedulaInvalida: true };
 }
 
-const COEF_RUC_SOCIEDAD_PRIVADA = [4, 3, 2, 7, 6, 5, 4, 3, 2];
-const COEF_RUC_SECTOR_PUBLICO = [3, 2, 7, 6, 5, 4, 3, 2];
-
-function modulo11(digitos: string, coeficientes: number[]): number {
-  let suma = 0;
-  for (let i = 0; i < coeficientes.length; i++) {
-    suma += Number(digitos[i]) * coeficientes[i];
-  }
-  const residuo = suma % 11;
-  return residuo === 0 ? 0 : 11 - residuo;
-}
-
-/**
- * RUC ecuatoriano: 13 dígitos, provincia 01-24. El tercer dígito decide el tipo
- * de contribuyente y su propio checksum (SRI): 0-5 persona natural (cédula +
- * establecimiento), 6 sector público (módulo 11 sobre 8 dígitos), 9 sociedad
- * privada (módulo 11 sobre 9 dígitos). El código de establecimiento final no
- * puede ser cero en ningún caso.
- */
+/** RUC ecuatoriano (SRI): mismo chequeo de formato + el checksum según el tipo de contribuyente. */
 function rucEcuatorianoValido(control: AbstractControl): ValidationErrors | null {
   const valor = (control.value ?? '').trim();
   if (!/^\d{13}$/.test(valor)) return null;
-
-  const provincia = Number(valor.slice(0, 2));
-  if (provincia < 1 || provincia > 24) return { rucInvalido: true };
-
-  const tercerDigito = Number(valor[2]);
-  let valido: boolean;
-  if (tercerDigito <= 5) {
-    valido = cedulaValidaChecksum(valor.slice(0, 10)) && Number(valor.slice(10)) >= 1;
-  } else if (tercerDigito === 6) {
-    const verificador = modulo11(valor, COEF_RUC_SECTOR_PUBLICO);
-    valido = verificador <= 9 && verificador === Number(valor[8]) && Number(valor.slice(9)) >= 1;
-  } else if (tercerDigito === 9) {
-    const verificador = modulo11(valor, COEF_RUC_SOCIEDAD_PRIVADA);
-    valido = verificador <= 9 && verificador === Number(valor[9]) && Number(valor.slice(10)) >= 1;
-  } else {
-    valido = false;
-  }
-  return valido ? null : { rucInvalido: true };
+  return rucValidoChecksum(valor) ? null : { rucInvalido: true };
 }
 
 @Component({

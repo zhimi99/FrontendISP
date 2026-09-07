@@ -996,6 +996,27 @@
       </div>
       <div class="modal-body">
         <div class="form-grid">
+          <div class="field">
+            <label>Tipo de documento</label>
+            <select [ngModel]="edTipoId()" (ngModelChange)="edTipoId.set($event)">
+              @if (!editEsEmpresa()) {
+                <option value="CEDULA">Cédula</option>
+                <option value="PASAPORTE">Pasaporte</option>
+              } @else {
+                <option value="RUC">RUC</option>
+              }
+            </select>
+          </div>
+          <div class="field">
+            <label>{{ edIdLabel() }} *</label>
+            <input type="text" [ngModel]="edIdentificacion()" (ngModelChange)="edIdentificacion.set($event)"
+                   [placeholder]="edIdHelp()" />
+            @if (edIdInvalida()) {
+              <span class="hint warn">{{ edIdLabel() }} inválida: revisa el número.</span>
+            } @else {
+              <span class="hint">{{ edIdHelp() }}</span>
+            }
+          </div>
           @if (editEsEmpresa()) {
             <div class="field span2">
               <label>Razón social *</label>
@@ -1026,7 +1047,7 @@
                    placeholder="correo@ejemplo.com" />
           </div>
         </div>
-        <p class="modal-nota">La identificación y la dirección no se editan aquí.</p>
+        <p class="modal-nota">La dirección no se edita aquí.</p>
         @if (errorEditar()) { <div class="modal-error">{{ errorEditar() }}</div> }
       </div>
       <div class="modal-foot">
