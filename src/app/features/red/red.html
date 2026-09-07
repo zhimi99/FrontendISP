@@ -210,7 +210,13 @@
             @for (a of registro(); track a.id) {
               <tr>
                 <td class="mono strong">{{ a.contratoCodigo }}</td>
-                <td>{{ a.nombreCliente }}</td>
+                <td>
+                  @if (a.nombreCliente === 'HAY-QUE-REVISAR') {
+                    <span class="badge warn">Revisar ficha</span>
+                  } @else {
+                    {{ a.nombreCliente }}
+                  }
+                </td>
                 <td class="mono muted">{{ a.tarjeta }}/{{ a.puerto }} · ont {{ a.ontId }}</td>
                 <td class="mono muted">{{ a.serialOnt }}</td>
                 <td class="mono">{{ a.ipServicio ?? '—' }}</td>
@@ -299,7 +305,14 @@
       } @else if (comandosAbiertos(); as a) {
         <div class="modal-head">
           <div>
-            <h3>{{ a.contratoCodigo }} · {{ a.nombreCliente }}</h3>
+            <h3>
+              {{ a.contratoCodigo }} ·
+              @if (a.nombreCliente === 'HAY-QUE-REVISAR') {
+                <span class="badge warn">Falta el nombre: revisar la ficha del cliente</span>
+              } @else {
+                {{ a.nombreCliente }}
+              }
+            </h3>
             <span class="hint">
               {{ a.oltCodigo }} · tarjeta {{ a.tarjeta }} puerto {{ a.puerto }} · ONT {{ a.ontId }} · serial {{ a.serialOnt }}
             </span>
