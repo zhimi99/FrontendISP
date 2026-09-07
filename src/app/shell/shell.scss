@@ -338,7 +338,7 @@
   min-width: 0;
 }
 
-/* ===================== Colapsado ===================== */
+/* ===================== Colapsado (solo escritorio) ===================== */
 .is-collapsed .sidebar {
   width: 72px;
 }
@@ -370,18 +370,54 @@
   display: none;
 }
 
-/* ===================== Responsivo ===================== */
-@media (max-width: 1000px) {
+/* ===================== Cajón (tablet/móvil) ===================== */
+/* Botón "×" arriba del cajón: solo tiene sentido cuando el menú flota sobre el
+   contenido, así que por defecto (escritorio) no ocupa espacio ni se ve. */
+.sidebar-close {
+  display: none;
+  margin-left: auto;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--side-faint);
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s;
+}
+
+.sidebar-close:hover {
+  background: var(--side-hover);
+  color: #fff;
+}
+
+/* Fuera de la franja móvil el fondo no existe: ni ocupa capa ni intercepta clics. */
+.backdrop {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  /* El menú deja de empujar contenido: pasa a flotar encima, oculto por defecto. */
   .sidebar {
+    width: min(300px, 86vw);
     transform: translateX(-100%);
-    box-shadow: 6px 0 30px rgba(0, 0, 0, 0.35);
+    box-shadow: none;
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
   }
+
   .panel {
     margin-left: 0;
   }
+
+  /* El icono-solo de escritorio no aplica a un cajón flotante: siempre se ve
+     completo, con su propia etiqueta — es lo único que tiene sentido aquí. */
   .is-collapsed .sidebar {
-    width: var(--sidebar-w);
-    transform: translateX(0);
+    width: min(300px, 86vw);
   }
   .is-collapsed .panel {
     margin-left: 0;
@@ -402,16 +438,81 @@
   .is-collapsed .brand {
     padding: 0 18px;
   }
+  .is-collapsed .nav-item.active::before {
+    display: block;
+  }
+
+  .is-mobile-open .sidebar {
+    transform: translateX(0);
+    box-shadow: 10px 0 44px rgba(4, 8, 5, 0.45);
+  }
+
+  .sidebar-close {
+    display: flex;
+  }
+
+  .backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 15;
+    background: rgba(6, 10, 7, 0.55);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+
+  .is-mobile-open .backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Objetivos táctiles más grandes: 44px es el mínimo cómodo en iOS y Android. */
+  .icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .nav-item {
+    height: 48px;
+  }
+
+  .topbar {
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
+    gap: 10px;
+  }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 640px) {
+  .topbar {
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    gap: 8px;
+  }
   .topbar-search {
     display: none;
   }
   .topbar-title .crumbs {
     display: none;
   }
+  .topbar-title h1 {
+    font-size: 16px;
+  }
   .user-meta {
     display: none;
+  }
+  .user-chip {
+    padding: 0;
+  }
+}
+
+@media (max-width: 380px) {
+  .sidebar {
+    width: min(272px, 88vw);
+  }
+  .brand {
+    padding: 0 14px;
   }
 }

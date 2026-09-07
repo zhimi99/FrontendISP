@@ -1,8 +1,11 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { IconComponent } from '../shared/icon';
 import { AuthService } from '../core/services/auth.service';
+
+/** Por debajo de este ancho, el menú deja de empujar contenido y pasa a ser un cajón. */
+const UMBRAL_MOVIL = '(max-width: 1024px)';
 
 interface NavItem {
   label: string;
@@ -28,7 +31,11 @@ interface NavItem {
 })
 export class Shell {
   protected readonly auth = inject(AuthService);
+
+  /** Escritorio: reduce el menú a solo íconos, pero sigue empujando el contenido. */
   protected readonly collapsed = signal(false);
+  /** Tablet/móvil: el menú es un cajón superpuesto, cerrado salvo que se pida. */
+  protected readonly mobileOpen = signal(false);
 
   protected readonly navMain: NavItem[] = [
     { label: 'Dashboard', icon: 'dashboard', path: '/dashboard' },
@@ -47,8 +54,51 @@ export class Shell {
     { label: 'Configuración', icon: 'gear', path: '/configuracion' },
   ];
 
+  constructor() {
+    // Si el componente se destruyera con el cajón abierto (recarga en caliente,
+    // etc.), que no quede el scroll del fondo bloqueado para siempre.
+    inject(DestroyRef).onDestroy(() => {
+      document.body.style.overflow = '';
+    });
+  }
+
+  /** Un solo botón, dos comportamientos: en escritorio reduce a íconos, en
+   *  tablet/móvil abre el cajón. Cada pantalla solo usa uno de los dos estados. */
   protected toggle() {
-    this.collapsed.update((v) => !v);
+    if (this.esMovil()) {
+      this.mobileOpen.update((v) => !v);
+      this.sincronizarScroll();
+    } else {
+      this.collapsed.update((v) => !v);
+    }
+  }
+
+  /** Cierra el cajón: al tocar fuera, al elegir una sección, o con Escape. */
+  protected cerrarMovil() {
+    this.mobileOpen.set(false);
+    this.sincronizarScroll();
+  }
+
+  /** Con el cajón abierto, el fondo no debe desplazarse detrás: es lo que hace
+   *  que un overlay se sienta sólido en vez de un elemento más de la página. */
+  private sincronizarScroll() {
+    document.body.style.overflow = this.mobileOpen() ? 'hidden' : '';
+  }
+
+  @HostListener('document:keydown.escape')
+  protected onEscape() {
+    if (this.mobileOpen()) this.cerrarMovil();
+  }
+
+  /** Si la ventana crece hasta escritorio con el cajón abierto, se cierra solo:
+   *  ese estado no significa nada ahí y no debería reaparecer al volver a achicar. */
+  @HostListener('window:resize')
+  protected onResize() {
+    if (!this.esMovil() && this.mobileOpen()) this.cerrarMovil();
+  }
+
+  private esMovil(): boolean {
+    return window.matchMedia(UMBRAL_MOVIL).matches;
   }
 
   protected cerrarSesion() {
