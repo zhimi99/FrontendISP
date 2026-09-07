@@ -889,6 +889,12 @@ tbody tr:hover {
   margin-top: 16px;
 }
 
+/* Va bajo el botón deshabilitado, alineada con él, para que se lea como su motivo. */
+.gpon-nota-generar {
+  margin: 6px 0 0;
+  text-align: right;
+}
+
 /* ============ Modal: editar cliente ============ */
 .modal-backdrop {
   position: fixed;

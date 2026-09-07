@@ -293,11 +293,8 @@ export class SoporteComponent {
   readonly gponNombreCliente = signal('');
   readonly gponServicePortGestion = signal('');
   readonly gponServicePortServicio = signal('');
-  readonly gponGemportGestion = signal('');
-  readonly gponGemportServicio = signal('');
   readonly gponTx = signal('');
   readonly gponRx = signal('');
-  readonly gponNombreEquipo = signal('');
   readonly gponMetraje = signal('');
   /** La ficha GPON documenta el alta del servicio; una visita de soporte no la toca. */
   readonly pideGpon = computed(() => this.ordenAccion()?.tipo === 'INSTALACION');
@@ -519,11 +516,8 @@ export class SoporteComponent {
       this.gponNombreCliente,
       this.gponServicePortGestion,
       this.gponServicePortServicio,
-      this.gponGemportGestion,
-      this.gponGemportServicio,
       this.gponTx,
       this.gponRx,
-      this.gponNombreEquipo,
       this.gponMetraje,
     ];
   }
@@ -572,11 +566,8 @@ export class SoporteComponent {
         this.gponNombreCliente.set(texto(gpon.nombreCliente));
         this.gponServicePortGestion.set(num(gpon.servicePortGestion));
         this.gponServicePortServicio.set(num(gpon.servicePortServicio));
-        this.gponGemportGestion.set(num(gpon.gemportGestion));
-        this.gponGemportServicio.set(num(gpon.gemportServicio));
         this.gponTx.set(num(gpon.tx));
         this.gponRx.set(num(gpon.rx));
-        this.gponNombreEquipo.set(texto(gpon.nombreEquipo));
         this.gponMetraje.set(num(gpon.metrajeCable));
       });
   }
@@ -800,11 +791,8 @@ export class SoporteComponent {
       nombreCliente: this.gponNombreCliente().trim() || null,
       servicePortGestion: this.enteroGpon(this.gponServicePortGestion()),
       servicePortServicio: this.enteroGpon(this.gponServicePortServicio()),
-      gemportGestion: this.enteroGpon(this.gponGemportGestion()),
-      gemportServicio: this.enteroGpon(this.gponGemportServicio()),
       tx: this.decimalGpon(this.gponTx()),
       rx: this.decimalGpon(this.gponRx()),
-      nombreEquipo: this.gponNombreEquipo().trim() || null,
       metrajeCable: this.decimalGpon(this.gponMetraje()),
     };
     // Una ficha en blanco no se crea: si el técnico no escribió nada, no hay nada

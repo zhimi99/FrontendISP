@@ -350,7 +350,7 @@ describe('SoporteComponent — cierre de orden', () => {
 
       component.resultado.set('Instalación completada');
       component.gponIpServicio.set('10.0.0.5');
-      component.gponNombreEquipo.set('Huawei EG8145V5');
+      component.gponSerialOnt.set('48575443217FDA9E');
 
       component.confirmarCerrar();
 
@@ -368,16 +368,13 @@ describe('SoporteComponent — cierre de orden', () => {
         ipGestion: null,
         mascaraGestion: null,
         barraGestion: null,
-        serialOnt: null,
+        serialOnt: '48575443217FDA9E',
         codigoServicio: null,
         nombreCliente: null,
         servicePortGestion: null,
         servicePortServicio: null,
-        gemportGestion: null,
-        gemportServicio: null,
         tx: null,
         rx: null,
-        nombreEquipo: 'Huawei EG8145V5',
         metrajeCable: null,
       });
       gpon.flush({});

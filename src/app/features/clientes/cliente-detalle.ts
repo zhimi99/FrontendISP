@@ -53,11 +53,7 @@ import {
 import { EstadoCliente, ESTADOS } from './clientes.model';
 import { environment } from '../../../environments/environment';
 import { GponService } from '../../core/services/gpon.service';
-import {
-  AprovisionamientoGpon,
-  OltResumen,
-  PuertoPonResumen,
-} from '../../core/models/gpon.model';
+import { AprovisionamientoGpon, OltResumen } from '../../core/models/gpon.model';
 
 /** Estado de la carga perezosa de facturas para la pestaña de Facturación. */
 type EstadoFacturas = { estado: 'cargando' | 'ok' | 'error'; lista: FacturaVista[] };
@@ -457,24 +453,6 @@ export class ClienteDetalleComponent implements OnDestroy {
     this.errorGpon.set(null);
   }
 
-  /**
-   * El equipo que un técnico dejó instalado (pestaña Red/Equipos) para este mismo
-   * contrato. Su marca, modelo, serie y MAC ya quedaron registrados al darlo de alta
-   * en inventario y asignarlo — aquí solo se ofrece como atajo para no volver a
-   * teclearlo en el campo "Nombre del equipo" del registro GPON.
-   */
-  readonly routerAsignadoGpon = computed(() => {
-    const contratoId = this.contratoGponId();
-    if (contratoId == null) return null;
-    return this.equipos().find((e) => e.contratoId === contratoId && e.tipo === 'ROUTER') ?? null;
-  });
-
-  usarRouterAsignadoGpon() {
-    const equipo = this.routerAsignadoGpon();
-    if (!equipo) return;
-    this.gponNombreEquipo.set(`${equipo.marca} ${equipo.modelo} · S/N ${equipo.numeroSerie}`);
-  }
-
   private readonly registroGponResp = toSignal(
     toObservable(this.contratoGponCodigo).pipe(
       switchMap((codigo): Observable<EstadoRegistroGpon> => {
@@ -514,11 +492,8 @@ export class ClienteDetalleComponent implements OnDestroy {
   readonly gponNombreCliente = signal('');
   readonly gponServicePortGestion = signal('');
   readonly gponServicePortServicio = signal('');
-  readonly gponGemportGestion = signal('');
-  readonly gponGemportServicio = signal('');
   readonly gponTx = signal('');
   readonly gponRx = signal('');
-  readonly gponNombreEquipo = signal('');
   readonly gponMetraje = signal('');
   readonly guardandoGpon = signal(false);
   readonly errorGpon = signal<string | null>(null);
@@ -543,38 +518,33 @@ export class ClienteDetalleComponent implements OnDestroy {
     this.gponNombreCliente.set(texto(dato?.nombreCliente));
     this.gponServicePortGestion.set(num(dato?.servicePortGestion));
     this.gponServicePortServicio.set(num(dato?.servicePortServicio));
-    this.gponGemportGestion.set(num(dato?.gemportGestion));
-    this.gponGemportServicio.set(num(dato?.gemportServicio));
     this.gponTx.set(num(dato?.tx));
     this.gponRx.set(num(dato?.rx));
-    this.gponNombreEquipo.set(texto(dato?.nombreEquipo));
     this.gponMetraje.set(num(dato?.metrajeCable));
     this.errorGpon.set(null);
   }
 
-  /* ---------- Aprovisionamiento en la OLT (MS-RED) ----------
+  /* ---------- Comandos para la OLT (MS-RED) ----------
    *
    * Aquí no se calcula ningún comando: se piden al backend, que es quien
-   * reparte los recursos de la OLT y arma las plantillas. El técnico solo
-   * aporta el serial del aparato que va a instalar; el número de ONT, los
+   * reparte los recursos de la OLT y arma las plantillas. De la ficha solo sale
+   * el serial del aparato que se instala; el número de ONT, el puerto PON, los
    * service-port y las IP los decide el servidor, que es lo que permite dar
    * miles de altas sin que nadie lleve la cuenta a mano.
    */
-  readonly gponSerialOnt = signal('');
-  /** Puerto PON elegido a mano; nulo = que el backend escoja el menos ocupado. */
-  readonly gponPuertoPonId = signal<number | null>(null);
   readonly gponOltId = signal<number | null>(null);
   readonly aprovisionando = signal(false);
   readonly gponCopiado = signal(false);
   private temporizadorCopiado?: ReturnType<typeof setTimeout>;
 
-  /** Aprovisionamiento vigente del contrato; null = todavía no tiene. */
+  /** Comandos ya generados para el contrato; null = todavía no se han pedido. */
   readonly aprovisionamiento = signal<AprovisionamientoGpon | null>(null);
   readonly aprovisionamientoCargando = signal(false);
 
-  /** Puertos PON con hueco, para poder elegir en vez de dejarlo al automático. */
-  readonly puertosPon = signal<PuertoPonResumen[]>([]);
   readonly olts = signal<OltResumen[]>([]);
+
+  /** Sin serial no hay nada que generar: es lo único que el servidor no puede deducir. */
+  readonly puedeGenerarGpon = computed(() => this.gponFichaSerialOnt().trim().length > 0);
 
   /**
    * Reserva los recursos y trae los comandos.
@@ -583,10 +553,10 @@ export class ClienteDetalleComponent implements OnDestroy {
    * número de ONT: un doble clic o un reintento tras un fallo de red son
    * inofensivos.
    */
-  aprovisionarGpon() {
+  generarComandosGpon() {
     const contrato = this.contratoGpon();
     const cliente = this.detalle();
-    if (!contrato || !cliente || this.aprovisionando()) return;
+    if (!contrato || !cliente || this.aprovisionando() || !this.puedeGenerarGpon()) return;
 
     this.aprovisionando.set(true);
     this.errorGpon.set(null);
@@ -595,8 +565,10 @@ export class ClienteDetalleComponent implements OnDestroy {
         contratoId: contrato.id,
         contratoCodigo: contrato.codigo,
         nombreCliente: cliente.nombre,
-        serialOnt: this.gponSerialOnt(),
-        puertoPonId: this.gponPuertoPonId(),
+        serialOnt: this.gponFichaSerialOnt(),
+        // El puerto lo elige el backend (el menos ocupado): el de la ficha es texto
+        // libre, no el identificador del puerto real en el inventario de la OLT.
+        puertoPonId: null,
         oltId: this.gponOltId(),
       })
       .subscribe({
@@ -637,23 +609,17 @@ export class ClienteDetalleComponent implements OnDestroy {
   }
 
   /**
-   * Puertos con hueco para poder elegir a mano.
+   * Resuelve contra qué OLT generar.
    *
-   * Si la instalación falla por silencio de la red, el desplegable queda vacío y
-   * el alta sigue siendo posible: con puerto nulo el backend escoge el menos
-   * ocupado, que es el caso corriente.
+   * Con una sola OLT se manda su id y el técnico no tiene que elegir nada; con
+   * varias se deja nulo y decide el backend. Si la consulta falla por silencio de
+   * la red tampoco se bloquea nada: generar sigue siendo posible.
    */
-  private cargarPuertosPon() {
+  private cargarOlts() {
     this.gponService.olts().subscribe({
       next: (olts) => {
         this.olts.set(olts);
-        const unica = olts.length === 1 ? olts[0] : null;
-        this.gponOltId.set(unica?.id ?? null);
-        if (!unica) return;
-        this.gponService.puertos(unica.id).subscribe({
-          next: (p) => this.puertosPon.set(p),
-          error: () => this.puertosPon.set([]),
-        });
+        this.gponOltId.set(olts.length === 1 ? olts[0].id : null);
       },
       error: () => this.olts.set([]),
     });
@@ -690,11 +656,8 @@ export class ClienteDetalleComponent implements OnDestroy {
       nombreCliente: this.gponNombreCliente().trim() || null,
       servicePortGestion: this.enteroOpcionalGpon(this.gponServicePortGestion()),
       servicePortServicio: this.enteroOpcionalGpon(this.gponServicePortServicio()),
-      gemportGestion: this.enteroOpcionalGpon(this.gponGemportGestion()),
-      gemportServicio: this.enteroOpcionalGpon(this.gponGemportServicio()),
       tx: this.numeroOpcionalGpon(this.gponTx()),
       rx: this.numeroOpcionalGpon(this.gponRx()),
-      nombreEquipo: this.gponNombreEquipo().trim() || null,
       metrajeCable: this.numeroOpcionalGpon(this.gponMetraje()),
     };
 
@@ -1221,14 +1184,12 @@ export class ClienteDetalleComponent implements OnDestroy {
       this.cargarFormularioGpon(resp.dato);
     });
 
-    // Trae el aprovisionamiento de MS-RED al cambiar de contrato. Va aparte del
-    // registro GPON porque son dos módulos distintos: la ficha de instalación es
-    // de MS-CONTRATOS y los recursos de la OLT son de MS-RED.
+    // Trae los comandos ya generados en MS-RED al cambiar de contrato. Va aparte
+    // del registro GPON porque son dos módulos distintos: la ficha de instalación
+    // es de MS-CONTRATOS y los recursos de la OLT son de MS-RED.
     effect(() => {
       const codigo = this.contratoGponCodigo();
       this.aprovisionamiento.set(null);
-      this.gponSerialOnt.set('');
-      this.gponPuertoPonId.set(null);
       if (!codigo) return;
 
       this.aprovisionamientoCargando.set(true);
@@ -1236,14 +1197,8 @@ export class ClienteDetalleComponent implements OnDestroy {
         next: (a) => {
           this.aprovisionamientoCargando.set(false);
           this.aprovisionamiento.set(a);
-          // El serial se precarga para que se vea cuál está puesto; no se puede
-          // cambiar reaprovisionando, eso exigiría liberar los recursos antes.
-          if (a) {
-            this.gponSerialOnt.set(a.serialOnt);
-          } else {
-            // Solo hace falta la lista de puertos si aún hay que aprovisionar.
-            this.cargarPuertosPon();
-          }
+          // Solo hace falta saber contra qué OLT generar si aún no hay comandos.
+          if (!a) this.cargarOlts();
         },
         error: () => this.aprovisionamientoCargando.set(false),
       });

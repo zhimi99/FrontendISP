@@ -381,16 +381,6 @@
                              [ngModel]="gponServicePortServicio()" (ngModelChange)="gponServicePortServicio.set($event)" />
                     </div>
                     <div class="field">
-                      <label>Gemport gestión</label>
-                      <input type="text" inputmode="numeric" placeholder="1"
-                             [ngModel]="gponGemportGestion()" (ngModelChange)="gponGemportGestion.set($event)" />
-                    </div>
-                    <div class="field">
-                      <label>Gemport servicio</label>
-                      <input type="text" inputmode="numeric" placeholder="2"
-                             [ngModel]="gponGemportServicio()" (ngModelChange)="gponGemportServicio.set($event)" />
-                    </div>
-                    <div class="field">
                       <label>TX (dBm)</label>
                       <input type="text" inputmode="decimal" placeholder="2.50"
                              [ngModel]="gponTx()" (ngModelChange)="gponTx.set($event)" />
@@ -399,11 +389,6 @@
                       <label>RX (dBm)</label>
                       <input type="text" inputmode="decimal" placeholder="-21.30"
                              [ngModel]="gponRx()" (ngModelChange)="gponRx.set($event)" />
-                    </div>
-                    <div class="field">
-                      <label>Nombre del equipo</label>
-                      <input type="text" placeholder="Marca y modelo del equipo instalado"
-                             [ngModel]="gponNombreEquipo()" (ngModelChange)="gponNombreEquipo.set($event)" />
                     </div>
                     <div class="field">
                       <label>Metraje del cable (m)</label>

@@ -53,13 +53,9 @@ export interface RegistroGpon {
   nombreCliente: string | null;
   servicePortGestion: number | null;
   servicePortServicio: number | null;
-  gemportGestion: number | null;
-  gemportServicio: number | null;
   /** Potencia óptica (dBm), leída del equipo a mano. */
   tx: number | null;
   rx: number | null;
-  /** Antes "router": el equipo instalado no siempre lo es. */
-  nombreEquipo: string | null;
   metrajeCable: number | null;
 }
 
@@ -81,11 +77,8 @@ export interface GuardarRegistroGponRequest {
   nombreCliente: string | null;
   servicePortGestion: number | null;
   servicePortServicio: number | null;
-  gemportGestion: number | null;
-  gemportServicio: number | null;
   tx: number | null;
   rx: number | null;
-  nombreEquipo: string | null;
   metrajeCable: number | null;
 }
 

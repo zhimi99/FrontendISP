@@ -155,11 +155,8 @@ describe('ContratosService', () => {
       nombreCliente: 'Juan Pérez',
       servicePortGestion: 10,
       servicePortServicio: 11,
-      gemportGestion: 1,
-      gemportServicio: 2,
       tx: 2.5,
       rx: -21.3,
-      nombreEquipo: 'Huawei EG8145V5',
       metrajeCable: 80,
     };
 
