@@ -8,78 +8,80 @@
  *
  * Antes estaban en la hoja compartida y sin acotar, de modo que `table-layout: fixed`
  * y sus medidas se aplicaban también a grillas con otras columnas y otro número de
- * ellas. La primera columna mide 36px porque aquí lleva un checkbox; en los demás
- * módulos esa columna es un código o un nombre, que no cabía y se derramaba sobre la
- * celda vecina. Ahora esos módulos usan `table-layout: auto` y el navegador dimensiona
- * cada columna por su contenido; `.table-scroll` absorbe el desbordamiento horizontal.
+ * ellas. Ahora esos otros módulos usan `table-layout: auto` (o definen su propio
+ * reparto, como contratos.scss) y el navegador dimensiona cada columna por su
+ * contenido; `.table-scroll` absorbe el desbordamiento horizontal.
  *
- * Las medidas de abajo estaban escritas para ONCE columnas y la tabla tiene DIEZ:
- * sobraban de cuando existían las columnas de zona y vendedor, que se retiraron sin
- * recalibrar el reparto. Al correrse, «Acciones» heredaba el ancho pensado para otra
- * y se quedaba en 86px para tres botones. Aquí van las diez reales, en su orden.
+ * La tabla tenía una columna de checkbox al frente; al quitarse (no tenía acción
+ * asociada) las nueve columnas reales corrieron un puesto hacia la izquierda pero
+ * este archivo se quedó con el reparto viejo: el código de cliente heredó los 36px
+ * pensados para el checkbox, y así en cascada hasta que «Acciones» —tres botones de
+ * 27px— se quedó con el ancho pensado para «Registro», demasiado angosto para los
+ * tres. Aquí va el reparto para las nueve columnas reales, en su orden actual.
  */
 table.tabla-clientes {
   table-layout: fixed;
 }
 
-/* 1 · Selección */
+/* 1 · ID Cliente (código, no parte) */
 .tabla-clientes th:nth-child(1),
 .tabla-clientes td:nth-child(1) {
-  width: 36px;
-}
-
-/* 2 · ID Cliente (código, no parte) */
-.tabla-clientes th:nth-child(2),
-.tabla-clientes td:nth-child(2) {
   width: 104px;
 }
 
-/* 3 · Nombre: la columna que más texto lleva */
-.tabla-clientes th:nth-child(3),
-.tabla-clientes td:nth-child(3) {
+/* 2 · Nombre: la columna que más texto lleva */
+.tabla-clientes th:nth-child(2),
+.tabla-clientes td:nth-child(2) {
   width: 210px;
 }
 
-/* 4 · Cédula / RUC (13 dígitos) */
-.tabla-clientes th:nth-child(4),
-.tabla-clientes td:nth-child(4) {
+/* 3 · Cédula / RUC (13 dígitos) */
+.tabla-clientes th:nth-child(3),
+.tabla-clientes td:nth-child(3) {
   width: 120px;
 }
 
-/* 5 · Teléfono */
-.tabla-clientes th:nth-child(5),
-.tabla-clientes td:nth-child(5) {
+/* 4 · Teléfono */
+.tabla-clientes th:nth-child(4),
+.tabla-clientes td:nth-child(4) {
   width: 116px;
 }
 
-/* 6 · Dirección */
-.tabla-clientes th:nth-child(6),
-.tabla-clientes td:nth-child(6) {
+/* 5 · Dirección */
+.tabla-clientes th:nth-child(5),
+.tabla-clientes td:nth-child(5) {
   width: 190px;
 }
 
-/* 7 · Plan / Velocidad, en dos líneas */
-.tabla-clientes th:nth-child(7),
-.tabla-clientes td:nth-child(7) {
+/* 6 · Plan / Velocidad, en dos líneas */
+.tabla-clientes th:nth-child(6),
+.tabla-clientes td:nth-child(6) {
   width: 152px;
 }
 
-/* 8 · Estado (insignia) */
-.tabla-clientes th:nth-child(8),
-.tabla-clientes td:nth-child(8) {
+/* 7 · Estado (insignia) */
+.tabla-clientes th:nth-child(7),
+.tabla-clientes td:nth-child(7) {
   width: 104px;
 }
 
-/* 9 · Registro (dd/mm/aaaa) */
-.tabla-clientes th:nth-child(9),
-.tabla-clientes td:nth-child(9) {
+/* 8 · Registro (dd/mm/aaaa) */
+.tabla-clientes th:nth-child(8),
+.tabla-clientes td:nth-child(8) {
   width: 96px;
 }
 
-/* 10 · Acciones: tres botones de 27px con sus separaciones */
-.tabla-clientes th:nth-child(10),
-.tabla-clientes td:nth-child(10) {
+/* 9 · Acciones: tres botones de 27px con sus separaciones */
+.tabla-clientes th:nth-child(9),
+.tabla-clientes td:nth-child(9) {
   width: 120px;
+}
+
+/* El código no debe partirse ni invadir la columna vecina: sin este resguardo un
+   código largo se derrama visualmente sobre el nombre. */
+.tabla-clientes td:nth-child(1) {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* El nombre y la dirección se recortan en vez de empujar la columna vecina. */

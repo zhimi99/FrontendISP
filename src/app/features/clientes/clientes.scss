@@ -324,6 +324,7 @@ input[type='checkbox'] {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
 .mini-avatar {
@@ -348,6 +349,10 @@ input[type='checkbox'] {
   color: var(--brand-700);
   font-weight: 600;
   text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .name-link:hover {
