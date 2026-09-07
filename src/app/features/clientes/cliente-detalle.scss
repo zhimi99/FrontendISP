@@ -826,6 +826,27 @@ tbody tr:hover {
 }
 
 /* ============ Pestaña Registro GPON ============ */
+/*
+ * La ficha son 22 campos cortos: a dos columnas obliga a desplazarse mucho, así que
+ * va a tres y baja a dos y a una según el ancho. El formulario de aprovisionamiento
+ * (dos campos) conserva las dos de `.form-grid`; con tres dejaría un hueco.
+ */
+.gpon-ficha {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+@media (max-width: 1180px) {
+  .gpon-ficha {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .gpon-ficha {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Mismo estilo que .modal .field, pero el formulario vive fuera de un modal. */
 .gpon-form .field {
   display: flex;

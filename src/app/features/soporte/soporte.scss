@@ -328,9 +328,11 @@
   font-size: 13px;
   font-weight: 700;
 }
+/* Son 22 campos cortos: a tres columnas la ficha entra de una ojeada en vez de
+   obligar a desplazar todo el modal. Baja a dos y a una según el ancho. */
 .gpon-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px 12px;
   margin-top: 10px;
 }
@@ -350,6 +352,12 @@
 .gpon-grid input:focus {
   outline: none;
   border-color: var(--brand);
+}
+
+@media (max-width: 760px) {
+  .gpon-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 520px) {
