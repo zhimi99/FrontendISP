@@ -344,20 +344,6 @@ export interface ContratoDetalle {
 }
 
 /**
- * Cuerpo de `PUT /api/contratos/{codigo}`: solo condiciones comerciales.
- *
- * Un campo nulo significa «no tocar». No se cambia el cliente, la oferta ni el
- * estado del servicio: eso lo gobiernan las órdenes de trabajo, la mora y los pagos.
- * Tampoco el día de pago: es política del ISP (del 1 al 10), igual para todos.
- */
-export interface EditarContratoRequest {
-  planCodigo: string | null;
-  precioAcordado: number | null;
-  direccionId: number | null;
-  observaciones: string | null;
-}
-
-/**
  * Cuerpo de `POST /api/contratos/{codigo}/baja`.
  *
  * El contrato no se borra: queda RETIRADO conservando su historial, porque está

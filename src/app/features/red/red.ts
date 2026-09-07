@@ -38,7 +38,10 @@ export class RedComponent {
   readonly tabActiva = signal<0 | 1>(0);
   setTab(i: 0 | 1) {
     this.tabActiva.set(i);
-    if (i === 1 && this.registro().length === 0) this.cargarRegistro();
+    // Siempre recarga, no solo la primera vez: un nombre editado en Clientes
+    // mientras esta pestaña ya estaba abierta debe verse al volver a ella, no
+    // quedarse con la lista que se trajo al principio de la sesión.
+    if (i === 1) this.cargarRegistro();
   }
 
   /** Forzar la re-sincronización toca la red de verdad: operación reservada. */
