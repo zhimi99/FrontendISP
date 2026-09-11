@@ -246,7 +246,7 @@
                                historia y su dirección no se toca. -->
                           @if (s.estado !== 'RETIRADO') {
                             <button type="button" class="btn mini" (click)="abrirCambioDireccion(s)">
-                              Editar dirección
+                              Editar
                             </button>
                           }
                         </td>
@@ -978,6 +978,14 @@
                 <span class="hint">Este cliente no tiene otra dirección registrada.</span>
               }
             } @else {
+              <div class="field span2">
+                <label>Ubicación en el mapa</label>
+                <app-mapa-selector
+                  [inicial]="ubicacionInicialEdicion()"
+                  (ubicacionElegida)="onUbicacionElegidaEdicion($event)"
+                />
+                <span class="hint">Arrastra el pin o toca el mapa sobre el domicilio exacto.</span>
+              </div>
               <div class="form-grid direccion-nueva-grid">
                 <div class="field">
                   <label>Etiqueta</label>
@@ -1008,6 +1016,7 @@
                   <input type="text" placeholder="-79.0059"
                          [ngModel]="edicionDireccionLongitud()"
                          (ngModelChange)="edicionDireccionLongitud.set($event)" />
+                  <span class="hint">El mapa de arriba llena estos dos campos solo; también se pueden escribir a mano.</span>
                 </div>
               </div>
             }

@@ -6,6 +6,8 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { catchError, combineLatest, forkJoin, map, Observable, of, startWith, Subscription, switchMap } from 'rxjs';
 
 import { IconComponent } from '../../shared/icon';
+import { MapaSelectorComponent } from '../../shared/mapa-selector';
+import { LatLngLiteral } from '../../core/services/google-maps-loader.service';
 import { VisorContratoComponent } from '../../shared/visor-contrato';
 import { ClientesService } from '../../core/services/clientes.service';
 import { ContratosService } from '../../core/services/contratos.service';
@@ -90,7 +92,7 @@ type ServicioFila = {
 @Component({
   selector: 'app-cliente-detalle',
   standalone: true,
-  imports: [IconComponent, RouterLink, FormsModule, VisorContratoComponent],
+  imports: [IconComponent, RouterLink, FormsModule, VisorContratoComponent, MapaSelectorComponent],
   templateUrl: './cliente-detalle.html',
   // El aprovisionamiento GPON va en su propia hoja: el presupuesto de estilos de
   // Angular se aplica por archivo y la ficha ya rozaba el límite.
@@ -966,6 +968,27 @@ export class ClienteDetalleComponent implements OnDestroy {
   readonly edicionDireccionReferencia = signal('');
   readonly edicionDireccionLatitud = signal('');
   readonly edicionDireccionLongitud = signal('');
+
+  /**
+   * Dónde centrar el mapa al registrar la dirección nueva: en la ubicación que el
+   * servicio ya tenía, si la tiene, para que el pin se ajuste en vez de partir del
+   * dispositivo de quien edita —que puede estar en la oficina, no en el domicilio—.
+   * Sin coordenadas previas, `app-mapa-selector` cae solo a la geolocalización.
+   */
+  readonly ubicacionInicialEdicion = computed<LatLngLiteral | null>(() => {
+    const servicio = this.servicioEditandoDireccion();
+    if (!servicio) return null;
+    const actual = this.direccionesCliente().find((d) => d.id === servicio.direccionId);
+    return actual?.latitud != null && actual?.longitud != null
+      ? { lat: actual.latitud, lng: actual.longitud }
+      : null;
+  });
+
+  /** El pin del mapa llena los mismos campos que la entrada manual de coordenadas. */
+  onUbicacionElegidaEdicion(pos: LatLngLiteral) {
+    this.edicionDireccionLatitud.set(String(pos.lat));
+    this.edicionDireccionLongitud.set(String(pos.lng));
+  }
 
   abrirCambioDireccion(servicio: ServicioFila) {
     if (!this.puedeEditar()) return;
