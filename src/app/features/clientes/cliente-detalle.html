@@ -795,6 +795,11 @@
                       <span class="hint">Este cliente aún no tiene direcciones para reutilizar.</span>
                     }
                   } @else {
+                    <div class="field span2">
+                      <label>Ubicación en el mapa</label>
+                      <app-mapa-selector (ubicacionElegida)="onUbicacionElegidaServicio($event)" />
+                      <span class="hint">Arrastra el pin o toca el mapa sobre el domicilio del cliente.</span>
+                    </div>
                     <div class="form-grid direccion-nueva-grid">
                       <div class="field">
                         <label>Etiqueta</label>
@@ -842,6 +847,7 @@
                           [ngModel]="nuevaDireccionLongitud()"
                           (ngModelChange)="nuevaDireccionLongitud.set($event)"
                         />
+                        <span class="hint">El mapa de arriba llena estos dos campos solo; también se pueden escribir a mano.</span>
                       </div>
                     </div>
                   }

@@ -817,6 +817,16 @@ export class ClienteDetalleComponent implements OnDestroy {
     this.direccionServicioId.set(Number.isInteger(direccionId) && direccionId > 0 ? direccionId : null);
   }
 
+  /**
+   * El pin del mapa llena las mismas coordenadas que la entrada manual. Sin punto de
+   * partida —a diferencia del mapa de "Editar" en un servicio ya existente—: es una
+   * dirección nueva, igual que al dar de alta un cliente.
+   */
+  onUbicacionElegidaServicio(pos: LatLngLiteral) {
+    this.nuevaDireccionLatitud.set(String(pos.lat));
+    this.nuevaDireccionLongitud.set(String(pos.lng));
+  }
+
   guardarServicio() {
     const cliente = this.detalle();
     const oferta = this.ofertaServicioSeleccionada();
