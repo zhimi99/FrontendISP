@@ -1004,16 +1004,21 @@ export class ClienteDetalleComponent implements OnDestroy {
     if (!this.puedeEditar()) return;
     this.errorDireccion.set(null);
     this.motivoDireccion.set('');
-    // Se parte de las direcciones que el cliente ya tiene; registrar una nueva es
-    // el segundo camino, no el primero, para no llenar la ficha de duplicados.
+
+    // El camino por defecto es corregir lo que ya hay, no partir de cero: se
+    // precarga el formulario de "dirección nueva" con los datos que el servicio
+    // ya tiene. Guardar sigue creando un registro aparte y repuntando el
+    // contrato -nunca se toca la fila original-, así que esto es solo para no
+    // tener que retipear una dirección que en su mayoría ya está bien.
     const otras = this.direccionesCliente().filter((d) => d.id !== servicio.direccionId);
-    this.modoDireccionEdicion.set(otras.length ? 'EXISTENTE' : 'NUEVA');
+    const actual = this.direccionesCliente().find((d) => d.id === servicio.direccionId);
+    this.modoDireccionEdicion.set('NUEVA');
     this.direccionEdicionId.set(otras[0]?.id ?? null);
-    this.edicionDireccionEtiqueta.set('');
-    this.edicionDireccionTexto.set('');
-    this.edicionDireccionReferencia.set('');
-    this.edicionDireccionLatitud.set('');
-    this.edicionDireccionLongitud.set('');
+    this.edicionDireccionEtiqueta.set(actual?.etiqueta ?? '');
+    this.edicionDireccionTexto.set(actual?.direccionTexto ?? '');
+    this.edicionDireccionReferencia.set(actual?.referencia ?? '');
+    this.edicionDireccionLatitud.set(actual?.latitud != null ? String(actual.latitud) : '');
+    this.edicionDireccionLongitud.set(actual?.longitud != null ? String(actual.longitud) : '');
     this.servicioEditandoDireccion.set(servicio);
   }
 

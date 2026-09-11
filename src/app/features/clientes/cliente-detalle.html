@@ -957,18 +957,18 @@
 
         <div class="form-grid servicio-form-grid">
           <div class="field span2">
-            <label>Dirección nueva <span class="req">*</span></label>
+            <label>Dirección <span class="req">*</span></label>
             <div class="direccion-mode">
+              <button type="button" class="direccion-mode-btn"
+                      [class.active]="modoDireccionEdicion() === 'NUEVA'"
+                      (click)="cambiarModoDireccionEdicion('NUEVA')">
+                Corregir esta dirección
+              </button>
               <button type="button" class="direccion-mode-btn"
                       [class.active]="modoDireccionEdicion() === 'EXISTENTE'"
                       (click)="cambiarModoDireccionEdicion('EXISTENTE')"
                       [disabled]="!direccionesParaCambio().length">
                 Usar otra dirección del cliente
-              </button>
-              <button type="button" class="direccion-mode-btn"
-                      [class.active]="modoDireccionEdicion() === 'NUEVA'"
-                      (click)="cambiarModoDireccionEdicion('NUEVA')">
-                Registrar una nueva
               </button>
             </div>
 
