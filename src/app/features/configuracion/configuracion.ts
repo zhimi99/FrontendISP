@@ -7,8 +7,9 @@ import { CertificadoComponent } from './certificado';
 import { EmisorComponent } from './emisor';
 import { EmpleadosComponent } from './empleados';
 import { PlanesComponent } from './planes';
+import { ServiciosComponent } from './servicios';
 
-export type Pestana = 'empleados' | 'catalogos' | 'planes' | 'emisor' | 'certificado';
+export type Pestana = 'empleados' | 'catalogos' | 'servicios' | 'planes' | 'emisor' | 'certificado';
 
 /**
  * Configuración: los maestros del sistema.
@@ -31,6 +32,7 @@ export type Pestana = 'empleados' | 'catalogos' | 'planes' | 'emisor' | 'certifi
     IconComponent,
     EmpleadosComponent,
     CatalogosComponent,
+    ServiciosComponent,
     PlanesComponent,
     EmisorComponent,
     CertificadoComponent,
@@ -50,6 +52,9 @@ export class ConfiguracionComponent {
       return [
         { id: 'empleados', texto: 'Empleados', icono: 'users' },
         { id: 'catalogos', texto: 'Materiales y bodegas', icono: 'box' },
+        // Lo que se puede contratar. Va antes de Planes porque es lo que primero se
+        // elige al vender: el plan solo entra si el servicio lleva internet.
+        { id: 'servicios', texto: 'Servicios', icono: 'contract' },
         { id: 'planes', texto: 'Planes', icono: 'network' },
         { id: 'emisor', texto: 'Emisor SRI', icono: 'invoice' },
         // Solo ADMIN, y ni siquiera FINANZAS: la clave privada de este archivo firma

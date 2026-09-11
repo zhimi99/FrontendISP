@@ -283,8 +283,9 @@ export interface AltaClienteResponse {
   clienteCodigo: string;
 }
 
-/** Oferta activa del catálogo extensible que puede venderse a un cliente. */
+/** Oferta del catálogo extensible que puede venderse a un cliente. */
 export interface OfertaServicioCatalogo {
+  id: number;
   codigo: string;
   nombre: string;
   descripcion: string | null;
@@ -292,11 +293,52 @@ export interface OfertaServicioCatalogo {
   tipoNombre: string;
   modalidadCobro: ModalidadCobro;
   precioReferencial: number;
+  /** El alta solo recibe activas; Configuración las pide todas para reactivarlas. */
+  activo: boolean;
   requiereDireccion: boolean;
   requiereInstalacion: boolean;
   usaRed: boolean;
   sujetoMora: boolean;
   requierePlanInternet: boolean;
+}
+
+/**
+ * Tipo de servicio: la familia a la que pertenece una oferta (Internet, TV, cámaras…).
+ * Es quien decide las reglas —si pide dirección, si usa red, si entra en mora—, no la
+ * oferta, que solo pone nombre y precio.
+ */
+export interface TipoServicioCatalogo {
+  codigo: string;
+  nombre: string;
+  descripcion: string | null;
+  requiereDireccion: boolean;
+  requiereInstalacion: boolean;
+  usaRed: boolean;
+  sujetoMora: boolean;
+  requierePlanInternet: boolean;
+  activo: boolean;
+}
+
+/** Cuerpo de `POST /api/catalogo-servicios/ofertas`. */
+export interface CrearOfertaServicioRequest {
+  tipoCodigo: string;
+  codigo: string;
+  nombre: string;
+  descripcion: string | null;
+  modalidadCobro: ModalidadCobro;
+  precioReferencial: number;
+}
+
+/**
+ * Cuerpo de `PUT /api/catalogo-servicios/ofertas/{id}`. Sin `codigo` ni `tipoCodigo`:
+ * el código es la identidad de la oferta y el tipo decide sus reglas, así que ninguno
+ * de los dos se corrige sobre algo que ya se vendió.
+ */
+export interface EditarOfertaServicioRequest {
+  nombre: string;
+  descripcion: string | null;
+  modalidadCobro: ModalidadCobro;
+  precioReferencial: number;
 }
 
 /** Domicilio que se crea junto con un contrato adicional. */

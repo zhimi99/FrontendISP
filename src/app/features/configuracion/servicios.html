@@ -1,0 +1,169 @@
+<div class="tab-head">
+  <div>
+    <h3>Servicios que se pueden contratar</h3>
+    <p class="sub">Lo que aparece en «Agregar contrato / servicio» al vender: internet, TV, cámaras, soporte…</p>
+  </div>
+  <div class="tab-acc">
+    <button class="btn" (click)="cargar()"><app-icon name="refresh" [size]="15" /> Actualizar</button>
+    <button class="btn btn-primary" (click)="abrir(null)" [disabled]="!tiposDisponibles().length">
+      <app-icon name="plus" [size]="15" /> Nuevo servicio
+    </button>
+  </div>
+</div>
+
+@if (banner(); as b) {
+  <div class="card banner" [class.error]="b.error">
+    <span>{{ b.texto }}</span>
+    <button class="banner-x" (click)="banner.set(null)" aria-label="Cerrar">✕</button>
+  </div>
+}
+
+@if (!cargando() && !tiposDisponibles().length) {
+  <div class="card banner error">
+    <span>
+      No hay ningún tipo de servicio activo, así que todavía no se puede crear una oferta.
+      Los tipos (Internet, TV, cámaras…) definen las reglas de cada familia y hoy se dan
+      de alta por API.
+    </span>
+  </div>
+}
+
+<div class="card table-card">
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Servicio</th>
+          <th>Tipo</th>
+          <th>Cobro</th>
+          <th class="right">Precio</th>
+          <th>Estado</th>
+          <th class="w-acc">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (o of lista(); track o.id) {
+          <tr [class.inactivo]="!o.activo">
+            <td class="mono strong">{{ o.codigo }}</td>
+            <td>
+              {{ o.nombre }}
+              @if (o.descripcion) { <span class="muted"> · {{ o.descripcion }}</span> }
+            </td>
+            <td class="muted">{{ o.tipoNombre }}</td>
+            <td class="muted">{{ modalidadEtiqueta(o.modalidadCobro) }}</td>
+            <td class="right mono">{{ moneda(o.precioReferencial) }}</td>
+            <td>
+              <span class="badge" [class]="o.activo ? 'ok' : 'neutral'">
+                {{ o.activo ? 'En venta' : 'Retirado' }}
+              </span>
+            </td>
+            <td class="w-acc">
+              <div class="acc">
+                <button class="btn mini" (click)="abrir(o)">Editar</button>
+                <button class="btn mini" [class.danger]="o.activo"
+                        [disabled]="procesandoId() === o.id" (click)="cambiarEstado(o)">
+                  {{ procesandoId() === o.id ? '…' : (o.activo ? 'Retirar' : 'Reactivar') }}
+                </button>
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="7" class="empty">{{ mensajeTabla() }}</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+@if (creando() || editando()) {
+  <div class="modal-backdrop" (click)="cerrar()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <h3>{{ creando() ? 'Nuevo servicio' : 'Editar servicio' }}</h3>
+        <button class="modal-x" (click)="cerrar()" [disabled]="guardando()" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        @if (!creando()) {
+          <div class="identidad">
+            <span class="hint">
+              El <strong>precio nuevo rige para lo que se venda desde ahora</strong>: cada contrato
+              conserva el precio con el que se firmó, y las facturas emitidas no cambian.
+            </span>
+          </div>
+        }
+
+        <div class="form-grid">
+          <div class="field">
+            <label>Tipo de servicio *</label>
+            @if (creando()) {
+              <select [ngModel]="oTipo()" (ngModelChange)="onTipoChange($event)">
+                <option value="" disabled>Elige el tipo</option>
+                @for (t of tiposDisponibles(); track t.codigo) {
+                  <option [value]="t.codigo">{{ t.nombre }}</option>
+                }
+              </select>
+              <span class="hint">Decide si el servicio pide dirección, usa red y entra en mora.</span>
+            } @else {
+              <input type="text" [value]="editando()!.tipoNombre" disabled />
+              <span class="hint">
+                No se cambia: el tipo fija las reglas con las que ya se vendió este servicio.
+                Si hace falta otro, crea un servicio nuevo y retira este.
+              </span>
+            }
+          </div>
+          <div class="field">
+            <label>Código *</label>
+            <input type="text" [ngModel]="oCodigo()" (ngModelChange)="oCodigo.set($event)"
+                   [disabled]="!creando()" placeholder="TV-BASICO" />
+            @if (!creando()) {
+              <span class="hint">No se edita: identifica el servicio en los contratos firmados.</span>
+            } @else {
+              <span class="hint">Letras, dígitos, punto, guion y guion bajo. Sin espacios ni acentos.</span>
+            }
+          </div>
+
+          <div class="field span2">
+            <label>Nombre *</label>
+            <input type="text" [ngModel]="oNombre()" (ngModelChange)="oNombre.set($event)"
+                   placeholder="TV Básico 80 canales" />
+            <span class="hint">Es lo que ve quien vende, en el desplegable del alta.</span>
+          </div>
+
+          <div class="field">
+            <label>Modalidad de cobro *</label>
+            <select [ngModel]="oModalidad()" (ngModelChange)="oModalidad.set($event)"
+                    [disabled]="modalidadBloqueada()">
+              <option value="RECURRENTE">Mensual</option>
+              <option value="UNICO">Pago único</option>
+            </select>
+            @if (modalidadBloqueada()) {
+              <span class="hint">
+                Este tipo entra en mora o lleva plan de internet, así que solo admite cobro mensual.
+              </span>
+            }
+          </div>
+          <div class="field">
+            <label>Precio (USD) *</label>
+            <input type="number" min="0" step="0.01" [ngModel]="oPrecio()" (ngModelChange)="oPrecio.set($event)" />
+            <span class="hint">Sin IVA: lo aplica la facturación al emitir.</span>
+          </div>
+
+          <div class="field span2">
+            <label>Descripción</label>
+            <input type="text" [ngModel]="oDescripcion()" (ngModelChange)="oDescripcion.set($event)"
+                   placeholder="Opcional: qué incluye, para quien lo vende" />
+          </div>
+        </div>
+
+        @if (errorForm()) { <div class="modal-error">{{ errorForm() }}</div> }
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" (click)="cerrar()" [disabled]="guardando()">Cancelar</button>
+        <button type="button" class="btn btn-primary" (click)="guardar()" [disabled]="guardando()">
+          {{ guardando() ? 'Guardando…' : 'Guardar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
