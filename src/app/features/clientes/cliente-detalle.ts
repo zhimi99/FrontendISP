@@ -966,10 +966,11 @@ export class ClienteDetalleComponent implements OnDestroy {
    * este modal no ofrece ningún otro campo, y el motivo es obligatorio: el contrato
    * firmado sigue nombrando la dirección anterior y esa diferencia debe quedar
    * explicada.
+   *
+   * <p>A propósito no ofrece "usar otra dirección del cliente": aquí se corrige el
+   * domicilio de este servicio, no se reasigna a uno ya registrado para otro fin.</p>
    */
   readonly servicioEditandoDireccion = signal<ServicioFila | null>(null);
-  readonly modoDireccionEdicion = signal<ModoDireccionServicio>('EXISTENTE');
-  readonly direccionEdicionId = signal<number | null>(null);
   readonly motivoDireccion = signal('');
   readonly guardandoDireccion = signal(false);
   readonly errorDireccion = signal<string | null>(null);
@@ -1005,15 +1006,11 @@ export class ClienteDetalleComponent implements OnDestroy {
     this.errorDireccion.set(null);
     this.motivoDireccion.set('');
 
-    // El camino por defecto es corregir lo que ya hay, no partir de cero: se
-    // precarga el formulario de "dirección nueva" con los datos que el servicio
-    // ya tiene. Guardar sigue creando un registro aparte y repuntando el
-    // contrato -nunca se toca la fila original-, así que esto es solo para no
-    // tener que retipear una dirección que en su mayoría ya está bien.
-    const otras = this.direccionesCliente().filter((d) => d.id !== servicio.direccionId);
+    // Se precarga con lo que el servicio ya tiene: se corrige lo que está mal
+    // en vez de partir de cero. Guardar sigue creando un registro aparte y
+    // repuntando el contrato -nunca se toca la fila original, que puede estar
+    // compartida con otro servicio del mismo cliente-.
     const actual = this.direccionesCliente().find((d) => d.id === servicio.direccionId);
-    this.modoDireccionEdicion.set('NUEVA');
-    this.direccionEdicionId.set(otras[0]?.id ?? null);
     this.edicionDireccionEtiqueta.set(actual?.etiqueta ?? '');
     this.edicionDireccionTexto.set(actual?.direccionTexto ?? '');
     this.edicionDireccionReferencia.set(actual?.referencia ?? '');
@@ -1027,20 +1024,6 @@ export class ClienteDetalleComponent implements OnDestroy {
     this.servicioEditandoDireccion.set(null);
   }
 
-  /** Las del cliente menos la que el servicio ya tiene: cambiar a la misma no es un cambio. */
-  readonly direccionesParaCambio = computed(() => {
-    const actual = this.servicioEditandoDireccion()?.direccionId ?? null;
-    return this.direccionesCliente().filter((d) => d.id !== actual);
-  });
-
-  cambiarModoDireccionEdicion(modo: ModoDireccionServicio) {
-    this.modoDireccionEdicion.set(modo);
-    this.errorDireccion.set(null);
-    if (modo === 'EXISTENTE') {
-      this.direccionEdicionId.set(this.direccionesParaCambio()[0]?.id ?? null);
-    }
-  }
-
   guardarCambioDireccion() {
     const servicio = this.servicioEditandoDireccion();
     if (!servicio) return;
@@ -1051,23 +1034,13 @@ export class ClienteDetalleComponent implements OnDestroy {
       return;
     }
 
-    let direccionId: number | null = null;
-    let nuevaDireccion: NuevaDireccionContratoRequest | null = null;
-    if (this.modoDireccionEdicion() === 'EXISTENTE') {
-      direccionId = this.direccionEdicionId();
-      if (!direccionId) {
-        this.errorDireccion.set('Selecciona una dirección o registra una nueva.');
-        return;
-      }
-    } else {
-      nuevaDireccion = this.construirDireccionEditada();
-      if (!nuevaDireccion) return;
-    }
+    const nuevaDireccion = this.construirDireccionEditada();
+    if (!nuevaDireccion) return;
 
     this.guardandoDireccion.set(true);
     this.errorDireccion.set(null);
     this.contratosService
-      .cambiarDireccion(servicio.id, { direccionId, nuevaDireccion, motivo })
+      .cambiarDireccion(servicio.id, { direccionId: null, nuevaDireccion, motivo })
       .subscribe({
         next: () => {
           this.guardandoDireccion.set(false);

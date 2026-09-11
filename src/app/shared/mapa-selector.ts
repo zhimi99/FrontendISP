@@ -1,4 +1,14 @@
-import { AfterViewInit, Component, ElementRef, ViewChild, inject, input, output, signal } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  ViewChild,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 
 import {
   GoogleMapInstance,
@@ -80,6 +90,22 @@ export class MapaSelectorComponent implements AfterViewInit {
 
   private marcador?: GoogleMarkerInstance;
 
+  constructor() {
+    // Vive durante todo el ciclo del componente, no solo al cargar: Google
+    // detecta ApiNotActivatedMapError al construir el mapa, no al descargar el
+    // script, así que este aviso puede llegar después de que el mapa ya se
+    // haya mostrado "bien". El guard evita disparar un error en el primer
+    // arranque, cuando el contador todavía está en 0.
+    effect(() => {
+      if (this.loader.fallaAutenticacion() === 0) return;
+      this.error.set(
+        'La clave de Google Maps no está habilitada para este sitio. En Google '
+        + 'Cloud: revisa que "Maps JavaScript API" esté activada y que el '
+        + 'proyecto tenga una cuenta de facturación vinculada.',
+      );
+    });
+  }
+
   ngAfterViewInit() {
     this.iniciar();
   }
@@ -113,8 +139,11 @@ export class MapaSelectorComponent implements AfterViewInit {
       });
 
       this.cargando.set(false);
-    } catch {
-      this.error.set('No se pudo cargar el mapa.');
+    } catch (e) {
+      // El loader ya distingue el motivo (API no habilitada, sin facturación,
+      // script bloqueado); mostrarlo evita que quien lo vea tenga que abrir la
+      // consola del navegador para saber qué revisar.
+      this.error.set(e instanceof Error ? e.message : 'No se pudo cargar el mapa.');
       this.cargando.set(false);
     }
   }

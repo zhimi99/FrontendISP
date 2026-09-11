@@ -957,75 +957,43 @@
 
         <div class="form-grid servicio-form-grid">
           <div class="field span2">
+            <label>Ubicación en el mapa</label>
+            <app-mapa-selector
+              [inicial]="ubicacionInicialEdicion()"
+              (ubicacionElegida)="onUbicacionElegidaEdicion($event)"
+            />
+            <span class="hint">Arrastra el pin o toca el mapa sobre el domicilio exacto.</span>
+          </div>
+          <div class="field">
+            <label>Etiqueta</label>
+            <input type="text" placeholder="Ej. Casa nueva"
+                   [ngModel]="edicionDireccionEtiqueta()"
+                   (ngModelChange)="edicionDireccionEtiqueta.set($event)" />
+          </div>
+          <div class="field">
+            <label>Referencia</label>
+            <input type="text" placeholder="Ej. junto a la escuela"
+                   [ngModel]="edicionDireccionReferencia()"
+                   (ngModelChange)="edicionDireccionReferencia.set($event)" />
+          </div>
+          <div class="field span2">
             <label>Dirección <span class="req">*</span></label>
-            <div class="direccion-mode">
-              <button type="button" class="direccion-mode-btn"
-                      [class.active]="modoDireccionEdicion() === 'NUEVA'"
-                      (click)="cambiarModoDireccionEdicion('NUEVA')">
-                Corregir esta dirección
-              </button>
-              <button type="button" class="direccion-mode-btn"
-                      [class.active]="modoDireccionEdicion() === 'EXISTENTE'"
-                      (click)="cambiarModoDireccionEdicion('EXISTENTE')"
-                      [disabled]="!direccionesParaCambio().length">
-                Usar otra dirección del cliente
-              </button>
-            </div>
-
-            @if (modoDireccionEdicion() === 'EXISTENTE') {
-              @if (direccionesParaCambio().length) {
-                <select [ngModel]="direccionEdicionId()"
-                        (ngModelChange)="direccionEdicionId.set($event)">
-                  @for (direccion of direccionesParaCambio(); track direccion.id) {
-                    <option [value]="direccion.id">{{ direccionEtiqueta(direccion) }}</option>
-                  }
-                </select>
-              } @else {
-                <span class="hint">Este cliente no tiene otra dirección registrada.</span>
-              }
-            } @else {
-              <div class="field span2">
-                <label>Ubicación en el mapa</label>
-                <app-mapa-selector
-                  [inicial]="ubicacionInicialEdicion()"
-                  (ubicacionElegida)="onUbicacionElegidaEdicion($event)"
-                />
-                <span class="hint">Arrastra el pin o toca el mapa sobre el domicilio exacto.</span>
-              </div>
-              <div class="form-grid direccion-nueva-grid">
-                <div class="field">
-                  <label>Etiqueta</label>
-                  <input type="text" placeholder="Ej. Casa nueva"
-                         [ngModel]="edicionDireccionEtiqueta()"
-                         (ngModelChange)="edicionDireccionEtiqueta.set($event)" />
-                </div>
-                <div class="field">
-                  <label>Referencia</label>
-                  <input type="text" placeholder="Ej. junto a la escuela"
-                         [ngModel]="edicionDireccionReferencia()"
-                         (ngModelChange)="edicionDireccionReferencia.set($event)" />
-                </div>
-                <div class="field span2">
-                  <label>Dirección <span class="req">*</span></label>
-                  <input type="text" placeholder="Calle, número y sector"
-                         [ngModel]="edicionDireccionTexto()"
-                         (ngModelChange)="edicionDireccionTexto.set($event)" />
-                </div>
-                <div class="field">
-                  <label>Latitud</label>
-                  <input type="text" placeholder="-2.9001"
-                         [ngModel]="edicionDireccionLatitud()"
-                         (ngModelChange)="edicionDireccionLatitud.set($event)" />
-                </div>
-                <div class="field">
-                  <label>Longitud</label>
-                  <input type="text" placeholder="-79.0059"
-                         [ngModel]="edicionDireccionLongitud()"
-                         (ngModelChange)="edicionDireccionLongitud.set($event)" />
-                  <span class="hint">El mapa de arriba llena estos dos campos solo; también se pueden escribir a mano.</span>
-                </div>
-              </div>
-            }
+            <input type="text" placeholder="Calle, número y sector"
+                   [ngModel]="edicionDireccionTexto()"
+                   (ngModelChange)="edicionDireccionTexto.set($event)" />
+          </div>
+          <div class="field">
+            <label>Latitud</label>
+            <input type="text" placeholder="-2.9001"
+                   [ngModel]="edicionDireccionLatitud()"
+                   (ngModelChange)="edicionDireccionLatitud.set($event)" />
+          </div>
+          <div class="field">
+            <label>Longitud</label>
+            <input type="text" placeholder="-79.0059"
+                   [ngModel]="edicionDireccionLongitud()"
+                   (ngModelChange)="edicionDireccionLongitud.set($event)" />
+            <span class="hint">El mapa de arriba llena estos dos campos solo; también se pueden escribir a mano.</span>
           </div>
 
           <div class="field span2">
