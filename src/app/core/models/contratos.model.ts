@@ -350,6 +350,19 @@ export interface NuevaDireccionContratoRequest {
   longitud: number | null;
 }
 
+/**
+ * Cuerpo de `PUT /api/contratos/{codigo}/direccion`.
+ *
+ * Solo la dirección: ni plan, ni precio, ni estado. `direccionId` reutiliza una del
+ * cliente y `nuevaDireccion` registra otra; mandar las dos, o ninguna, es un error.
+ * El motivo es obligatorio porque el contrato firmado nombra la dirección anterior.
+ */
+export interface CambiarDireccionContratoRequest {
+  direccionId: number | null;
+  nuevaDireccion: NuevaDireccionContratoRequest | null;
+  motivo: string;
+}
+
 /** Cuerpo de `POST /api/clientes/{codigo}/contratos`. */
 export interface CrearContratoServicioRequest {
   ofertaCodigo: string;

@@ -22,6 +22,7 @@ import {
   EditarClienteRequest,
   GuardarRegistroGponRequest,
   HistorialEstado,
+  ModalidadCobro,
   MOTIVO_ETIQUETA,
   NuevaDireccionContratoRequest,
   OfertaServicioCatalogo,
@@ -63,6 +64,28 @@ type EstadoHistorial = { estado: 'cargando' | 'ok' | 'error'; lista: HistorialEs
 type EstadoEquipos = { estado: 'cargando' | 'ok' | 'error'; lista: Equipo[] };
 type EstadoRegistroGpon = { estado: 'cargando' | 'ok' | 'error'; dato: RegistroGpon | null };
 type ModoDireccionServicio = 'EXISTENTE' | 'NUEVA';
+
+/**
+ * Una fila de la tabla de servicios del cliente, tal como la arma `armarVista`.
+ * Se declara para poder pasar la fila al modal de corrección de dirección sin
+ * perder el tipo por el camino.
+ */
+type ServicioFila = {
+  /** El código del contrato (CTR-000001): es lo que espera la API. */
+  id: string;
+  servicio: string;
+  tipo: string;
+  plan: string | null;
+  velocidad: string | null;
+  modalidad: ModalidadCobro;
+  direccion: string;
+  direccionId: number | null;
+  usaRed: boolean;
+  requiereInstalacion: boolean;
+  estado: EstadoCliente;
+  fechaInicio: string;
+  precio: number;
+};
 
 @Component({
   selector: 'app-cliente-detalle',
@@ -923,6 +946,145 @@ export class ClienteDetalleComponent implements OnDestroy {
     };
   }
 
+  /* ---------- Corregir la dirección de un servicio ---------- */
+
+  /**
+   * Lo único que admite un contrato ya generado. El resto de condiciones —plan,
+   * precio— no se renegocian: se retira el contrato y se da de alta otro. Por eso
+   * este modal no ofrece ningún otro campo, y el motivo es obligatorio: el contrato
+   * firmado sigue nombrando la dirección anterior y esa diferencia debe quedar
+   * explicada.
+   */
+  readonly servicioEditandoDireccion = signal<ServicioFila | null>(null);
+  readonly modoDireccionEdicion = signal<ModoDireccionServicio>('EXISTENTE');
+  readonly direccionEdicionId = signal<number | null>(null);
+  readonly motivoDireccion = signal('');
+  readonly guardandoDireccion = signal(false);
+  readonly errorDireccion = signal<string | null>(null);
+  readonly edicionDireccionEtiqueta = signal('');
+  readonly edicionDireccionTexto = signal('');
+  readonly edicionDireccionReferencia = signal('');
+  readonly edicionDireccionLatitud = signal('');
+  readonly edicionDireccionLongitud = signal('');
+
+  abrirCambioDireccion(servicio: ServicioFila) {
+    if (!this.puedeEditar()) return;
+    this.errorDireccion.set(null);
+    this.motivoDireccion.set('');
+    // Se parte de las direcciones que el cliente ya tiene; registrar una nueva es
+    // el segundo camino, no el primero, para no llenar la ficha de duplicados.
+    const otras = this.direccionesCliente().filter((d) => d.id !== servicio.direccionId);
+    this.modoDireccionEdicion.set(otras.length ? 'EXISTENTE' : 'NUEVA');
+    this.direccionEdicionId.set(otras[0]?.id ?? null);
+    this.edicionDireccionEtiqueta.set('');
+    this.edicionDireccionTexto.set('');
+    this.edicionDireccionReferencia.set('');
+    this.edicionDireccionLatitud.set('');
+    this.edicionDireccionLongitud.set('');
+    this.servicioEditandoDireccion.set(servicio);
+  }
+
+  cerrarCambioDireccion() {
+    if (this.guardandoDireccion()) return;
+    this.servicioEditandoDireccion.set(null);
+  }
+
+  /** Las del cliente menos la que el servicio ya tiene: cambiar a la misma no es un cambio. */
+  readonly direccionesParaCambio = computed(() => {
+    const actual = this.servicioEditandoDireccion()?.direccionId ?? null;
+    return this.direccionesCliente().filter((d) => d.id !== actual);
+  });
+
+  cambiarModoDireccionEdicion(modo: ModoDireccionServicio) {
+    this.modoDireccionEdicion.set(modo);
+    this.errorDireccion.set(null);
+    if (modo === 'EXISTENTE') {
+      this.direccionEdicionId.set(this.direccionesParaCambio()[0]?.id ?? null);
+    }
+  }
+
+  guardarCambioDireccion() {
+    const servicio = this.servicioEditandoDireccion();
+    if (!servicio) return;
+
+    const motivo = this.motivoDireccion().trim();
+    if (!motivo) {
+      this.errorDireccion.set('Escribe el motivo del cambio: queda en el historial del contrato.');
+      return;
+    }
+
+    let direccionId: number | null = null;
+    let nuevaDireccion: NuevaDireccionContratoRequest | null = null;
+    if (this.modoDireccionEdicion() === 'EXISTENTE') {
+      direccionId = this.direccionEdicionId();
+      if (!direccionId) {
+        this.errorDireccion.set('Selecciona una dirección o registra una nueva.');
+        return;
+      }
+    } else {
+      nuevaDireccion = this.construirDireccionEditada();
+      if (!nuevaDireccion) return;
+    }
+
+    this.guardandoDireccion.set(true);
+    this.errorDireccion.set(null);
+    this.contratosService
+      .cambiarDireccion(servicio.id, { direccionId, nuevaDireccion, motivo })
+      .subscribe({
+        next: () => {
+          this.guardandoDireccion.set(false);
+          this.servicioEditandoDireccion.set(null);
+          this.avisoServicio.set({
+            texto: `Dirección del contrato ${servicio.id} actualizada. El contrato firmado conserva la anterior; el cambio quedó registrado con su motivo.`,
+            error: false,
+          });
+          this.recargar.update((n) => n + 1);
+        },
+        error: (e) => {
+          this.guardandoDireccion.set(false);
+          this.errorDireccion.set(
+            mensajeError(e, {
+              porEstado: {
+                403: 'Tu rol no tiene permiso para cambiar la dirección de un contrato.',
+                404: 'Ese contrato ya no existe; recarga la ficha.',
+                422: () => e.error?.message ?? 'No se pudo cambiar la dirección.',
+              },
+              generico: 'No se pudo cambiar la dirección.',
+            }),
+          );
+        },
+      });
+  }
+
+  private construirDireccionEditada(): NuevaDireccionContratoRequest | null {
+    const direccionTexto = this.edicionDireccionTexto().trim();
+    if (!direccionTexto) {
+      this.errorDireccion.set('Escribe la dirección nueva.');
+      return null;
+    }
+
+    const latitudTexto = this.edicionDireccionLatitud().trim();
+    const longitudTexto = this.edicionDireccionLongitud().trim();
+    const latitud = latitudTexto ? this.numeroFormulario(latitudTexto) : null;
+    const longitud = longitudTexto ? this.numeroFormulario(longitudTexto) : null;
+    if (latitudTexto && (latitud == null || latitud < -90 || latitud > 90)) {
+      this.errorDireccion.set('La latitud debe estar entre -90 y 90.');
+      return null;
+    }
+    if (longitudTexto && (longitud == null || longitud < -180 || longitud > 180)) {
+      this.errorDireccion.set('La longitud debe estar entre -180 y 180.');
+      return null;
+    }
+
+    return {
+      etiqueta: this.edicionDireccionEtiqueta().trim() || null,
+      direccionTexto,
+      referencia: this.edicionDireccionReferencia().trim() || null,
+      latitud,
+      longitud,
+    };
+  }
+
   private numeroFormulario(valor: string): number | null {
     const numero = Number(valor.trim().replace(',', '.'));
     return Number.isFinite(numero) ? numero : null;
@@ -1046,6 +1208,9 @@ export class ClienteDetalleComponent implements OnDestroy {
       velocidad: c.velocidad,
       modalidad: c.modalidadCobro,
       direccion: c.direccion?.direccionTexto ?? 'Sin dirección asociada',
+      direccionId: c.direccion?.id ?? null,
+      // Para avisar, al corregir la dirección, de que el equipo no se mueve solo.
+      usaRed: c.usaRed,
       requiereInstalacion: c.requiereInstalacion,
       estado: c.estadoServicio as EstadoCliente,
       fechaInicio: this.fmt(c.fechaAlta),

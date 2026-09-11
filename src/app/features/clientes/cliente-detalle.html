@@ -216,6 +216,7 @@
                     <th>Estado</th>
                     <th>Fecha de alta</th>
                     <th class="right">Precio</th>
+                    @if (puedeEditar()) { <th class="w-acc">Acciones</th> }
                   </tr>
                 </thead>
                 <tbody>
@@ -237,10 +238,23 @@
                       <td><span class="badge" [class]="estadosMap[s.estado].tono">{{ estadosMap[s.estado].texto }}</span></td>
                       <td class="muted">{{ s.fechaInicio }}</td>
                       <td class="right mono">{{ moneda(s.precio) }}</td>
+                      @if (puedeEditar()) {
+                        <td class="w-acc">
+                          <!-- Solo la dirección: las condiciones comerciales de un
+                               contrato generado no se renegocian, se retira y se
+                               vuelve a dar de alta. Un contrato retirado ya es
+                               historia y su dirección no se toca. -->
+                          @if (s.estado !== 'RETIRADO') {
+                            <button type="button" class="btn mini" (click)="abrirCambioDireccion(s)">
+                              Editar dirección
+                            </button>
+                          }
+                        </td>
+                      }
                     </tr>
                   } @empty {
                     <tr>
-                      <td colspan="7" class="empty">
+                      <td [attr.colspan]="puedeEditar() ? 8 : 7" class="empty">
                         Este cliente todavía no tiene servicios registrados.
                       </td>
                     </tr>
@@ -902,6 +916,123 @@
           [disabled]="guardandoServicio() || cargandoCatalogosServicio() || !ofertasServicio().length"
         >
           {{ guardandoServicio() ? 'Registrando…' : 'Registrar servicio' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ============ Modal: corregir la dirección de un servicio ============ -->
+@if (servicioEditandoDireccion(); as srv) {
+  <div class="modal-backdrop" (click)="cerrarCambioDireccion()">
+    <div class="modal modal-servicio" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <div>
+          <h3>Editar dirección del servicio</h3>
+          <p class="modal-sub">
+            {{ srv.servicio }} · contrato {{ srv.id }}. Solo cambia dónde se presta;
+            el plan, el precio y el estado quedan igual.
+          </p>
+        </div>
+        <button class="modal-x" type="button" (click)="cerrarCambioDireccion()"
+                [disabled]="guardandoDireccion()" aria-label="Cerrar">×</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="identidad">
+          <span class="hint">Dirección actual: <strong>{{ srv.direccion }}</strong></span>
+          @if (srv.usaRed) {
+            <span class="hint">
+              Este servicio usa la red: corregir la dirección <strong>no mueve el equipo</strong>.
+              Si el abonado se mudó de verdad, hace falta además una orden de trabajo.
+            </span>
+          }
+        </div>
+
+        <div class="form-grid servicio-form-grid">
+          <div class="field span2">
+            <label>Dirección nueva <span class="req">*</span></label>
+            <div class="direccion-mode">
+              <button type="button" class="direccion-mode-btn"
+                      [class.active]="modoDireccionEdicion() === 'EXISTENTE'"
+                      (click)="cambiarModoDireccionEdicion('EXISTENTE')"
+                      [disabled]="!direccionesParaCambio().length">
+                Usar otra dirección del cliente
+              </button>
+              <button type="button" class="direccion-mode-btn"
+                      [class.active]="modoDireccionEdicion() === 'NUEVA'"
+                      (click)="cambiarModoDireccionEdicion('NUEVA')">
+                Registrar una nueva
+              </button>
+            </div>
+
+            @if (modoDireccionEdicion() === 'EXISTENTE') {
+              @if (direccionesParaCambio().length) {
+                <select [ngModel]="direccionEdicionId()"
+                        (ngModelChange)="direccionEdicionId.set($event)">
+                  @for (direccion of direccionesParaCambio(); track direccion.id) {
+                    <option [value]="direccion.id">{{ direccionEtiqueta(direccion) }}</option>
+                  }
+                </select>
+              } @else {
+                <span class="hint">Este cliente no tiene otra dirección registrada.</span>
+              }
+            } @else {
+              <div class="form-grid direccion-nueva-grid">
+                <div class="field">
+                  <label>Etiqueta</label>
+                  <input type="text" placeholder="Ej. Casa nueva"
+                         [ngModel]="edicionDireccionEtiqueta()"
+                         (ngModelChange)="edicionDireccionEtiqueta.set($event)" />
+                </div>
+                <div class="field">
+                  <label>Referencia</label>
+                  <input type="text" placeholder="Ej. junto a la escuela"
+                         [ngModel]="edicionDireccionReferencia()"
+                         (ngModelChange)="edicionDireccionReferencia.set($event)" />
+                </div>
+                <div class="field span2">
+                  <label>Dirección <span class="req">*</span></label>
+                  <input type="text" placeholder="Calle, número y sector"
+                         [ngModel]="edicionDireccionTexto()"
+                         (ngModelChange)="edicionDireccionTexto.set($event)" />
+                </div>
+                <div class="field">
+                  <label>Latitud</label>
+                  <input type="text" placeholder="-2.9001"
+                         [ngModel]="edicionDireccionLatitud()"
+                         (ngModelChange)="edicionDireccionLatitud.set($event)" />
+                </div>
+                <div class="field">
+                  <label>Longitud</label>
+                  <input type="text" placeholder="-79.0059"
+                         [ngModel]="edicionDireccionLongitud()"
+                         (ngModelChange)="edicionDireccionLongitud.set($event)" />
+                </div>
+              </div>
+            }
+          </div>
+
+          <div class="field span2">
+            <label>Motivo del cambio <span class="req">*</span></label>
+            <input type="text" placeholder="Ej. estaba mal escrita en el alta / el abonado se mudó"
+                   [ngModel]="motivoDireccion()" (ngModelChange)="motivoDireccion.set($event)" />
+            <span class="hint">
+              El contrato firmado sigue nombrando la dirección anterior, así que el
+              motivo queda guardado con tu usuario y la fecha.
+            </span>
+          </div>
+        </div>
+
+        @if (errorDireccion()) { <div class="modal-error">{{ errorDireccion() }}</div> }
+      </div>
+
+      <div class="modal-foot">
+        <button type="button" class="btn" (click)="cerrarCambioDireccion()"
+                [disabled]="guardandoDireccion()">Cancelar</button>
+        <button type="button" class="btn btn-primary" (click)="guardarCambioDireccion()"
+                [disabled]="guardandoDireccion()">
+          {{ guardandoDireccion() ? 'Guardando…' : 'Guardar dirección' }}
         </button>
       </div>
     </div>

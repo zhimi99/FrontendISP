@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   BajaContratoRequest,
+  CambiarDireccionContratoRequest,
   ContratoDetalle,
   ContratoListado,
   CrearContratoServicioRequest,
@@ -84,6 +85,23 @@ export class ContratosService {
   darDeBaja(codigo: string, request: BajaContratoRequest): Observable<ContratoDetalle> {
     return this.http.post<ContratoDetalle>(
       `${this.base}/api/contratos/${codigo}/baja`,
+      request,
+    );
+  }
+
+  /**
+   * PUT /api/contratos/{codigo}/direccion — corrige dónde se presta el servicio.
+   *
+   * Es lo único que admite un contrato ya generado: las condiciones comerciales no se
+   * renegocian (el backend responde 422). El motivo es obligatorio porque el contrato
+   * firmado sigue nombrando la dirección anterior.
+   */
+  cambiarDireccion(
+    codigo: string,
+    request: CambiarDireccionContratoRequest,
+  ): Observable<ContratoDetalle> {
+    return this.http.put<ContratoDetalle>(
+      `${this.base}/api/contratos/${codigo}/direccion`,
       request,
     );
   }
