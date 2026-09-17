@@ -89,6 +89,9 @@ type ServicioFila = {
   precio: number;
 };
 
+/** Notación CIDR completa (/0 a /32) para elegir la barra de red en vez de escribirla a mano. */
+const MASCARAS_CIDR = Array.from({ length: 33 }, (_, prefijo) => `/${prefijo}`);
+
 @Component({
   selector: 'app-cliente-detalle',
   standalone: true,
@@ -99,6 +102,8 @@ type ServicioFila = {
   styleUrls: ['./cliente-detalle.scss', './cliente-detalle-gpon.scss'],
 })
 export class ClienteDetalleComponent implements OnDestroy {
+  readonly mascarasCidr = MASCARAS_CIDR;
+
   private readonly route = inject(ActivatedRoute);
   private readonly clientesService = inject(ClientesService);
   private readonly contratosService = inject(ContratosService);

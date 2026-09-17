@@ -859,6 +859,7 @@ tbody tr:hover {
   color: var(--muted);
 }
 .gpon-form .field input,
+.gpon-form .field select,
 .gpon-form .field textarea {
   width: 100%;
   padding: 9px 11px;
@@ -874,11 +875,13 @@ tbody tr:hover {
   min-height: 78px;
 }
 .gpon-form .field input:focus,
+.gpon-form .field select:focus,
 .gpon-form .field textarea:focus {
   outline: none;
   border-color: var(--brand);
 }
 .gpon-form .field input:disabled,
+.gpon-form .field select:disabled,
 .gpon-form .field textarea:disabled {
   opacity: 0.65;
   cursor: not-allowed;

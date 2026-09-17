@@ -556,8 +556,13 @@
                 </div>
                 <div class="field">
                   <label>Barra (servicio)</label>
-                  <input type="text" placeholder="/24" [ngModel]="gponBarraServicio()"
-                         (ngModelChange)="gponBarraServicio.set($event)" [disabled]="!puedeEditar()" />
+                  <select [ngModel]="gponBarraServicio()"
+                          (ngModelChange)="gponBarraServicio.set($event)" [disabled]="!puedeEditar()">
+                    <option value="">Elegir…</option>
+                    @for (mascara of mascarasCidr; track mascara) {
+                      <option [value]="mascara">{{ mascara }}</option>
+                    }
+                  </select>
                 </div>
                 <div class="field">
                   <label>IP de gestión</label>
@@ -571,8 +576,13 @@
                 </div>
                 <div class="field">
                   <label>Barra (gestión)</label>
-                  <input type="text" placeholder="/24" [ngModel]="gponBarraGestion()"
-                         (ngModelChange)="gponBarraGestion.set($event)" [disabled]="!puedeEditar()" />
+                  <select [ngModel]="gponBarraGestion()"
+                          (ngModelChange)="gponBarraGestion.set($event)" [disabled]="!puedeEditar()">
+                    <option value="">Elegir…</option>
+                    @for (mascara of mascarasCidr; track mascara) {
+                      <option [value]="mascara">{{ mascara }}</option>
+                    }
+                  </select>
                 </div>
                 <div class="field">
                   <label>Serial ONT</label>
