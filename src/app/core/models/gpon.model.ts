@@ -72,6 +72,12 @@ export interface AprovisionarGponRequest {
 export interface CorregirRecursosGponRequest {
   /** Opcional: si va nulo, se conserva el puerto que ya tenía. */
   puertoPonId?: number | null;
+  /**
+   * Alternativa a `puertoPonId`: la interfaz tal como la escribe la ficha
+   * ("0/1") junto con el número de puerto. Se ignora si va `puertoPonId`.
+   */
+  tarjeta?: string | null;
+  numeroPuerto?: number | null;
   ontId: number;
   spGestion: number;
   spServicio: number;

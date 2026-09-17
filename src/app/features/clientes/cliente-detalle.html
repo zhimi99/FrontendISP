@@ -651,7 +651,7 @@
                           class="btn btn-sm"
                           (click)="actualizarRecursosGpon()"
                           [disabled]="actualizandoRecursosGpon()"
-                          title="Vuelve a generar los 7 comandos con el ONT y los service-port que hoy dice la ficha de arriba"
+                          title="Vuelve a generar los 7 comandos con la interfaz, el ONT y los service-port que hoy dice la ficha de arriba"
                         >
                           {{ actualizandoRecursosGpon() ? 'Actualizando…' : 'Actualizar comandos' }}
                         </button>
@@ -669,10 +669,10 @@
                   </div>
 
                   <p class="sub gpon-recursos-reales">
-                    Puerto real asignado: <strong>{{ a.tarjeta }}/{{ a.puerto }}</strong>
+                    Puerto usado en los comandos: <strong>{{ a.tarjeta }}/{{ a.puerto }}</strong>
                     · ONT: <strong>{{ a.ontId }}</strong>
                     · Service-port: <strong>{{ a.spGestion }}/{{ a.spServicio }}</strong>
-                    <span class="hint">Si corriges el ONT o los Service port en la ficha de arriba, presiona "Actualizar comandos" para que el script use los nuevos valores.</span>
+                    <span class="hint">Si corriges Interface GPON, Puerto PON, ONT o los Service port en la ficha de arriba, presiona "Actualizar comandos" para que el script use los nuevos valores.</span>
                   </p>
 
                   <ol class="gpon-comandos">

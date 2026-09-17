@@ -664,13 +664,15 @@ export class ClienteDetalleComponent implements OnDestroy {
   readonly actualizandoRecursosGpon = signal(false);
 
   /**
-   * Manda a MS-RED el ONT y los service-port que hoy dice la ficha manual, y
-   * regenera los 7 comandos con esos valores.
+   * Manda a MS-RED la interfaz (tarjeta + puerto), el ONT y los service-port
+   * que hoy dice la ficha manual, y regenera los 7 comandos con esos valores.
    *
-   * Solo esos tres: el "Puerto PON" de la ficha es el número físico del
-   * puerto (p. ej. "5"), no el identificador interno del puerto en MS-RED, así
-   * que mandarlo tal cual reasignaría al abonado a un puerto equivocado. El
-   * backend valida que ningún valor choque con otro contrato antes de aceptarlo.
+   * La interfaz se manda como texto ("0/1" + el número de "Puerto PON"), no
+   * como el identificador interno del puerto en MS-RED: eso es lo único que la
+   * ficha conoce, y el backend la resuelve contra el catálogo real de la OLT.
+   * Si cualquiera de los dos campos queda vacío, se conserva el puerto que ya
+   * tenía. El backend valida que ningún valor choque con otro contrato antes
+   * de aceptarlo.
    */
   actualizarRecursosGpon() {
     const a = this.aprovisionamiento();
@@ -684,19 +686,24 @@ export class ClienteDetalleComponent implements OnDestroy {
       return;
     }
 
+    const tarjeta = this.gponInterface().trim() || null;
+    const numeroPuerto = this.enteroOpcionalGpon(this.gponPuertoPon());
+
     this.actualizandoRecursosGpon.set(true);
     this.errorGpon.set(null);
-    this.gponService.corregirRecursos(a.contratoId, { ontId: ont, spGestion, spServicio }).subscribe({
-      next: (actualizado) => {
-        this.actualizandoRecursosGpon.set(false);
-        this.aprovisionamiento.set(actualizado);
-        this.avisoGpon.set({ texto: 'Comandos actualizados con los nuevos valores.', error: false });
-      },
-      error: (e) => {
-        this.actualizandoRecursosGpon.set(false);
-        this.errorGpon.set(this.mensajeErrorGpon(e));
-      },
-    });
+    this.gponService
+      .corregirRecursos(a.contratoId, { tarjeta, numeroPuerto, ontId: ont, spGestion, spServicio })
+      .subscribe({
+        next: (actualizado) => {
+          this.actualizandoRecursosGpon.set(false);
+          this.aprovisionamiento.set(actualizado);
+          this.avisoGpon.set({ texto: 'Comandos actualizados con los nuevos valores.', error: false });
+        },
+        error: (e) => {
+          this.actualizandoRecursosGpon.set(false);
+          this.errorGpon.set(this.mensajeErrorGpon(e));
+        },
+      });
   }
 
   guardarGpon() {
