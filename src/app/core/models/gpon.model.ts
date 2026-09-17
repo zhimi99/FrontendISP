@@ -61,6 +61,22 @@ export interface AprovisionarGponRequest {
   oltId?: number | null;
 }
 
+/**
+ * Cuerpo de `PUT /api/red/gpon/contratos/{contratoId}/recursos`.
+ *
+ * A diferencia del alta, aquí sí se mandan los números: es la corrección
+ * manual de lo que la ficha técnica del contrato dice que de verdad quedó
+ * puesto en la OLT. El backend valida que no choque con otro contrato antes
+ * de aceptarlo.
+ */
+export interface CorregirRecursosGponRequest {
+  /** Opcional: si va nulo, se conserva el puerto que ya tenía. */
+  puertoPonId?: number | null;
+  ontId: number;
+  spGestion: number;
+  spServicio: number;
+}
+
 /** OLT para el selector del alta. */
 export interface OltResumen {
   id: number;

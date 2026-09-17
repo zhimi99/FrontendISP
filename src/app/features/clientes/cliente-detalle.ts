@@ -661,6 +661,44 @@ export class ClienteDetalleComponent implements OnDestroy {
     });
   }
 
+  readonly actualizandoRecursosGpon = signal(false);
+
+  /**
+   * Manda a MS-RED el ONT y los service-port que hoy dice la ficha manual, y
+   * regenera los 7 comandos con esos valores.
+   *
+   * Solo esos tres: el "Puerto PON" de la ficha es el número físico del
+   * puerto (p. ej. "5"), no el identificador interno del puerto en MS-RED, así
+   * que mandarlo tal cual reasignaría al abonado a un puerto equivocado. El
+   * backend valida que ningún valor choque con otro contrato antes de aceptarlo.
+   */
+  actualizarRecursosGpon() {
+    const a = this.aprovisionamiento();
+    if (!a || this.actualizandoRecursosGpon()) return;
+
+    const ont = this.enteroOpcionalGpon(this.gponOnt());
+    const spGestion = this.enteroOpcionalGpon(this.gponServicePortGestion());
+    const spServicio = this.enteroOpcionalGpon(this.gponServicePortServicio());
+    if (ont == null || spGestion == null || spServicio == null) {
+      this.errorGpon.set('Completa ONT, Service port gestión y Service port servicio para actualizar los comandos.');
+      return;
+    }
+
+    this.actualizandoRecursosGpon.set(true);
+    this.errorGpon.set(null);
+    this.gponService.corregirRecursos(a.contratoId, { ontId: ont, spGestion, spServicio }).subscribe({
+      next: (actualizado) => {
+        this.actualizandoRecursosGpon.set(false);
+        this.aprovisionamiento.set(actualizado);
+        this.avisoGpon.set({ texto: 'Comandos actualizados con los nuevos valores.', error: false });
+      },
+      error: (e) => {
+        this.actualizandoRecursosGpon.set(false);
+        this.errorGpon.set(this.mensajeErrorGpon(e));
+      },
+    });
+  }
+
   guardarGpon() {
     const codigo = this.contratoGponCodigo();
     if (!codigo || this.guardandoGpon()) return;

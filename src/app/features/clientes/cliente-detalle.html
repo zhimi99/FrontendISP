@@ -645,6 +645,17 @@
                       <p class="sub">Generados por MS-RED a partir de los recursos asignados.</p>
                     </div>
                     <div class="head-acciones">
+                      @if (puedeEditar()) {
+                        <button
+                          type="button"
+                          class="btn btn-sm"
+                          (click)="actualizarRecursosGpon()"
+                          [disabled]="actualizandoRecursosGpon()"
+                          title="Vuelve a generar los 7 comandos con el ONT y los service-port que hoy dice la ficha de arriba"
+                        >
+                          {{ actualizandoRecursosGpon() ? 'Actualizando…' : 'Actualizar comandos' }}
+                        </button>
+                      }
                       @if (a.estado !== 'APLICADO' && puedeEditar()) {
                         <button type="button" class="btn btn-sm" (click)="confirmarGponAplicado()">
                           Marcar como aplicado
@@ -660,7 +671,8 @@
                   <p class="sub gpon-recursos-reales">
                     Puerto real asignado: <strong>{{ a.tarjeta }}/{{ a.puerto }}</strong>
                     · ONT: <strong>{{ a.ontId }}</strong>
-                    <span class="hint">(el sistema lo eligió al generar el script; los campos "Puerto PON" y "ONT" de la ficha de arriba son solo de referencia manual)</span>
+                    · Service-port: <strong>{{ a.spGestion }}/{{ a.spServicio }}</strong>
+                    <span class="hint">Si corriges el ONT o los Service port en la ficha de arriba, presiona "Actualizar comandos" para que el script use los nuevos valores.</span>
                   </p>
 
                   <ol class="gpon-comandos">

@@ -7,6 +7,7 @@ import {
   AprovisionamientoGpon,
   AprovisionamientoResumen,
   AprovisionarGponRequest,
+  CorregirRecursosGponRequest,
   FiltroGpon,
   OltResumen,
   PuertoPonResumen,
@@ -49,6 +50,24 @@ export class GponService {
     return this.http.post<AprovisionamientoGpon>(
       `${this.base}/api/red/gpon/contratos/${contratoId}/aplicado`,
       {},
+    );
+  }
+
+  /**
+   * Corrige a mano el puerto/ONT y los service-port ya reservados, y devuelve
+   * los 7 comandos regenerados con esos valores.
+   *
+   * Para cuando la ficha técnica del contrato (carga manual) se corrige
+   * después del alta automática: el backend rechaza el cambio si alguno de
+   * los números ya lo tiene otro contrato.
+   */
+  corregirRecursos(
+    contratoId: number,
+    peticion: CorregirRecursosGponRequest,
+  ): Observable<AprovisionamientoGpon> {
+    return this.http.put<AprovisionamientoGpon>(
+      `${this.base}/api/red/gpon/contratos/${contratoId}/recursos`,
+      peticion,
     );
   }
 
