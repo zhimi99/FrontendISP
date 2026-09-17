@@ -518,8 +518,6 @@ export class ClienteDetalleComponent implements OnDestroy {
   readonly gponMascaraGestion = signal('');
   readonly gponBarraGestion = signal('');
   readonly gponFichaSerialOnt = signal('');
-  readonly gponCodigoServicio = signal('');
-  readonly gponNombreCliente = signal('');
   readonly gponServicePortGestion = signal('');
   readonly gponServicePortServicio = signal('');
   readonly gponTx = signal('');
@@ -544,8 +542,6 @@ export class ClienteDetalleComponent implements OnDestroy {
     this.gponMascaraGestion.set(texto(dato?.mascaraGestion));
     this.gponBarraGestion.set(texto(dato?.barraGestion));
     this.gponFichaSerialOnt.set(texto(dato?.serialOnt));
-    this.gponCodigoServicio.set(texto(dato?.codigoServicio));
-    this.gponNombreCliente.set(texto(dato?.nombreCliente));
     this.gponServicePortGestion.set(num(dato?.servicePortGestion));
     this.gponServicePortServicio.set(num(dato?.servicePortServicio));
     this.gponTx.set(num(dato?.tx));
@@ -682,8 +678,11 @@ export class ClienteDetalleComponent implements OnDestroy {
       mascaraGestion: this.gponMascaraGestion().trim() || null,
       barraGestion: this.gponBarraGestion().trim() || null,
       serialOnt: this.gponFichaSerialOnt().trim() || null,
-      codigoServicio: this.gponCodigoServicio().trim() || null,
-      nombreCliente: this.gponNombreCliente().trim() || null,
+      // El código de servicio y el nombre del cliente en la OLT ya no se piden a
+      // mano en esta ficha; se dejan en null hasta que se retiren del todo del
+      // modelo (los sigue esperando el backend como campos opcionales).
+      codigoServicio: null,
+      nombreCliente: null,
       servicePortGestion: this.enteroOpcionalGpon(this.gponServicePortGestion()),
       servicePortServicio: this.enteroOpcionalGpon(this.gponServicePortServicio()),
       tx: this.numeroOpcionalGpon(this.gponTx()),

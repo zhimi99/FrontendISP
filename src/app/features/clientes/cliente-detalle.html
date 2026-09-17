@@ -590,16 +590,6 @@
                          (ngModelChange)="gponFichaSerialOnt.set($event)" [disabled]="!puedeEditar()" />
                 </div>
                 <div class="field">
-                  <label>Código de servicio</label>
-                  <input type="text" placeholder="FIB00002" [ngModel]="gponCodigoServicio()"
-                         (ngModelChange)="gponCodigoServicio.set($event)" [disabled]="!puedeEditar()" />
-                </div>
-                <div class="field">
-                  <label>Nombres y apellidos del cliente</label>
-                  <input type="text" placeholder="Como se escribe en la OLT" [ngModel]="gponNombreCliente()"
-                         (ngModelChange)="gponNombreCliente.set($event)" [disabled]="!puedeEditar()" />
-                </div>
-                <div class="field">
                   <label>Service port gestión</label>
                   <input type="text" inputmode="numeric" placeholder="10" [ngModel]="gponServicePortGestion()"
                          (ngModelChange)="gponServicePortGestion.set($event)" [disabled]="!puedeEditar()" />
