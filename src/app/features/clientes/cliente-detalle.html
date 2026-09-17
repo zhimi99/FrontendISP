@@ -657,6 +657,12 @@
                     </div>
                   </div>
 
+                  <p class="sub gpon-recursos-reales">
+                    Puerto real asignado: <strong>{{ a.tarjeta }}/{{ a.puerto }}</strong>
+                    · ONT: <strong>{{ a.ontId }}</strong>
+                    <span class="hint">(el sistema lo eligió al generar el script; los campos "Puerto PON" y "ONT" de la ficha de arriba son solo de referencia manual)</span>
+                  </p>
+
                   <ol class="gpon-comandos">
                     @for (c of a.comandos; track c.titulo) {
                       <li>
