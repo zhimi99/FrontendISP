@@ -7,6 +7,7 @@ import { catchError, combineLatest, forkJoin, map, Observable, of, startWith, Su
 
 import { IconComponent } from '../../shared/icon';
 import { MapaSelectorComponent } from '../../shared/mapa-selector';
+import { MASCARAS_CIDR } from '../../shared/mascaras-cidr';
 import { LatLngLiteral } from '../../core/services/google-maps-loader.service';
 import { VisorContratoComponent } from '../../shared/visor-contrato';
 import { ClientesService } from '../../core/services/clientes.service';
@@ -88,9 +89,6 @@ type ServicioFila = {
   fechaInicio: string;
   precio: number;
 };
-
-/** Notación CIDR completa (/0 a /32) para elegir la barra de red en vez de escribirla a mano. */
-const MASCARAS_CIDR = Array.from({ length: 33 }, (_, prefijo) => `/${prefijo}`);
 
 @Component({
   selector: 'app-cliente-detalle',

@@ -339,7 +339,8 @@
 .gpon-grid .field label {
   font-size: 11.5px;
 }
-.gpon-grid input {
+.gpon-grid input,
+.gpon-grid select {
   width: 100%;
   padding: 8px 10px;
   border: 1px solid var(--border-2);
@@ -349,7 +350,8 @@
   font-size: 13px;
   font-family: inherit;
 }
-.gpon-grid input:focus {
+.gpon-grid input:focus,
+.gpon-grid select:focus {
   outline: none;
   border-color: var(--brand);
 }

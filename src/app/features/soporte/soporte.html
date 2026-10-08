@@ -337,8 +337,12 @@
                     </div>
                     <div class="field">
                       <label>Barra (servicio)</label>
-                      <input type="text" placeholder="/24"
-                             [ngModel]="gponBarraServicio()" (ngModelChange)="gponBarraServicio.set($event)" />
+                      <select [ngModel]="gponBarraServicio()" (ngModelChange)="gponBarraServicio.set($event)">
+                        <option value="">Elegir…</option>
+                        @for (mascara of mascarasCidr; track mascara) {
+                          <option [value]="mascara">{{ mascara }}</option>
+                        }
+                      </select>
                     </div>
                     <div class="field">
                       <label>IP de gestión</label>
@@ -352,23 +356,17 @@
                     </div>
                     <div class="field">
                       <label>Barra (gestión)</label>
-                      <input type="text" placeholder="/24"
-                             [ngModel]="gponBarraGestion()" (ngModelChange)="gponBarraGestion.set($event)" />
+                      <select [ngModel]="gponBarraGestion()" (ngModelChange)="gponBarraGestion.set($event)">
+                        <option value="">Elegir…</option>
+                        @for (mascara of mascarasCidr; track mascara) {
+                          <option [value]="mascara">{{ mascara }}</option>
+                        }
+                      </select>
                     </div>
                     <div class="field">
                       <label>Serial ONT</label>
                       <input type="text" placeholder="48575443217FDA9E"
                              [ngModel]="gponSerialOnt()" (ngModelChange)="gponSerialOnt.set($event)" />
-                    </div>
-                    <div class="field">
-                      <label>Código de servicio</label>
-                      <input type="text" placeholder="FIB00002"
-                             [ngModel]="gponCodigoServicio()" (ngModelChange)="gponCodigoServicio.set($event)" />
-                    </div>
-                    <div class="field">
-                      <label>Nombres y apellidos del cliente</label>
-                      <input type="text" placeholder="Como se escribe en la OLT"
-                             [ngModel]="gponNombreCliente()" (ngModelChange)="gponNombreCliente.set($event)" />
                     </div>
                     <div class="field">
                       <label>Service port gestión</label>

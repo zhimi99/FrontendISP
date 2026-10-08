@@ -26,6 +26,7 @@ import {
   PRIORIDAD_TONO,
   TIPO_ORDEN_ETIQUETA,
 } from '../../core/models/operativo.model';
+import { MASCARAS_CIDR } from '../../shared/mascaras-cidr';
 import { RespuestaError, detalleErrorBackend, mensajeError } from '../../core/http/errores';
 
 /** Rango de prioridad para ordenar el tablero (lo urgente arriba). */
@@ -289,14 +290,13 @@ export class SoporteComponent {
   readonly gponMascaraGestion = signal('');
   readonly gponBarraGestion = signal('');
   readonly gponSerialOnt = signal('');
-  readonly gponCodigoServicio = signal('');
-  readonly gponNombreCliente = signal('');
   readonly gponServicePortGestion = signal('');
   readonly gponServicePortServicio = signal('');
   readonly gponTx = signal('');
   readonly gponRx = signal('');
   readonly gponMetraje = signal('');
   /** La ficha GPON documenta el alta del servicio; una visita de soporte no la toca. */
+  readonly mascarasCidr = MASCARAS_CIDR;
   readonly pideGpon = computed(() => this.ordenAccion()?.tipo === 'INSTALACION');
 
   /**
@@ -512,8 +512,6 @@ export class SoporteComponent {
       this.gponMascaraGestion,
       this.gponBarraGestion,
       this.gponSerialOnt,
-      this.gponCodigoServicio,
-      this.gponNombreCliente,
       this.gponServicePortGestion,
       this.gponServicePortServicio,
       this.gponTx,
@@ -562,8 +560,6 @@ export class SoporteComponent {
         this.gponMascaraGestion.set(texto(gpon.mascaraGestion));
         this.gponBarraGestion.set(texto(gpon.barraGestion));
         this.gponSerialOnt.set(texto(gpon.serialOnt));
-        this.gponCodigoServicio.set(texto(gpon.codigoServicio));
-        this.gponNombreCliente.set(texto(gpon.nombreCliente));
         this.gponServicePortGestion.set(num(gpon.servicePortGestion));
         this.gponServicePortServicio.set(num(gpon.servicePortServicio));
         this.gponTx.set(num(gpon.tx));
@@ -787,8 +783,9 @@ export class SoporteComponent {
       mascaraGestion: this.gponMascaraGestion().trim() || null,
       barraGestion: this.gponBarraGestion().trim() || null,
       serialOnt: this.gponSerialOnt().trim() || null,
-      codigoServicio: this.gponCodigoServicio().trim() || null,
-      nombreCliente: this.gponNombreCliente().trim() || null,
+      // Igual que la ficha del cliente: estos dos ya no se piden en pantalla.
+      codigoServicio: null,
+      nombreCliente: null,
       servicePortGestion: this.enteroGpon(this.gponServicePortGestion()),
       servicePortServicio: this.enteroGpon(this.gponServicePortServicio()),
       tx: this.decimalGpon(this.gponTx()),
