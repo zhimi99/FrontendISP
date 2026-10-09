@@ -599,10 +599,16 @@ export class ClienteDetalleComponent implements OnDestroy {
         next: (a) => {
           this.aprovisionando.set(false);
           this.aprovisionamiento.set(a);
-          this.avisoGpon.set({
-            texto: `Aprovisionado en ${a.oltCodigo} puerto ${a.tarjeta}/${a.puerto}, ONT ${a.ontId}.`,
-            error: false,
-          });
+          // Con la ficha llena, los comandos salen con SUS valores y no con los que
+          // el sistema repartió solo; vacía, se quedan los automáticos.
+          if (this.fichaTieneRecursosGpon()) {
+            this.actualizarRecursosGpon();
+          } else {
+            this.avisoGpon.set({
+              texto: `Aprovisionado en ${a.oltCodigo} puerto ${a.tarjeta}/${a.puerto}, ONT ${a.ontId}.`,
+              error: false,
+            });
+          }
         },
         error: (e) => {
           this.aprovisionando.set(false);
@@ -661,8 +667,14 @@ export class ClienteDetalleComponent implements OnDestroy {
 
   readonly actualizandoRecursosGpon = signal(false);
 
+  /** ONT y los dos service-port son el mínimo para armar los comandos desde la ficha. */
+  private fichaTieneRecursosGpon(): boolean {
+    return [this.gponOnt(), this.gponServicePortGestion(), this.gponServicePortServicio()]
+      .every((v) => this.enteroOpcionalGpon(v) != null);
+  }
+
   /**
-   * Manda a MS-RED la interfaz (tarjeta + puerto), el ONT y los service-port
+   * Manda a MS-RED la interfaz (tarjeta + puerto), el ONT, las VLAN, las IP y los service-port
    * que hoy dice la ficha manual, y regenera los 7 comandos con esos valores.
    *
    * La interfaz se manda como texto ("0/1" + el número de "Puerto PON"), no
@@ -690,7 +702,17 @@ export class ClienteDetalleComponent implements OnDestroy {
     this.actualizandoRecursosGpon.set(true);
     this.errorGpon.set(null);
     this.gponService
-      .corregirRecursos(a.contratoId, { tarjeta, numeroPuerto, ontId: ont, spGestion, spServicio })
+      .corregirRecursos(a.contratoId, {
+        tarjeta,
+        numeroPuerto,
+        ontId: ont,
+        spGestion,
+        spServicio,
+        vlanGestion: this.enteroOpcionalGpon(this.gponVlanGestion()),
+        vlanServicio: this.enteroOpcionalGpon(this.gponVlanServicio()),
+        ipServicio: this.gponIpServicio().trim() || null,
+        ipGestion: this.gponIpGestion().trim() || null,
+      })
       .subscribe({
         next: (actualizado) => {
           this.actualizandoRecursosGpon.set(false);

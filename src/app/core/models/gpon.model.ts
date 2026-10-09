@@ -81,6 +81,11 @@ export interface CorregirRecursosGponRequest {
   ontId: number;
   spGestion: number;
   spServicio: number;
+  /** Opcionales: nulo conserva lo que ya tenía el aprovisionamiento. */
+  vlanGestion?: number | null;
+  vlanServicio?: number | null;
+  ipServicio?: string | null;
+  ipGestion?: string | null;
 }
 
 /** OLT para el selector del alta. */
