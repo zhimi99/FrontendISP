@@ -623,6 +623,10 @@
                 }
               </div>
 
+              @if (errorGpon()) {
+                <div class="modal-error">{{ errorGpon() }}</div>
+              }
+
               <!-- ===== Comandos generados en el servidor =====
                    Se piden a MS-RED con el serial de la ficha; el resto de recursos
                    (ONT, puerto, service-port, IP) los reparte el backend. -->
@@ -691,10 +695,6 @@
                     }
                   </ol>
                 </div>
-              }
-
-              @if (errorGpon()) {
-                <div class="modal-error">{{ errorGpon() }}</div>
               }
 
             }
