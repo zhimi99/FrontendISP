@@ -614,6 +614,13 @@
                   <input type="text" inputmode="decimal" placeholder="Ej. 121 a 145" [ngModel]="gponMetraje()"
                          (ngModelChange)="gponMetraje.set($event)" [disabled]="!puedeEditar()" />
                 </div>
+                @if (puedeEditar()) {
+                  <div class="field gpon-guardar">
+                    <button type="button" class="btn btn-primary" (click)="guardarGpon()" [disabled]="guardandoGpon()">
+                      {{ guardandoGpon() ? 'Guardando…' : 'Guardar registro GPON' }}
+                    </button>
+                  </div>
+                }
               </div>
 
               <!-- ===== Comandos generados en el servidor =====
@@ -690,13 +697,6 @@
                 <div class="modal-error">{{ errorGpon() }}</div>
               }
 
-              @if (puedeEditar()) {
-                <div class="gpon-acciones">
-                  <button type="button" class="btn btn-primary" (click)="guardarGpon()" [disabled]="guardandoGpon()">
-                    {{ guardandoGpon() ? 'Guardando…' : 'Guardar registro GPON' }}
-                  </button>
-                </div>
-              }
             }
           </div>
         }

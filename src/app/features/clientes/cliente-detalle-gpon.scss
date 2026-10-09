@@ -196,3 +196,12 @@
     margin-right: 12px;
   }
 }
+
+/* Guardar va en la celda que sigue a "Metraje del cable", el último dato que se
+   llena: al terminar la ficha el botón queda a mano, no debajo de los comandos. */
+.gpon-form .field.gpon-guardar {
+  justify-content: flex-end;
+}
+.gpon-form .field.gpon-guardar .btn {
+  width: 100%;
+}
